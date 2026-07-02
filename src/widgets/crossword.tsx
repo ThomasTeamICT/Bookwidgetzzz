@@ -264,10 +264,8 @@ export function CrosswordPlayer({ widget, timeUp, onComplete }: PlayerProps<Cros
               if (!words) return <td key={x} className="cross-cell block" aria-hidden />;
               const num = numbers.get(k);
               const val = letters[k] ?? '';
-              const correctHere = words.some(wordCorrect);
               let cls = 'cross-cell';
               if (!review && inActive(x, y)) cls += ' active';
-              if (review) cls += correctHere || words.every((w) => wordCorrect(w)) ? '' : '';
               if (review) {
                 const expected = (() => {
                   const p = words[0];
