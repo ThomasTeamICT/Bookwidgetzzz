@@ -81,6 +81,20 @@ export function seedIfEmpty() {
   rad.config = { items: ['Emma', 'Noah', 'Olivia', 'Lucas', 'Mila', 'Arthur', 'Julia', 'Louis'], removeAfterSpin: true };
   widgets.push(rad);
 
+  const exit = createWidget('exitticket', 'Sjabloon: 3-2-1 exit-ticket');
+  exit.settings.showScore = false;
+  exit.settings.instructions = 'Geen punten — dit helpt je leerkracht om de volgende les beter af te stemmen.';
+  exit.config = {
+    layout: 'single',
+    questions: [
+      { id: uid(), type: 'long', prompt: 'Noem 3 dingen die je vandaag geleerd hebt.', points: 0, modelAnswer: '' },
+      { id: uid(), type: 'long', prompt: 'Schrijf 2 vragen die je nog hebt.', points: 0, modelAnswer: '' },
+      { id: uid(), type: 'long', prompt: 'Geef 1 voorbeeld van hoe je dit buiten de les kan gebruiken.', points: 0, modelAnswer: '' },
+      { id: uid(), type: 'slider', prompt: 'Hoe goed snap je de leerstof van vandaag?', points: 0, min: 1, max: 10, step: 1, answer: 10, tolerance: 9, explanation: '' },
+    ],
+  };
+  widgets.push(exit);
+
   const tijdlijn = createWidget('timeline', 'Voorbeeld: tijdlijn wereldoorlogen');
   tijdlijn.config = {
     mode: 'exercise',

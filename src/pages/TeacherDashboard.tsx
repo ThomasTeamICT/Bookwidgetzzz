@@ -150,6 +150,26 @@ export function TeacherDashboard() {
                         <button className="btn btn-quiet btn-sm" style={{ justifyContent: 'flex-start' }} role="menuitem" onClick={() => { setMenuFor(null); setShareTarget(w); }}>📤 Delen</button>
                         <button className="btn btn-quiet btn-sm" style={{ justifyContent: 'flex-start' }} role="menuitem" onClick={() => { setMenuFor(null); navigate(`/resultaten/${w.id}`); }}>📊 Resultaten ({subs.length})</button>
                         <button className="btn btn-quiet btn-sm" style={{ justifyContent: 'flex-start' }} role="menuitem" onClick={() => { setMenuFor(null); duplicate(w); }}>⧉ Dupliceren</button>
+                        {['quiz', 'worksheet', 'exitticket'].includes(w.type) && (
+                          <select
+                            className="select input-sm" aria-label="Omzetten naar ander type"
+                            value=""
+                            onChange={(e) => {
+                              const target = e.target.value as Widget['type'];
+                              if (!target) return;
+                              const targetDef = getTypeDef(target);
+                              saveWidget({ ...w, type: target });
+                              toast(`Omgezet naar ${targetDef.name.toLowerCase()}`, 'ok');
+                              setMenuFor(null);
+                            }}
+                            style={{ margin: '4px 6px' }}
+                          >
+                            <option value="">↻ Omzetten naar…</option>
+                            {(['quiz', 'worksheet', 'exitticket'] as const).filter((t) => t !== w.type).map((t) => (
+                              <option key={t} value={t}>{getTypeDef(t).name}</option>
+                            ))}
+                          </select>
+                        )}
                         {folders.length > 0 && (
                           <select
                             className="select input-sm" aria-label="Verplaats naar map"

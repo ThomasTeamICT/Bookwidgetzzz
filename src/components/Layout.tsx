@@ -20,6 +20,7 @@ export function Layout() {
           <NavLink to="/widgets">Mijn widgets</NavLink>
           <NavLink to="/nieuw">Nieuwe widget</NavLink>
           <NavLink to="/resultaten">Resultaten</NavLink>
+          <NavLink to="/privacy" title="Privacy en gegevensbeheer">Privacy</NavLink>
         </nav>
         <div className="topbar-spacer" />
         <Link to="/meedoen" className="btn btn-sm btn-ghost">🎓 Ik ben leerling</Link>

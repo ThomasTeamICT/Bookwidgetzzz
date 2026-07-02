@@ -32,7 +32,7 @@ export function OpenSharedPage() {
 
   return (
     <div style={{ position: 'relative' }}>
-      <WidgetRunner widget={widget} recordSubmission />
+      <WidgetRunner widget={widget} recordSubmission offerResultCode />
       <div style={{ position: 'fixed', bottom: 14, right: 14, zIndex: 60 }}>
         <button
           className="btn btn-sm btn-ghost"

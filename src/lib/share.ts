@@ -1,5 +1,5 @@
 import LZString from 'lz-string';
-import type { Widget } from './types';
+import type { Submission, Widget } from './types';
 
 /**
  * Delen van widgets:
@@ -30,6 +30,29 @@ export function decodeWidgetFromParam(d: string): Widget | null {
 export function playUrlForCode(code: string): string {
   const base = location.origin + location.pathname;
   return `${base}#/speel/${code}`;
+}
+
+/**
+ * Resultaatcode: een leerling die thuis (via de draagbare link) werkte, kan zijn
+ * inzending als gecomprimeerde code doorsturen; de leerkracht plakt die bij de
+ * resultaten. Zo komt thuiswerk toch centraal terecht, zonder server.
+ */
+export function encodeSubmission(sub: Submission): string {
+  return 'WF1.' + LZString.compressToEncodedURIComponent(JSON.stringify(sub));
+}
+
+export function decodeSubmission(code: string): Submission | null {
+  try {
+    const raw = code.trim();
+    if (!raw.startsWith('WF1.')) return null;
+    const json = LZString.decompressFromEncodedURIComponent(raw.slice(4));
+    if (!json) return null;
+    const sub = JSON.parse(json) as Submission;
+    if (!sub || typeof sub !== 'object' || !sub.widgetId || !sub.studentName || !sub.answers) return null;
+    return sub;
+  } catch {
+    return null;
+  }
 }
 
 export function exportWidgetJson(widget: Widget): string {

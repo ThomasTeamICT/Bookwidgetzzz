@@ -8,6 +8,7 @@ const KEYS = {
   submissions: 'wf.submissions.v1',
   prefs: 'wf.prefs.v1',
   attempts: 'wf.attempts.v1', // pogingen per widget per leerlingnaam
+  live: 'wf.live.v1', // wie is er (op dit toestel) aan het werk
 } as const;
 
 type Listener = () => void;
@@ -19,6 +20,14 @@ export function onStorageChange(fn: Listener): () => void {
 }
 function emit() {
   listeners.forEach((fn) => fn());
+}
+
+// Ook wijzigingen uit ándere tabbladen doorgeven (bv. leerling dient in op
+// hetzelfde toestel) zodat dashboards en resultaten live verversen.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key && e.key.startsWith('wf.')) emit();
+  });
 }
 
 function read<T>(key: string, fallback: T): T {
@@ -111,6 +120,27 @@ export function bumpAttemptCount(widgetId: string, studentName: string) {
   const key = `${widgetId}::${studentName.trim().toLowerCase()}`;
   map[key] = (map[key] ?? 0) + 1;
   write(KEYS.attempts, map);
+}
+
+// ── Live activiteit (zelfde toestel/browser) ────────────────────────────────
+
+export interface LiveEntry {
+  widgetId: string;
+  studentName: string;
+  startedAt: number;
+}
+
+export function markStarted(widgetId: string, studentName: string) {
+  const all = read<LiveEntry[]>(KEYS.live, []);
+  const name = studentName.trim() || 'Anoniem';
+  const filtered = all.filter((e) => !(e.widgetId === widgetId && e.studentName === name));
+  filtered.push({ widgetId, studentName: name, startedAt: Date.now() });
+  // oude entries (ouder dan 12u) opruimen
+  write(KEYS.live, filtered.filter((e) => Date.now() - e.startedAt < 12 * 3600 * 1000));
+}
+
+export function getLiveEntries(widgetId: string): LiveEntry[] {
+  return read<LiveEntry[]>(KEYS.live, []).filter((e) => e.widgetId === widgetId);
 }
 
 // ── Voorkeuren ──────────────────────────────────────────────────────────────

@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { deleteSubmission, getSubmissions, getWidget, onStorageChange, saveSubmission } from '../lib/storage';
+import { deleteSubmission, getLiveEntries, getSubmissions, getWidget, onStorageChange, saveSubmission } from '../lib/storage';
 import { getTypeDef } from '../widgets/registry';
 import type { Question, QuizConfig, Submission, Widget } from '../lib/types';
 import { csvCell, downloadFile, formatDate, formatDuration, pct } from '../lib/utils';
 import { ConfirmModal, EmptyState, Modal, ScoreRing, useToast } from '../components/ui';
 import { gradeQuestion } from '../lib/grading';
+import { decodeSubmission } from '../lib/share';
+import { uid } from '../lib/utils';
 
 const QUIZ_FAMILY = new Set(['quiz', 'worksheet', 'exitticket']);
 
@@ -18,6 +20,7 @@ export function ResultsPage() {
   const [detail, setDetail] = useState<Submission | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Submission | null>(null);
   const [tab, setTab] = useState<'students' | 'questions'>('students');
+  const [importOpen, setImportOpen] = useState(false);
   const toast = useToast();
 
   if (!widget) {
@@ -31,35 +34,40 @@ export function ResultsPage() {
 
   const def = getTypeDef(widget.type);
   const subs = getSubmissions(widget.id).sort((a, b) => b.submittedAt - a.submittedAt);
+  // live (zelfde toestel/browser): gestart maar nog niets ingediend sinds de start
+  const busy = getLiveEntries(widget.id).filter(
+    (e) => !subs.some((s) => s.studentName === e.studentName && s.submittedAt >= e.startedAt)
+  );
   const scored = subs.filter((s) => s.totalMax > 0);
   const avg = scored.length > 0 ? Math.round(scored.reduce((sum, s) => sum + pct(s.totalEarned, s.totalMax), 0) / scored.length) : null;
   const isQuiz = QUIZ_FAMILY.has(widget.type);
 
-  const exportCsv = () => {
+  const exportCsv = (anonymous = false) => {
     const rows: string[][] = [];
+    const nameOf = (s: Submission, i: number) => (anonymous ? `Leerling ${i + 1}` : s.studentName);
     if (isQuiz) {
       const qs = (widget.config as QuizConfig).questions.filter((q) => q.type !== 'info');
       rows.push(['Leerling', 'Ingediend', 'Duur', 'Score', 'Max', 'Procent', ...qs.map((q, i) => `V${i + 1}: ${q.prompt.slice(0, 40)}`)]);
-      for (const s of subs) {
+      subs.forEach((s, i) => {
         rows.push([
-          s.studentName, formatDate(s.submittedAt), formatDuration(s.durationSec),
+          nameOf(s, i), formatDate(s.submittedAt), formatDuration(s.durationSec),
           String(s.totalEarned), String(s.totalMax), s.totalMax > 0 ? `${pct(s.totalEarned, s.totalMax)}%` : '',
           ...qs.map((q) => formatAnswer(q, s.answers[q.id])),
         ]);
-      }
+      });
     } else {
       rows.push(['Leerling', 'Ingediend', 'Duur', 'Score', 'Max', 'Details']);
-      for (const s of subs) {
+      subs.forEach((s, i) => {
         rows.push([
-          s.studentName, formatDate(s.submittedAt), formatDuration(s.durationSec),
+          nameOf(s, i), formatDate(s.submittedAt), formatDuration(s.durationSec),
           String(s.totalEarned), String(s.totalMax),
           JSON.stringify(s.answers).slice(0, 300),
         ]);
-      }
+      });
     }
     const csv = rows.map((r) => r.map(csvCell).join(';')).join('\n');
-    downloadFile(`resultaten-${widget.code}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
-    toast('CSV geëxporteerd', 'ok');
+    downloadFile(`resultaten-${widget.code}${anonymous ? '-anoniem' : ''}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
+    toast(anonymous ? 'Anonieme CSV geëxporteerd' : 'CSV geëxporteerd — dit bestand bevat namen van leerlingen, bewaar het zorgvuldig', 'ok');
   };
 
   return (
@@ -72,7 +80,9 @@ export function ResultsPage() {
         </div>
         <div className="page-head-actions">
           <Link to={`/bewerk/${widget.id}`} className="btn btn-ghost">✏️ Bewerken</Link>
-          <button className="btn btn-ghost" onClick={exportCsv} disabled={subs.length === 0}>📄 CSV exporteren</button>
+          <button className="btn btn-ghost" onClick={() => setImportOpen(true)}>📮 Resultaatcode plakken</button>
+          <button className="btn btn-ghost" onClick={() => exportCsv(false)} disabled={subs.length === 0}>📄 CSV exporteren</button>
+          <button className="btn btn-quiet" onClick={() => exportCsv(true)} disabled={subs.length === 0} title="Voor teamoverleg: zonder leerlingnamen">CSV zonder namen</button>
         </div>
       </div>
 
@@ -100,6 +110,17 @@ export function ResultsPage() {
           <div className="hint">gemiddelde duur</div>
         </div>
       </div>
+
+      {busy.length > 0 && (
+        <div className="callout" role="status" aria-live="polite" style={{ alignItems: 'center' }}>
+          <span aria-hidden>🟢</span>
+          <div>
+            <strong>Nu bezig op dit toestel:</strong>{' '}
+            {busy.map((e) => e.studentName).join(', ')}
+            <span className="hint"> — dit overzicht ververst vanzelf zodra ze indienen.</span>
+          </div>
+        </div>
+      )}
 
       {isQuiz && subs.length > 0 && (
         <div style={{ display: 'flex', gap: 6, marginBottom: 14 }} role="tablist">
@@ -164,6 +185,13 @@ export function ResultsPage() {
         </div>
       )}
 
+      {importOpen && (
+        <ResultCodeImportModal
+          widget={widget}
+          onClose={() => setImportOpen(false)}
+          onImported={(n) => toast(`${n} ${n === 1 ? 'resultaat' : 'resultaten'} geïmporteerd`, 'ok')}
+        />
+      )}
       {detail && <SubmissionModal widget={widget} submission={detail} onClose={() => setDetail(null)} />}
       {deleteTarget && (
         <ConfirmModal
@@ -232,6 +260,13 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
         <div>
           <p style={{ margin: 0 }}><strong>Score:</strong> {totalEarned} / {totalMax || '—'}</p>
           <p style={{ margin: 0 }} className="hint">Ingediend: {formatDate(submission.submittedAt)} · duur {formatDuration(submission.durationSec)}</p>
+          {submission.focusLosses !== undefined && (
+            <p style={{ margin: '4px 0 0' }}>
+              {submission.focusLosses > 0
+                ? <span className="badge badge-warn">👀 verliet het toetsvenster {submission.focusLosses}×</span>
+                : <span className="badge badge-ok">🛡 bleef in het toetsvenster</span>}
+            </p>
+          )}
         </div>
       </div>
 
@@ -248,11 +283,22 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
             const ans = submission.answers[q.id];
             const score = scores[q.id] ?? gradeQuestion(q, ans);
             const isOpen = q.type === 'long';
+            const conf = (submission.answers['_zekerheid'] as Record<string, string> | undefined)?.[q.id];
+            const usedHint = Array.isArray(submission.answers['_hints']) && (submission.answers['_hints'] as string[]).includes(q.id);
             return (
               <div key={q.id} className="card" style={{ padding: '12px 14px', marginBottom: 10 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
                   <strong>V{i + 1}.</strong>
                   <span style={{ flex: 1 }}>{q.prompt || (q.type === 'gap' ? 'Invuloefening' : '')}</span>
+                  {usedHint && <span className="badge" title="De leerling opende de hint">💡 hint</span>}
+                  {conf && (
+                    <span
+                      className={`badge ${conf === 'zeker' && score.earned < score.max && score.mode !== 'pending' ? 'badge-err' : ''}`}
+                      title={conf === 'zeker' && score.earned < score.max ? 'Zeker maar fout: mogelijke misvatting' : 'Zelfinschatting van de leerling'}
+                    >
+                      {conf === 'zeker' ? '🎯 was zeker' : conf === 'twijfel' ? '🤔 twijfelde' : '🎲 gokte'}
+                    </span>
+                  )}
                   <span className={`badge ${score.mode === 'pending' ? 'badge-warn' : score.earned >= score.max ? 'badge-ok' : score.earned > 0 ? 'badge-warn' : 'badge-err'}`}>
                     {score.mode === 'pending' ? 'te beoordelen' : `${score.earned}/${score.max}`}
                   </span>
@@ -265,7 +311,18 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
                     <strong>Modelantwoord:</strong> {q.modelAnswer}
                   </p>
                 )}
-                {isOpen && (
+                {isOpen && (q.type === 'long' && (q.rubric ?? []).filter((r) => r.criterion.trim()).length > 0 ? (
+                  <RubricGrader
+                    rubric={(q.rubric ?? []).filter((r) => r.criterion.trim())}
+                    maxPoints={q.points}
+                    onScore={(earned, breakdown) => {
+                      setScores((sc) => ({
+                        ...sc,
+                        [q.id]: { earned, max: q.points, mode: 'manual', comment: breakdown },
+                      }));
+                    }}
+                  />
+                ) : (
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
                     <label style={{ fontWeight: 600, fontSize: '0.88rem' }}>
                       Punten:
@@ -287,7 +344,7 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
                     </label>
                     <span className="hint">van {q.points}</span>
                   </div>
-                )}
+                ))}
               </div>
             );
           })}
@@ -329,9 +386,121 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
 
       <div className="field" style={{ marginTop: 14 }}>
         <label htmlFor="teacher-feedback">Feedback voor de leerling (optioneel)</label>
-        <textarea id="teacher-feedback" className="textarea" rows={2} value={feedback} onChange={(e) => setFeedback(e.target.value)} />
+        <textarea
+          id="teacher-feedback" className="textarea" rows={3} value={feedback}
+          placeholder="Tip: benoem wat al lukt, wat nog niet, en wat de volgende stap is — gericht op de taak."
+          onChange={(e) => setFeedback(e.target.value)}
+        />
       </div>
     </Modal>
+  );
+}
+
+/** Resultaatcodes van leerlingen (thuiswerk via draagbare link) inlezen. */
+function ResultCodeImportModal({
+  widget, onClose, onImported,
+}: { widget: Widget; onClose: () => void; onImported: (n: number) => void }) {
+  const [text, setText] = useState('');
+  const [error, setError] = useState('');
+
+  const doImport = () => {
+    const codes = text.split(/\s+/).map((s) => s.trim()).filter(Boolean);
+    let ok = 0;
+    const existing = getSubmissions();
+    for (const code of codes) {
+      const sub = decodeSubmission(code);
+      if (!sub) continue;
+      if (sub.widgetId !== widget.id && sub.widgetCode !== widget.code) continue;
+      // dubbele import vermijden (zelfde leerling + zelfde indientijd)
+      if (existing.some((s) => s.studentName === sub.studentName && s.submittedAt === sub.submittedAt && s.widgetId === sub.widgetId)) continue;
+      saveSubmission({ ...sub, id: uid(), widgetId: widget.id });
+      ok++;
+    }
+    if (ok === 0) {
+      setError('Geen geldige resultaatcodes voor deze widget gevonden. Controleer of de volledige code geplakt is en of ze bij deze widget hoort.');
+      return;
+    }
+    onImported(ok);
+    onClose();
+  };
+
+  return (
+    <Modal
+      title="📮 Resultaatcodes plakken"
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn btn-ghost" onClick={onClose}>Annuleren</button>
+          <button className="btn btn-primary" disabled={!text.trim()} onClick={doImport}>Importeren</button>
+        </>
+      }
+    >
+      <p className="hint" style={{ marginBottom: 8 }}>
+        Leerlingen die thuis via de draagbare link werkten, krijgen na het indienen een <strong>resultaatcode</strong>.
+        Plak hier één of meerdere codes (gescheiden door een spatie of nieuwe regel) om ze aan deze resultaten toe te voegen.
+      </p>
+      <textarea
+        className="textarea" rows={6}
+        placeholder="WF1.…"
+        value={text}
+        onChange={(e) => { setText(e.target.value); setError(''); }}
+        style={{ fontFamily: 'monospace', fontSize: '0.78rem' }}
+      />
+      {error && <p role="alert" style={{ color: 'var(--err)', fontWeight: 600 }}>{error}</p>}
+    </Modal>
+  );
+}
+
+/** Rubric-beoordeling: per criterium punten geven; totaal en verantwoording worden samengesteld. */
+function RubricGrader({
+  rubric, maxPoints, onScore,
+}: {
+  rubric: { criterion: string; points: number }[];
+  maxPoints: number;
+  onScore: (earned: number, breakdown: string) => void;
+}) {
+  const [vals, setVals] = useState<(number | null)[]>(rubric.map(() => null));
+
+  const apply = (next: (number | null)[]) => {
+    setVals(next);
+    if (next.every((v) => v !== null)) {
+      const raw = next.reduce((a: number, v) => a + (v ?? 0), 0);
+      const earned = Math.min(maxPoints, Math.round(raw * 100) / 100);
+      const breakdown = rubric.map((r, i) => `${r.criterion}: ${next[i]}/${r.points}`).join(' · ');
+      onScore(earned, breakdown);
+    }
+  };
+
+  const sum = vals.reduce((a: number, v) => a + (v ?? 0), 0);
+
+  return (
+    <div style={{ marginTop: 10, borderTop: '1px dashed var(--line)', paddingTop: 8 }}>
+      <p style={{ margin: '0 0 6px', fontWeight: 600, fontSize: '0.88rem' }}>Beoordeel per criterium:</p>
+      {rubric.map((r, i) => (
+        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+          <span style={{ flex: 1, fontSize: '0.9rem' }}>{r.criterion}</span>
+          <input
+            className="input input-sm" type="number" min={0} max={r.points} step={0.5}
+            style={{ width: 70 }}
+            value={vals[i] === null ? '' : vals[i]!}
+            placeholder="?"
+            aria-label={`Punten voor: ${r.criterion}`}
+            onChange={(e) => {
+              const v = e.target.value === '' ? null : Math.max(0, Math.min(r.points, parseFloat(e.target.value) || 0));
+              const next = vals.slice();
+              next[i] = v;
+              apply(next);
+            }}
+          />
+          <span className="hint">/ {r.points}</span>
+        </div>
+      ))}
+      <p className="hint" aria-live="polite">
+        {vals.every((v) => v !== null)
+          ? `✓ Totaal: ${Math.min(maxPoints, sum)} van ${maxPoints}`
+          : 'Vul alle criteria in om de score toe te kennen.'}
+      </p>
+    </div>
   );
 }
 

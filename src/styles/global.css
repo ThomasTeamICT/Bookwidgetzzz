@@ -673,6 +673,22 @@ table.data tbody tr:hover { background: var(--bg-sunken); }
   text-transform: uppercase; font-variant-numeric: tabular-nums;
 }
 
+/* ── Toegankelijkheid: rustmodus & ruimere afstand ──────────────────────── */
+
+.calm *, .calm *::before, .calm *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
+.calm .timer-display.danger { animation: none; opacity: 1; }
+.spaced {
+  letter-spacing: 0.03em;
+}
+.spaced .question-prompt, .spaced .answer-option, .spaced p, .spaced .flashcard .face {
+  letter-spacing: 0.045em;
+  line-height: 1.85;
+  word-spacing: 0.12em;
+}
+
 /* ── Print ──────────────────────────────────────────────────────────────── */
 
 @media print {

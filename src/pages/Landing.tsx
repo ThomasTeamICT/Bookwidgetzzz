@@ -66,7 +66,8 @@ export function Landing() {
           ))}
         </div>
         <p style={{ textAlign: 'center', color: 'var(--text-faint)', marginTop: 30, fontSize: '0.88rem' }}>
-          💾 Alles wordt lokaal in je browser opgeslagen — geen account nodig. Gebruik exporteren/importeren om widgets over te zetten naar een ander toestel.
+          💾 Alles wordt lokaal in je browser opgeslagen — geen account nodig, niets gaat naar het internet.{' '}
+          <Link to="/privacy">Lees hoe we met gegevens omgaan</Link>.
         </p>
       </section>
     </div>

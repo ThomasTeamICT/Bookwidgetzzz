@@ -20,7 +20,25 @@ export type WidgetTypeId =
   | 'poll'
   | 'checklist'
   | 'timer'
-  | 'scramble';
+  | 'scramble'
+  | 'splitworksheet'
+  | 'videoquiz'
+  | 'splitwhiteboard'
+  | 'jigsaw'
+  | 'spotdifference'
+  | 'carousel'
+  | 'imageviewer'
+  | 'beforeafter'
+  | 'framesequence'
+  | 'tiptiles'
+  | 'randomimages'
+  | 'mediaplayer'
+  | 'activeplot'
+  | 'chart'
+  | 'webquest'
+  | 'mindmap'
+  | 'planner'
+  | 'piano';
 
 export type WidgetCategory = 'test' | 'game' | 'picture' | 'math' | 'classroom';
 
@@ -42,6 +60,10 @@ export interface WidgetSettings {
   requireName: boolean;
   /** Instructietekst die vóór het starten getoond wordt. */
   instructions: string;
+  /** Toetsmodus: volledig scherm vragen en focusverlies registreren. */
+  examMode?: boolean;
+  /** Na dit tijdstip (ISO-string) kan de widget niet meer gestart worden. */
+  expiresAt?: string;
 }
 
 export interface Widget<TConfig = unknown> {
@@ -88,6 +110,8 @@ export interface Submission {
   totalMax: number;
   status: 'submitted' | 'graded';
   teacherFeedback?: string;
+  /** Aantal keren dat de leerling het venster verliet (toetsmodus). */
+  focusLosses?: number;
 }
 
 // ── Quiz / werkblad / exitticket ────────────────────────────────────────────
@@ -114,6 +138,8 @@ export interface QuestionBase {
   points: number;
   /** Uitleg die bij feedback getoond wordt. */
   explanation?: string;
+  /** Optionele hulp die de leerling zelf kan openvouwen (scaffolding). */
+  hint?: string;
 }
 
 export interface MCQuestion extends QuestionBase {
@@ -140,6 +166,8 @@ export interface LongQuestion extends QuestionBase {
   type: 'long';
   /** Verwachte modelantwoord (alleen voor de leerkracht). */
   modelAnswer?: string;
+  /** Beoordelingsrubric: criteria met maximumpunten (som ≤ points). */
+  rubric?: { criterion: string; points: number }[];
 }
 export interface GapQuestion extends QuestionBase {
   type: 'gap';
@@ -182,6 +210,10 @@ export interface QuizConfig {
   questions: Question[];
   /** 'single' = één vraag per scherm, 'scroll' = alles onder elkaar. */
   layout: 'single' | 'scroll';
+  /** Vraag per vraag naar de zekerheid van de leerling (kalibratie). */
+  askConfidence?: boolean;
+  /** Trek per leerling n willekeurige vragen uit de pool (0/undefined = alle vragen). */
+  drawCount?: number;
 }
 
 // ── Overige widget-configuraties ────────────────────────────────────────────
@@ -247,3 +279,137 @@ export interface ScrambleConfig {
 
 export interface WorksheetConfig extends QuizConfig {}
 export interface ExitTicketConfig extends QuizConfig {}
+
+// ── Bronpaneel (voor gesplitste widgets) ────────────────────────────────────
+
+export interface SourcePane {
+  kind: 'text' | 'image' | 'video';
+  /** Bron als tekst (mag meerdere alinea's bevatten). */
+  text?: string;
+  imageUrl?: string;
+  /** YouTube- of Vimeo-URL. */
+  videoUrl?: string;
+  title?: string;
+}
+
+export interface SplitWorksheetConfig {
+  source: SourcePane;
+  questions: Question[];
+}
+
+export interface SplitWhiteboardConfig {
+  source: SourcePane;
+  prompt: string;
+}
+
+// ── Video-quiz ──────────────────────────────────────────────────────────────
+
+export interface VideoCheckpoint {
+  id: string;
+  /** Tijdstip in de video (seconden) waarop de vraag verschijnt. */
+  timeSec: number;
+  question: Question;
+}
+export interface VideoQuizConfig {
+  /** YouTube-URL of video-id. */
+  videoUrl: string;
+  checkpoints: VideoCheckpoint[];
+}
+
+// ── Beeld & media ───────────────────────────────────────────────────────────
+
+export interface JigsawConfig {
+  imageUrl: string;
+  cols: number; // 2..6
+  rows: number; // 2..6
+}
+
+export interface SpotDifference {
+  id: string;
+  /** Positie in procenten op de afbeelding. */
+  x: number;
+  y: number;
+  /** Klikstraal in procenten van de breedte. */
+  radius: number;
+  label?: string;
+}
+export interface SpotDifferenceConfig {
+  imageA: string;
+  imageB: string;
+  differences: SpotDifference[];
+}
+
+export interface CarouselSlide { id: string; imageUrl: string; caption: string; description?: string }
+export interface CarouselConfig { slides: CarouselSlide[] }
+
+export interface ImageViewerConfig { imageUrl: string; description?: string }
+
+export interface BeforeAfterConfig {
+  imageBefore: string;
+  imageAfter: string;
+  labelBefore: string;
+  labelAfter: string;
+}
+
+export interface Frame { id: string; imageUrl?: string; title: string; text?: string }
+export interface FrameSequenceConfig { frames: Frame[] }
+
+export interface TipTile { id: string; title: string; imageUrl?: string; text: string; color?: string }
+export interface TipTilesConfig { tiles: TipTile[] }
+
+export interface RandomImagesConfig { images: { id: string; imageUrl: string; caption?: string }[] }
+
+export interface MediaPlayerConfig {
+  provider: 'youtube' | 'vimeo';
+  videoUrl: string;
+  startSec?: number;
+  endSec?: number;
+  title?: string;
+}
+
+// ── Wiskunde ────────────────────────────────────────────────────────────────
+
+export interface PlotParam { name: string; min: number; max: number; step: number; value: number }
+export interface ActivePlotConfig {
+  /** Uitdrukkingen in x en parameternamen, bv. "a*x^2 + b". */
+  functions: { id: string; expression: string; color: string }[];
+  params: PlotParam[];
+  xMin: number; xMax: number; yMin: number; yMax: number;
+}
+
+export interface ChartConfig {
+  chartType: 'bar' | 'line' | 'pie' | 'donut';
+  title: string;
+  labels: string[];
+  values: number[];
+  /** Mogen leerlingen de waarden aanpassen en het effect zien? */
+  studentEditable: boolean;
+}
+
+// ── Diversen ────────────────────────────────────────────────────────────────
+
+export interface WebquestStep {
+  id: string;
+  title: string;
+  content: string;
+  links: { label: string; url: string }[];
+  imageUrl?: string;
+}
+export interface WebquestConfig { steps: WebquestStep[] }
+
+export interface MindmapConfig {
+  /** Centrale begrip. */
+  root: string;
+  /** Takken als ingesprongen tekst (2 spaties per niveau). */
+  outline: string;
+  /** Mag de leerling de mindmap aanpassen en indienen? */
+  studentEditable: boolean;
+}
+
+export interface PlannerSection { id: string; title: string; tasks: { id: string; text: string }[] }
+export interface PlannerConfig { title: string; sections: PlannerSection[] }
+
+export interface PianoConfig {
+  showNoteNames: boolean;
+  octaves: 1 | 2;
+}

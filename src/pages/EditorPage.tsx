@@ -68,6 +68,9 @@ export function EditorPage() {
         {def.hasSubmissions && (
           <Link to={`/resultaten/${widget.id}`} className="btn btn-sm btn-ghost">📊 Resultaten ({subCount})</Link>
         )}
+        {['quiz', 'worksheet', 'exitticket'].includes(widget.type) && (
+          <Link to={`/print/${widget.id}`} className="btn btn-sm btn-ghost" title="Afdrukken of als PDF bewaren">🖨 Afdrukken</Link>
+        )}
         <button className="btn btn-sm btn-ghost" onClick={() => setShareOpen(true)}>📤 Delen</button>
         <button
           className={`btn btn-sm ${previewMode ? 'btn-primary' : 'btn-ghost'}`}
@@ -179,6 +182,26 @@ function SettingsPanel({ widget, onChange }: { widget: Widget; onChange: (w: Wid
             onChange={(e) => set({ maxAttempts: Math.max(0, parseInt(e.target.value) || 0) })} />
         </Field>
       </div>
+
+      <hr className="divider" />
+      <h3>Toets &amp; deadline</h3>
+      <CheckRow
+        checked={s.examMode ?? false}
+        onChange={(v) => set({ examMode: v })}
+        label="Toetsmodus: volledig scherm vragen en registreren wanneer de leerling het venster verlaat"
+      />
+      <Field label="Afsluiten na (deadline, optioneel)" hint="Na dit tijdstip kunnen leerlingen niet meer starten.">
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            className="input input-sm" type="datetime-local" style={{ maxWidth: 230 }}
+            value={s.expiresAt ?? ''}
+            onChange={(e) => set({ expiresAt: e.target.value || undefined })}
+          />
+          {s.expiresAt && (
+            <button className="btn btn-sm btn-quiet" onClick={() => set({ expiresAt: undefined })}>✕ Wissen</button>
+          )}
+        </div>
+      </Field>
     </div>
   );
 }

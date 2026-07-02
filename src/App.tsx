@@ -11,6 +11,8 @@ import { OpenSharedPage } from './pages/OpenSharedPage';
 import { JoinPage } from './pages/JoinPage';
 import { ResultsPage } from './pages/ResultsPage';
 import { ResultsOverviewPage } from './pages/ResultsOverviewPage';
+import { PrintPage } from './pages/PrintPage';
+import { PrivacyPage } from './pages/PrivacyPage';
 import { seedIfEmpty } from './lib/seed';
 
 const router = createHashRouter([
@@ -22,10 +24,12 @@ const router = createHashRouter([
       { path: '/nieuw', element: <NewWidgetPage /> },
       { path: '/resultaten', element: <ResultsOverviewPage /> },
       { path: '/resultaten/:id', element: <ResultsPage /> },
+      { path: '/privacy', element: <PrivacyPage /> },
     ],
   },
   // spelersweergave zonder leerkracht-navigatie
   { path: '/bewerk/:id', element: <EditorPage /> },
+  { path: '/print/:id', element: <PrintPage /> },
   { path: '/speel/:code', element: <PlayerPage /> },
   { path: '/open', element: <OpenSharedPage /> },
   { path: '/meedoen', element: <JoinPage /> },
