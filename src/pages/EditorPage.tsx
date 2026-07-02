@@ -89,7 +89,7 @@ export function EditorPage() {
               <button className="btn btn-sm btn-ghost" style={{ marginLeft: 10 }} onClick={() => setPreviewKey((k) => k + 1)}>↺ Herstart voorbeeld</button>
             </div>
           </div>
-          <div className="player-main">
+          <div className={`player-main ${def.wide ? 'player-main-wide' : ''}`}>
             <def.Player key={previewKey} widget={widget} studentName="Voorbeeld" preview onComplete={() => {}} />
           </div>
         </main>

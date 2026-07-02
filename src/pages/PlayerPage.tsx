@@ -155,7 +155,7 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
         {name && <span className="badge">👤 {name}</span>}
       </header>
 
-      <div className="player-main">
+      <div className={`player-main ${def.wide ? 'player-main-wide' : ''}`}>
         {expired ? (
           <div className="card result-hero">
             <div style={{ fontSize: '3rem' }} aria-hidden>⌛</div>

@@ -4,41 +4,51 @@ Een volledig functionele webapplicatie om **interactieve oefeningen, toetsen en 
 
 ## ✨ Functies
 
-### 20 widgettypes, in 5 categorieën
+### 38 widgettypes, in 5 categorieën
 
 | Categorie | Widgets |
 |---|---|
-| 📝 **Toetsen & opdrachten** | Quiz · Werkblad · Exit-ticket · Dictee (spraakstem) · Peiling |
-| 🎮 **Spelletjes** | Flitskaarten · Kruiswoordraadsel · Woordzoeker · Memory · Galgje · Koppelspel · Husselwoorden · Bingo |
-| 🖼️ **Beeld & verkennen** | Tijdlijn · Hotspot-afbeelding · Whiteboard (tekenopdracht) |
-| 🧮 **Rekenen** | Rekenoefening (sommen & maaltafels, automatisch gegenereerd) |
-| 🧑‍🏫 **Klashulpjes** | Rad van fortuin · Klastimer · Checklist |
+| 📝 **Toetsen & opdrachten** | Quiz · Werkblad · Gesplitst werkblad (bron naast vragen) · Video-quiz (video pauzeert op vragen) · Gesplitst whiteboard · Exit-ticket · Dictee (spraakstem) · Peiling |
+| 🎮 **Spelletjes** | Flitskaarten · Kruiswoordraadsel · Woordzoeker · Memory · Galgje · Koppelspel · Husselwoorden · Bingo · Legpuzzel · Zoek de verschillen |
+| 🖼️ **Beeld & media** | Tijdlijn · Hotspot-afbeelding · Whiteboard · Fotocarrousel · Afbeeldingsviewer (pan/zoom) · Voor/na-vergelijker · Framesequentie · Tip-tegels · Willekeurige afbeeldingen · Videospeler (YouTube/Vimeo) |
+| 🧮 **Rekenen & wiskunde** | Rekenoefening (sommen & maaltafels) · Actieve plot (functiegrafieken met parameter-schuivers, eigen veilige formule-parser) · Grafiek (staaf/lijn/taart, leerlingen kunnen data aanpassen) |
+| 🧑‍🏫 **Klashulpjes & projecten** | Rad van fortuin · Klastimer · Checklist · Planner · WebQuest · Mindmap (bekijken of zelf bouwen) · Piano (WebAudio) |
 
 ### De quiz ondersteunt 11 vraagtypes
-Meerkeuze · meerdere antwoorden · juist/onjuist · kort antwoord · open vraag (manueel beoordeeld) · invuloefening met gaten `[zo|alternatief]` · koppelparen · rangschikken · getal met tolerantie · schuiver · infoblok.
+Meerkeuze · meerdere antwoorden · juist/onjuist · kort antwoord · open vraag (manueel beoordeeld, met **rubrics**) · invuloefening met gaten `[zo|alternatief]` · koppelparen · rangschikken · getal met tolerantie · schuiver · infoblok. Per vraag: afbeelding, punten, uitleg bij feedback, **hint** (gebruik zichtbaar voor de leerkracht) en **voorleesknop** (TTS). Extra: **zekerheidsgraad** per vraag met kalibratiefeedback, **vragenpool** (elke leerling een andere variant), **oefen-je-fouten**-ronde, vraagbank-import uit andere widgets en bulk-import via geplakte tekst.
 
 ### Voor de leerkracht
-- **Dashboard** met mappen (kleuren), zoeken, dupliceren, verwijderen
+- **Dashboard** met mappen (kleuren), zoeken, dupliceren, omzetten (quiz ↔ werkblad ↔ exit-ticket), verwijderen
 - **Editor** met live voorbeeldmodus ("Uitproberen"), automatisch opslaan en per-widget instellingen:
-  accentkleur, instructies, schudden, feedback/score tonen, **tijdslimiet**, **maximum aantal pogingen**, naamverplichting
-- **Resultaten**: scoreoverzicht per leerling, per-vraagstatistieken, detail per inzending,
-  **manuele beoordeling** van open vragen en tekeningen, feedback voor de leerling, **CSV-export**
-- **Delen** op drie manieren:
-  1. **Klascode** (6 tekens) — leerlingen klikken op *Ik ben leerling* en typen de code (zelfde browser/toestel, bv. klas-pc of gedeeld device)
-  2. **Draagbare link** — de volledige widget zit gecomprimeerd (lz-string) in de URL en werkt dus op élk toestel zonder server
-  3. **JSON-bestand** — exporteren/importeren tussen toestellen of collega's
+  accentkleur, instructies, schudden, feedback/score tonen, **tijdslimiet**, **maximum aantal pogingen**, naamverplichting, **toetsmodus** (volledig scherm + registratie venster-verlaten, transparant voor de leerling) en **deadline**
+- **Resultaten**: scoreoverzicht per leerling, per-vraagstatistieken, live "nu bezig"-overzicht (zelfde toestel), detail per inzending met zekerheid/hintgebruik, **manuele beoordeling** met **rubrics**, feedback voor de leerling, **CSV-export** (ook anoniem voor teamoverleg)
+- **Afdrukken/PDF** van quiz-familie, blanco of met correctiesleutel
+- **Delen**: klascode (6 tekens) · **draagbare link** (widget zit gecomprimeerd in de URL, werkt op elk toestel) · **QR-code** · Google Classroom-knop · e-mail · **embed-code** (iframe) · JSON-bestand voor collega's
+- **Resultaatcode**: leerlingen die thuis via de draagbare link werkten, sturen hun inzending als gecomprimeerde code terug — plakken bij de resultaten en klaar
 
 ### Voor de leerling
-- Startscherm met naam, instructies en tijdsindicatie
+- Startscherm met naam ("voornaam volstaat"), instructies, tijdsindicatie en een kindvriendelijke privacy-uitleg
+- **Opslaan & hervatten**: tussentijds werk blijft bewaard bij herladen of stroomonderbreking; "opnieuw beginnen" op gedeelde toestellen
 - Voortgangsbalk, aftellende timer, automatisch indienen als de tijd om is
-- Direct feedback met juiste antwoorden en uitleg (indien de leerkracht dat toestaat)
-- Score-ring en vriendelijke resultaatschermen
+- Directe feedback met juiste antwoorden en uitleg; **oefen-je-fouten**-ronde; kalibratiefeedback bij zekerheidsgraad
+- **Toegankelijkheidsmenu**: tekstgrootte, ruimere letterafstand en rustmodus (minder beweging) — per toestel onthouden
 
 ### UX & toegankelijkheid
 - Modern, rustig ontwerp met **licht/donker/automatisch thema**
 - Volledig **toetsenbordbedienbaar** (focusstijlen, focus-trap in modals, pijltjesnavigatie in het kruiswoordraadsel, spatie om flitskaarten te draaien)
 - ARIA-rollen en live-regions voor schermlezers, `prefers-reduced-motion` wordt gerespecteerd
+- **Voorleesknop** (TTS) per vraag en accenttekens-balk voor taalvakken
 - Responsief tot op smartphoneformaat; speelvlakken scrollen horizontaal waar nodig
+
+### Didactische onderbouwing
+Zie [`DIDACTIEK.md`](./DIDACTIEK.md): welke features didactisch onderbouwd toegevoegd zijn
+(formatieve evaluatie, UDL, zelfregulatie, werkdruk, AVG), de roadmap, én wat bewust
+**niet** gebouwd is (leaderboards, zware proctoring, streaks/XP).
+
+### Privacy (AVG)
+Alles staat lokaal in de browser; de app heeft een eigen **privacypagina** met uitleg in
+mensentaal, opschoonknoppen (inzendingen wissen, alles wissen) en een printbare one-pager
+voor directie of ouders. CSV kan ook **zonder namen** geëxporteerd worden.
 
 ## 🚀 Starten
 

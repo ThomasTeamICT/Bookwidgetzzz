@@ -21,6 +21,24 @@ import { ArithmeticEditor, ArithmeticPlayer } from './arithmetic';
 import { TimelineEditor, TimelinePlayer } from './timeline';
 import { HotspotEditor, HotspotPlayer } from './hotspot';
 import { WhiteboardEditor, WhiteboardPlayer } from './whiteboard';
+import { SplitWorksheetEditor, SplitWorksheetPlayer } from './splitworksheet';
+import { VideoQuizEditor, VideoQuizPlayer } from './videoquiz';
+import { SplitWhiteboardEditor, SplitWhiteboardPlayer } from './splitwhiteboard';
+import { JigsawEditor, JigsawPlayer } from './jigsaw';
+import { SpotDifferenceEditor, SpotDifferencePlayer } from './spotdifference';
+import { CarouselEditor, CarouselPlayer } from './carousel';
+import { ImageViewerEditor, ImageViewerPlayer } from './imageviewer';
+import { BeforeAfterEditor, BeforeAfterPlayer } from './beforeafter';
+import { FrameSequenceEditor, FrameSequencePlayer } from './framesequence';
+import { TipTilesEditor, TipTilesPlayer } from './tiptiles';
+import { RandomImagesEditor, RandomImagesPlayer } from './randomimages';
+import { MediaPlayerEditor, MediaPlayerPlayer } from './mediaplayer';
+import { ActivePlotEditor, ActivePlotPlayer } from './activeplot';
+import { ChartEditor, ChartPlayer } from './chart';
+import { WebquestEditor, WebquestPlayer } from './webquest';
+import { MindmapEditor, MindmapPlayer } from './mindmap';
+import { PlannerEditor, PlannerPlayer } from './planner';
+import { PianoEditor, PianoPlayer } from './piano';
 
 export interface WidgetTypeDef {
   id: WidgetTypeId;
@@ -33,6 +51,8 @@ export interface WidgetTypeDef {
   hasSubmissions: boolean;
   /** Heeft deze widget een score? (voor resultatenweergave) */
   hasScore: boolean;
+  /** Brede spelersweergave (bv. gesplitste layouts, plots, puzzels). */
+  wide?: boolean;
   defaultConfig: () => unknown;
   Editor: React.ComponentType<EditorProps<any>>;
   Player: React.ComponentType<PlayerProps<any>>;
@@ -148,6 +168,121 @@ export const WIDGET_TYPES: WidgetTypeDef[] = [
     color: '#16a34a', category: 'math', hasSubmissions: true, hasScore: true,
     defaultConfig: () => ({ ops: ['add', 'sub'], min: 1, max: 20, count: 10, tables: [] }),
     Editor: ArithmeticEditor, Player: ArithmeticPlayer,
+  },
+  {
+    id: 'splitworksheet', name: 'Gesplitst werkblad', tagline: 'Bron (tekst, beeld of video) naast de vragen', icon: '📑',
+    color: '#0e7490', category: 'test', hasSubmissions: true, hasScore: true, wide: true,
+    defaultConfig: () => ({ source: { kind: 'text', text: '', title: '' }, questions: [] }),
+    Editor: SplitWorksheetEditor, Player: SplitWorksheetPlayer,
+  },
+  {
+    id: 'videoquiz', name: 'Video-quiz', tagline: 'Video pauzeert op jouw vragen (flipped classroom)', icon: '🎬',
+    color: '#b91c1c', category: 'test', hasSubmissions: true, hasScore: true, wide: true,
+    defaultConfig: () => ({ videoUrl: '', checkpoints: [] }),
+    Editor: VideoQuizEditor, Player: VideoQuizPlayer,
+  },
+  {
+    id: 'splitwhiteboard', name: 'Gesplitst whiteboard', tagline: 'Bron bekijken en ernaast tekenen of noteren', icon: '🖌️',
+    color: '#a21caf', category: 'test', hasSubmissions: true, hasScore: true, wide: true,
+    defaultConfig: () => ({ source: { kind: 'text', text: '', title: '' }, prompt: '' }),
+    Editor: SplitWhiteboardEditor, Player: SplitWhiteboardPlayer,
+  },
+  {
+    id: 'jigsaw', name: 'Legpuzzel', tagline: 'Eigen afbeelding als schuifpuzzel', icon: '🧩',
+    color: '#7c3aed', category: 'game', hasSubmissions: true, hasScore: false, wide: true,
+    defaultConfig: () => ({ imageUrl: '', cols: 3, rows: 3 }),
+    Editor: JigsawEditor, Player: JigsawPlayer,
+  },
+  {
+    id: 'spotdifference', name: 'Zoek de verschillen', tagline: 'Twee afbeeldingen, verschillen aantikken', icon: '🔎',
+    color: '#0d9488', category: 'game', hasSubmissions: true, hasScore: true, wide: true,
+    defaultConfig: () => ({ imageA: '', imageB: '', differences: [] }),
+    Editor: SpotDifferenceEditor, Player: SpotDifferencePlayer,
+  },
+  {
+    id: 'carousel', name: 'Fotocarrousel', tagline: 'Diareeks met bijschriften', icon: '🎠',
+    color: '#ea580c', category: 'picture', hasSubmissions: false, hasScore: false,
+    defaultConfig: () => ({ slides: [] }),
+    Editor: CarouselEditor, Player: CarouselPlayer,
+  },
+  {
+    id: 'imageviewer', name: 'Afbeeldingsviewer', tagline: 'Pannen en zoomen op een detailrijke afbeelding', icon: '🗺️',
+    color: '#4d7c0f', category: 'picture', hasSubmissions: false, hasScore: false, wide: true,
+    defaultConfig: () => ({ imageUrl: '', description: '' }),
+    Editor: ImageViewerEditor, Player: ImageViewerPlayer,
+  },
+  {
+    id: 'beforeafter', name: 'Voor/na-vergelijker', tagline: 'Twee beelden vergelijken met een schuifregelaar', icon: '🔛',
+    color: '#155e75', category: 'picture', hasSubmissions: false, hasScore: false, wide: true,
+    defaultConfig: () => ({ imageBefore: '', imageAfter: '', labelBefore: 'Voor', labelAfter: 'Na' }),
+    Editor: BeforeAfterEditor, Player: BeforeAfterPlayer,
+  },
+  {
+    id: 'framesequence', name: 'Framesequentie', tagline: 'Een proces stap voor stap in beeld', icon: '🎞️',
+    color: '#6d28d9', category: 'picture', hasSubmissions: false, hasScore: false,
+    defaultConfig: () => ({ frames: [] }),
+    Editor: FrameSequenceEditor, Player: FrameSequencePlayer,
+  },
+  {
+    id: 'tiptiles', name: 'Tip-tegels', tagline: 'Klikbare tegels met uitleg per begrip', icon: '🀄',
+    color: '#be185d', category: 'picture', hasSubmissions: false, hasScore: false,
+    defaultConfig: () => ({ tiles: [] }),
+    Editor: TipTilesEditor, Player: TipTilesPlayer,
+  },
+  {
+    id: 'randomimages', name: 'Willekeurige afbeeldingen', tagline: 'Creatieve beeldprikkel voor schrijf- en spreekopdrachten', icon: '🎲',
+    color: '#c2410c', category: 'picture', hasSubmissions: false, hasScore: false,
+    defaultConfig: () => ({ images: [] }),
+    Editor: RandomImagesEditor, Player: RandomImagesPlayer,
+  },
+  {
+    id: 'mediaplayer', name: 'Videospeler', tagline: 'YouTube of Vimeo afgebakend insluiten', icon: '📺',
+    color: '#475569', category: 'picture', hasSubmissions: false, hasScore: false, wide: true,
+    defaultConfig: () => ({ provider: 'youtube', videoUrl: '', title: '' }),
+    Editor: MediaPlayerEditor, Player: MediaPlayerPlayer,
+  },
+  {
+    id: 'activeplot', name: 'Actieve plot', tagline: 'Functiegrafieken met versleepbare parameters', icon: '📈',
+    color: '#1d4ed8', category: 'math', hasSubmissions: false, hasScore: false, wide: true,
+    defaultConfig: () => ({
+      functions: [{ id: uid(), expression: 'a*x^2 + b', color: '#4f46e5' }],
+      params: [
+        { name: 'a', min: -5, max: 5, step: 0.1, value: 1 },
+        { name: 'b', min: -10, max: 10, step: 0.5, value: 0 },
+      ],
+      xMin: -10, xMax: 10, yMin: -10, yMax: 10,
+    }),
+    Editor: ActivePlotEditor, Player: ActivePlotPlayer,
+  },
+  {
+    id: 'chart', name: 'Grafiek', tagline: 'Staaf, lijn of taart — leerlingen zien data veranderen', icon: '📊',
+    color: '#15803d', category: 'math', hasSubmissions: false, hasScore: false, wide: true,
+    defaultConfig: () => ({ chartType: 'bar', title: '', labels: ['A', 'B', 'C'], values: [4, 7, 3], studentEditable: false }),
+    Editor: ChartEditor, Player: ChartPlayer,
+  },
+  {
+    id: 'webquest', name: 'WebQuest', tagline: 'Zelfstandige onderzoeksopdracht in stappen', icon: '🧭',
+    color: '#9a3412', category: 'classroom', hasSubmissions: true, hasScore: false, wide: true,
+    defaultConfig: () => ({ steps: [] }),
+    Editor: WebquestEditor, Player: WebquestPlayer,
+  },
+  {
+    id: 'mindmap', name: 'Mindmap', tagline: 'Begrippen structureren — bekijken of zelf bouwen', icon: '🕸️',
+    color: '#0f766e', category: 'classroom', hasSubmissions: true, hasScore: false, wide: true,
+    defaultConfig: () => ({ root: '', outline: '', studentEditable: false }),
+    Editor: MindmapEditor, Player: MindmapPlayer,
+  },
+  {
+    id: 'planner', name: 'Planner', tagline: 'Week- of stappenplan dat leerlingen afwerken', icon: '🗓️',
+    color: '#3f6212', category: 'classroom', hasSubmissions: true, hasScore: false,
+    defaultConfig: () => ({ title: '', sections: [] }),
+    Editor: PlannerEditor, Player: PlannerPlayer,
+  },
+  {
+    id: 'piano', name: 'Piano', tagline: 'Speelbaar klavier voor de muziekles', icon: '🎹',
+    color: '#1e293b', category: 'classroom', hasSubmissions: false, hasScore: false, wide: true,
+    defaultConfig: () => ({ showNoteNames: true, octaves: 2 }),
+    Editor: PianoEditor, Player: PianoPlayer,
   },
   {
     id: 'spinner', name: 'Rad van fortuin', tagline: 'Willekeurige leerling of opdracht kiezen', icon: '🎡',

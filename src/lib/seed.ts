@@ -108,6 +108,40 @@ export function seedIfEmpty() {
   };
   widgets.push(tijdlijn);
 
+  const splitws = createWidget('splitworksheet', 'Voorbeeld: begrijpend lezen — de honingbij');
+  splitws.config = {
+    source: {
+      kind: 'text',
+      title: 'De honingbij: klein maar onmisbaar',
+      text: 'Een honingbijvolk telt in de zomer tot 50.000 bijen. Elke werkster heeft een taak: jonge bijen poetsen de raten en voeden de larven, oudere bijen vliegen uit om nectar en stuifmeel te verzamelen. Met de bijendans vertelt een speurbij aan haar zussen in welke richting en op welke afstand een veld vol bloemen ligt.\n\nBijen zijn onmisbaar voor onze voeding: ongeveer een derde van wat wij eten bestaat dankzij de bestuiving door insecten. Toch gaat het niet goed met de bij. Pesticiden, ziektes en het verdwijnen van bloemenweides maken het leven van een bijenvolk moeilijk. Gelukkig kan iedereen helpen: zaai bloemen die veel nectar geven en gebruik geen gif in de tuin.',
+    },
+    questions: [
+      { id: uid(), type: 'mc', prompt: 'Hoe vertelt een speurbij aan de andere bijen waar bloemen te vinden zijn?', points: 1, options: ['Door luid te zoemen', 'Met een dans', 'Met geurstoffen op de raat', 'Door ze mee te nemen'], correctIndex: 1, explanation: 'De bijendans geeft richting én afstand door.' },
+      { id: uid(), type: 'tf', prompt: 'Ongeveer de helft van ons voedsel bestaat dankzij bestuiving door insecten.', points: 1, answer: false, explanation: 'Het is ongeveer een derde.' },
+      { id: uid(), type: 'short', prompt: 'Hoeveel bijen telt een bijenvolk in de zomer maximaal?', points: 1, accepted: ['50.000', '50000', 'vijftigduizend'], caseSensitive: false },
+      { id: uid(), type: 'long', prompt: 'Wat kan jij zelf doen om bijen te helpen? Geef twee voorbeelden.', points: 2, modelAnswer: 'Nectarrijke bloemen zaaien, geen pesticiden gebruiken, een bijenhotel plaatsen…', rubric: [{ criterion: 'Geeft twee verschillende voorbeelden', points: 1 }, { criterion: 'Voorbeelden passen bij de tekst of eigen ervaring', points: 1 }] },
+    ],
+  };
+  widgets.push(splitws);
+
+  const grafiek = createWidget('chart', 'Voorbeeld: grafiek — huisdieren in de klas');
+  grafiek.config = {
+    chartType: 'bar',
+    title: 'Hoeveel huisdieren hebben wij?',
+    labels: ['Hond', 'Kat', 'Konijn', 'Vis', 'Geen'],
+    values: [7, 9, 3, 5, 4],
+    studentEditable: true,
+  };
+  widgets.push(grafiek);
+
+  const mindmap = createWidget('mindmap', 'Voorbeeld: mindmap — de waterkringloop');
+  mindmap.config = {
+    root: 'De waterkringloop',
+    outline: 'Verdamping\n  Zon verwarmt het water\n  Van zee, meren en rivieren\nCondensatie\n  Waterdamp koelt af\n  Wolken ontstaan\nNeerslag\n  Regen\n  Sneeuw en hagel\nInfiltratie\n  Water zakt in de grond\n  Grondwater',
+    studentEditable: false,
+  };
+  widgets.push(mindmap);
+
   for (const w of widgets) saveWidget(w);
   savePrefs({ ...prefs, seeded: true });
 }
