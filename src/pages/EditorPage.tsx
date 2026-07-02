@@ -1,0 +1,184 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { getSubmissions, getWidget, saveWidget } from '../lib/storage';
+import { getTypeDef } from '../widgets/registry';
+import type { Widget } from '../lib/types';
+import { CheckRow, Field, useToast } from '../components/ui';
+import { ShareModal } from '../components/ShareModal';
+
+export function EditorPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const initial = useMemo(() => (id ? getWidget(id) : undefined), [id]);
+  const [widget, setWidget] = useState<Widget | undefined>(initial);
+  const [tab, setTab] = useState<'content' | 'settings'>('content');
+  const [previewMode, setPreviewMode] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const saveTimer = useRef<number | null>(null);
+
+  // automatisch opslaan met korte debounce
+  useEffect(() => {
+    if (!widget) return;
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      saveWidget(widget);
+      setSavedFlash(true);
+      window.setTimeout(() => setSavedFlash(false), 1200);
+    }, 500);
+    return () => { if (saveTimer.current) window.clearTimeout(saveTimer.current); };
+  }, [widget]);
+
+  if (!widget) {
+    return (
+      <div className="page page-narrow" style={{ textAlign: 'center', paddingTop: 80 }}>
+        <h1>Widget niet gevonden</h1>
+        <p style={{ color: 'var(--text-soft)' }}>Deze widget bestaat niet (meer) in deze browser.</p>
+        <Link to="/widgets" className="btn btn-primary">← Naar mijn widgets</Link>
+      </div>
+    );
+  }
+
+  const def = getTypeDef(widget.type);
+  const subCount = getSubmissions(widget.id).length;
+
+  return (
+    <div className="appshell">
+      <header className="topbar">
+        <button className="btn btn-quiet btn-sm" onClick={() => navigate('/widgets')} aria-label="Terug naar mijn widgets">
+          ← Terug
+        </button>
+        <span className="type-icon" style={{ background: def.color, width: 34, height: 34, fontSize: '1.05rem', borderRadius: 9 }} aria-hidden>
+          {def.icon}
+        </span>
+        <input
+          className="input input-sm"
+          style={{ maxWidth: 340, fontWeight: 700 }}
+          value={widget.title}
+          onChange={(e) => setWidget({ ...widget, title: e.target.value })}
+          aria-label="Titel van de widget"
+        />
+        <span className="hint" aria-live="polite" style={{ minWidth: 86 }}>
+          {savedFlash ? '✓ opgeslagen' : ''}
+        </span>
+        <div className="topbar-spacer" />
+        <span className="badge" title="Klascode" style={{ fontFamily: 'monospace', letterSpacing: '0.15em' }}>{widget.code}</span>
+        {def.hasSubmissions && (
+          <Link to={`/resultaten/${widget.id}`} className="btn btn-sm btn-ghost">📊 Resultaten ({subCount})</Link>
+        )}
+        <button className="btn btn-sm btn-ghost" onClick={() => setShareOpen(true)}>📤 Delen</button>
+        <button
+          className={`btn btn-sm ${previewMode ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => { setPreviewMode((v) => !v); setPreviewKey((k) => k + 1); }}
+          aria-pressed={previewMode}
+        >
+          {previewMode ? '✏️ Terug naar bewerken' : '▶ Uitproberen'}
+        </button>
+      </header>
+
+      {previewMode ? (
+        <main className="player-shell" style={{ flex: 1, ['--player-accent' as any]: widget.settings.accentColor }}>
+          <div className="callout warn" style={{ maxWidth: 860, margin: '14px auto 0', width: 'calc(100% - 36px)' }}>
+            <span aria-hidden>👀</span>
+            <div>Voorbeeldmodus — zo ziet je leerling de widget. Er wordt niets opgeslagen.
+              <button className="btn btn-sm btn-ghost" style={{ marginLeft: 10 }} onClick={() => setPreviewKey((k) => k + 1)}>↺ Herstart voorbeeld</button>
+            </div>
+          </div>
+          <div className="player-main">
+            <def.Player key={previewKey} widget={widget} studentName="Voorbeeld" preview onComplete={() => {}} />
+          </div>
+        </main>
+      ) : (
+        <main className="page" style={{ paddingTop: 20 }}>
+          <div className="editor-layout">
+            <div>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 16 }} role="tablist" aria-label="Editor-onderdelen">
+                <button className={`btn btn-sm ${tab === 'content' ? 'btn-primary' : 'btn-ghost'}`} role="tab" aria-selected={tab === 'content'} onClick={() => setTab('content')}>
+                  📝 Inhoud
+                </button>
+                <button className={`btn btn-sm ${tab === 'settings' ? 'btn-primary' : 'btn-ghost'}`} role="tab" aria-selected={tab === 'settings'} onClick={() => setTab('settings')}>
+                  ⚙️ Instellingen
+                </button>
+              </div>
+              {tab === 'content' ? (
+                <def.Editor config={widget.config} onChange={(config: unknown) => setWidget({ ...widget, config })} />
+              ) : (
+                <SettingsPanel widget={widget} onChange={setWidget} />
+              )}
+            </div>
+            <aside className="card card-pad" style={{ position: 'sticky', top: 76 }}>
+              <h3>{def.icon} {def.name}</h3>
+              <p style={{ color: 'var(--text-soft)', fontSize: '0.9rem' }}>{def.tagline}</p>
+              <hr className="divider" />
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-soft)', marginBottom: 8 }}>
+                <strong>Zo deel je deze widget:</strong>
+              </p>
+              <ol style={{ fontSize: '0.88rem', color: 'var(--text-soft)', paddingLeft: 18, margin: 0 }}>
+                <li>Klik op <em>Uitproberen</em> om alles zelf te testen.</li>
+                <li>Klik op <em>Delen</em> en geef je leerlingen de code <strong style={{ fontFamily: 'monospace' }}>{widget.code}</strong> of de link.</li>
+                {def.hasSubmissions && <li>Volg de inzendingen op via <em>Resultaten</em>.</li>}
+              </ol>
+              <button className="btn btn-primary" style={{ marginTop: 14, width: '100%' }} onClick={() => setShareOpen(true)}>
+                📤 Delen met je klas
+              </button>
+            </aside>
+          </div>
+        </main>
+      )}
+
+      {shareOpen && <ShareModal widget={widget} onClose={() => setShareOpen(false)} />}
+    </div>
+  );
+}
+
+function SettingsPanel({ widget, onChange }: { widget: Widget; onChange: (w: Widget) => void }) {
+  const def = getTypeDef(widget.type);
+  const s = widget.settings;
+  const set = (patch: Partial<typeof s>) => onChange({ ...widget, settings: { ...s, ...patch } });
+
+  return (
+    <div className="card card-pad">
+      <h3>Weergave</h3>
+      <Field label="Accentkleur voor de leerling">
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <input type="color" value={s.accentColor} onChange={(e) => set({ accentColor: e.target.value })} aria-label="Accentkleur" />
+          <span className="hint">{s.accentColor}</span>
+        </div>
+      </Field>
+      <Field label="Instructies vóór de start (optioneel)">
+        <textarea className="textarea" rows={2} value={s.instructions} placeholder="bv. Je mag je woordenboek gebruiken."
+          onChange={(e) => set({ instructions: e.target.value })} />
+      </Field>
+
+      <hr className="divider" />
+      <h3>Gedrag</h3>
+      <CheckRow checked={s.shuffle} onChange={(v) => set({ shuffle: v })} label="Vragen/kaarten in willekeurige volgorde" />
+      {def.hasScore && (
+        <>
+          <CheckRow checked={s.showFeedback} onChange={(v) => set({ showFeedback: v })} label="Juiste antwoorden tonen na indienen" />
+          <CheckRow checked={s.showScore} onChange={(v) => set({ showScore: v })} label="Score tonen aan de leerling" />
+        </>
+      )}
+      {def.hasSubmissions && (
+        <CheckRow checked={s.requireName} onChange={(v) => set({ requireName: v })} label="Leerling moet eerst een naam invullen" />
+      )}
+
+      <hr className="divider" />
+      <h3>Beperkingen</h3>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+        <Field label="Tijdslimiet (minuten)" hint="0 = geen limiet">
+          <input className="input input-sm" type="number" min={0} max={240} style={{ maxWidth: 110 }}
+            value={s.timeLimitMin}
+            onChange={(e) => set({ timeLimitMin: Math.max(0, parseInt(e.target.value) || 0) })} />
+        </Field>
+        <Field label="Max. pogingen per leerling" hint="0 = onbeperkt">
+          <input className="input input-sm" type="number" min={0} max={20} style={{ maxWidth: 110 }}
+            value={s.maxAttempts}
+            onChange={(e) => set({ maxAttempts: Math.max(0, parseInt(e.target.value) || 0) })} />
+        </Field>
+      </div>
+    </div>
+  );
+}
