@@ -5,14 +5,22 @@ interface AutosaveData {
   answers: Record<string, unknown>;
   idx: number;
   savedAt: number;
+  /** Vraag-ids in de getoonde volgorde, zodat schudden/vragenpool stabiel hervat. */
+  order?: string[];
 }
 
 const key = (widgetId: string, studentName: string) =>
   `wf.autosave.${widgetId}.${studentName.trim().toLowerCase()}`;
 
-export function saveProgress(widgetId: string, studentName: string, answers: Record<string, unknown>, idx: number) {
+export function saveProgress(
+  widgetId: string,
+  studentName: string,
+  answers: Record<string, unknown>,
+  idx: number,
+  order?: string[]
+) {
   try {
-    localStorage.setItem(key(widgetId, studentName), JSON.stringify({ answers, idx, savedAt: Date.now() } satisfies AutosaveData));
+    localStorage.setItem(key(widgetId, studentName), JSON.stringify({ answers, idx, order, savedAt: Date.now() } satisfies AutosaveData));
   } catch {
     // opslag vol — stil negeren, autosave is best-effort
   }

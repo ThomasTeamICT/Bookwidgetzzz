@@ -1065,25 +1065,35 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
     }
     return widget.settings.shuffle ? shuffled(qs) : qs;
   }, [widget.id]);
-  const [questions, setQuestions] = useState<Question[]>(baseQuestions);
-  const [practice, setPractice] = useState(false);
-  const [confs, setConfs] = useState<Record<string, Confidence>>({});
-  const hintsRef = useRef<Set<string>>(new Set());
   // opslaan & hervatten: eerder werk van deze leerling op dit toestel terugzetten
   const restored = useMemo(
     () => (preview ? null : loadProgress(widget.id, studentName)),
     [widget.id, studentName]
   );
+  // bewaarde vraagvolgorde herstellen zodat schudden/vragenpool stabiel hervat
+  const restoredQuestions = useMemo(() => {
+    if (!restored?.order) return null;
+    const byId = new Map(config.questions.map((q) => [q.id, q]));
+    const qs = restored.order.map((id) => byId.get(id)).filter((q): q is Question => !!q);
+    // alleen bruikbaar als de opgeslagen volgorde nog volledig bij de widget past
+    return qs.length > 0 && qs.length === restored.order.length ? qs : null;
+  }, [restored, widget.id]);
+  const [questions, setQuestions] = useState<Question[]>(restoredQuestions ?? baseQuestions);
+  const [practice, setPractice] = useState(false);
+  const [confs, setConfs] = useState<Record<string, Confidence>>({});
+  const hintsRef = useRef<Set<string>>(new Set());
   const [answers, setAnswers] = useState<Answers>(restored?.answers ?? {});
   const [idx, setIdx] = useState(() =>
-    restored ? Math.min(Math.max(0, restored.idx), Math.max(0, questions.length - 1)) : 0
+    restored ? Math.min(Math.max(0, restored.idx), Math.max(0, (restoredQuestions ?? baseQuestions).length - 1)) : 0
   );
   const [phase, setPhase] = useState<'answering' | 'done'>('answering');
   const [showRestored, setShowRestored] = useState(!!restored && Object.keys(restored.answers).length > 0);
   const submittedRef = useRef(false);
 
   useEffect(() => {
-    if (!preview && !practice && phase === 'answering') saveProgress(widget.id, studentName, answers, idx);
+    if (!preview && !practice && phase === 'answering') {
+      saveProgress(widget.id, studentName, answers, idx, questions.map((q) => q.id));
+    }
   }, [answers, idx, phase, practice]);
 
   const gradable: Question[] = questions.filter((q) => q.type !== 'info');
@@ -1212,7 +1222,7 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
       <button
         className="btn btn-sm btn-ghost"
         onClick={() => {
-          setAnswers({}); setIdx(0); setShowRestored(false);
+          setAnswers({}); setIdx(0); setShowRestored(false); setQuestions(baseQuestions);
           if (!preview) clearProgress(widget.id, studentName);
         }}
       >
