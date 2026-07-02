@@ -479,7 +479,9 @@ function BulkImportModal({ onImport, onClose }: { onImport: (qs: Question[]) => 
         style={{ fontFamily: 'monospace' }}
       />
       <p className="hint" style={{ marginTop: 6 }} aria-live="polite">
-        {parsed.length > 0 ? `✓ ${parsed.length} vragen herkend: ${parsed.map((q) => QUESTION_TYPES.find((t) => t.type === q.type)?.name).join(', ')}` : 'Nog geen vragen herkend.'}
+        {parsed.length > 0
+          ? `✓ ${parsed.length} ${parsed.length === 1 ? 'vraag' : 'vragen'} herkend: ${parsed.map((q) => QUESTION_TYPES.find((t) => t.type === q.type)?.name).join(', ')}`
+          : 'Nog geen vragen herkend.'}
       </p>
     </Modal>
   );
