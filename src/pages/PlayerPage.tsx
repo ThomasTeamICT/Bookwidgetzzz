@@ -26,7 +26,8 @@ export function PlayerPage() {
     );
   }
 
-  return <WidgetRunner widget={widget} recordSubmission />;
+  // key zorgt dat de volledige leerlingflow herstart bij een andere code
+  return <WidgetRunner key={widget.id} widget={widget} recordSubmission />;
 }
 
 /**
