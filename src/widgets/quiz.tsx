@@ -96,7 +96,13 @@ function PromptText({
         .sort((a, b) => b.length - a.length)
         .map(escapeRegex)
         .join('|');
-      const parts = text.split(new RegExp(`(${pattern})`, 'gi'));
+      // woordgrenzen (unicode-veilig): "arm" mag niet midden in "warm" matchen
+      let parts: string[];
+      try {
+        parts = text.split(new RegExp(`(?<![\\p{L}\\p{N}])(${pattern})(?![\\p{L}\\p{N}])`, 'giu'));
+      } catch {
+        parts = [text]; // oude browser zonder lookbehind → geen glossarium-markering
+      }
       content = parts.map((part, i) => {
         const hit = valid.find((g) => g.term.trim().toLowerCase() === part.toLowerCase());
         if (!hit) return <span key={i}>{part}</span>;
@@ -959,7 +965,7 @@ function ShortAnswer({ q, value, onChange, review }: { q: ShortQuestion; value: 
 }
 
 /** Klein tekenvlak voor teken-antwoorden bij open vragen. */
-function MiniDrawPad({ value, onChange, disabled }: { value?: string; onChange: (dataUrl: string) => void; disabled?: boolean }) {
+function MiniDrawPad({ value, onChange, disabled }: { value?: string; onChange: (dataUrl: string | undefined) => void; disabled?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
   const pointerRef = useRef<number | null>(null);
@@ -994,7 +1000,8 @@ function MiniDrawPad({ value, onChange, disabled }: { value?: string; onChange: 
             const ctx = canvasRef.current!.getContext('2d')!;
             ctx.fillStyle = '#fff';
             ctx.fillRect(0, 0, W, H);
-            onChange(canvasRef.current!.toDataURL('image/jpeg', 0.8));
+            // leeg canvas is geen antwoord: tekening uit het antwoord verwijderen
+            onChange(undefined);
           }}>
           🗑 Wissen
         </button>
@@ -1046,6 +1053,8 @@ function AudioRecorder({ value, onChange }: { value?: string; onChange: (dataUrl
   const [error, setError] = useState('');
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const busyRef = useRef(false);
+  const unmountedRef = useRef(false);
 
   useEffect(() => {
     if (!recording) return;
@@ -1054,12 +1063,22 @@ function AudioRecorder({ value, onChange }: { value?: string; onChange: (dataUrl
     return () => clearTimeout(t);
   }, [recording, seconds]);
 
-  useEffect(() => () => { recRef.current?.stream.getTracks().forEach((t) => t.stop()); }, []);
+  useEffect(() => () => {
+    unmountedRef.current = true;
+    recRef.current?.stream.getTracks().forEach((t) => t.stop());
+  }, []);
 
   const start = async () => {
+    // dubbelklik of klik tijdens de permissieprompt mag geen tweede stream starten
+    if (busyRef.current || recording) return;
+    busyRef.current = true;
     setError('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (unmountedRef.current || recRef.current?.state === 'recording') {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       const rec = new MediaRecorder(stream);
       chunksRef.current = [];
       rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
@@ -1077,6 +1096,8 @@ function AudioRecorder({ value, onChange }: { value?: string; onChange: (dataUrl
       setRecording(true);
     } catch {
       setError('Geen toegang tot de microfoon. Sta microfoongebruik toe in je browser, of typ je antwoord.');
+    } finally {
+      busyRef.current = false;
     }
   };
 
@@ -1109,9 +1130,12 @@ function LongAnswer({ q, value, onChange, review }: { q: LongQuestion; value: un
   const multi = !!(q.allowDraw || q.allowAudio);
   const val: LongAnswerValue = typeof value === 'string' ? { tekst: value } : ((value as LongAnswerValue) ?? {});
   const [mode, setMode] = useState<'typen' | 'tekenen' | 'audio'>('typen');
+  // laat late async-callbacks (audio-opname) niet een verouderde waarde terugzetten
+  const valRef = useRef(val);
+  valRef.current = val;
 
   const setVal = (patch: Partial<LongAnswerValue>) => {
-    const next = { ...val, ...patch };
+    const next = { ...valRef.current, ...patch };
     // zonder extra modaliteiten blijft het antwoord een gewone string
     onChange(multi ? next : (next.tekst ?? ''));
   };
@@ -1367,9 +1391,9 @@ export function QuestionView({
   const [spoken, setSpoken] = useState<[number, number] | null>(null);
   const [supportOpen, setSupportOpen] = useState(false);
   useEffect(() => () => {
-    // voorlezen stoppen wanneer de vraag verdwijnt
-    if (typeof speechSynthesis !== 'undefined' && spoken) speechSynthesis.cancel();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // voorlezen stoppen wanneer de vraag verdwijnt (onvoorwaardelijk: de
+    // closure zou anders een verouderde 'spoken' zien die altijd null is)
+    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
   }, []);
   return (
     <div className="card question-card">

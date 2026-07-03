@@ -58,10 +58,10 @@ export function ProgressPage() {
   }, [subs]);
 
   const [gekozen, setGekozen] = useState<string | null>(null);
+  // canonieke schrijfwijze teruggeven: anders toont de select niets wanneer
+  // dezelfde naam later met andere hoofdletters opnieuw indient
   const actieveNaam =
-    gekozen && namen.some((n) => n.toLowerCase() === gekozen.toLowerCase())
-      ? gekozen
-      : (namen[0] ?? '');
+    (gekozen && namen.find((n) => n.toLowerCase() === gekozen.toLowerCase())) || (namen[0] ?? '');
 
   const groepen = useMemo<WidgetGroep[]>(() => {
     const mijn = subs.filter(

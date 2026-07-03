@@ -25,12 +25,18 @@ export function NewWidgetPage() {
   };
 
   const startFromTemplate = (t: CustomTemplate) => {
+    // sjablonen met een (na een update) onbekend widgettype nooit instantiëren
+    if (!WIDGET_TYPES.some((wt) => wt.id === t.typeId)) return;
     const w = instantiateTemplate(t);
     saveWidget(w);
     navigate(`/bewerk/${w.id}`);
   };
 
+  const preselectDone = React.useRef(false);
   React.useEffect(() => {
+    // guard tegen dubbele uitvoering (React StrictMode mount-cyclus)
+    if (preselectDone.current) return;
+    preselectDone.current = true;
     if (preselect && WIDGET_TYPES.some((t) => t.id === preselect)) {
       create(preselect as WidgetTypeId);
     }

@@ -247,9 +247,12 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
 
   const save = () => {
     const hasPending = Object.values(scores).some((s) => s.mode === 'pending');
+    // actuele versie als basis nemen: de leerling kan ná het openen van deze
+    // modal nog een foutenanalyse of doelreflectie bewaard hebben (zelfde toestel)
+    const current = getSubmissions().find((x) => x.id === submission.id) ?? submission;
     saveSubmission({
-      ...submission,
-      itemScores: Object.keys(scores).length > 0 ? scores : submission.itemScores,
+      ...current,
+      itemScores: Object.keys(scores).length > 0 ? scores : current.itemScores,
       totalEarned,
       status: hasPending ? 'submitted' : 'graded',
       teacherFeedback: feedback,
@@ -866,11 +869,13 @@ function CockpitRow({
 
   const save = () => {
     if (points === null) return;
-    const itemScores = { ...(submission.itemScores ?? {}) };
+    // actuele versie als basis: geen tussentijdse leerling-updates overschrijven
+    const current = getSubmissions().find((x) => x.id === submission.id) ?? submission;
+    const itemScores = { ...(current.itemScores ?? {}) };
     itemScores[question.id] = { earned: points, max: question.points, mode: 'manual', comment: comment.trim() || undefined };
     const totalEarned = Math.round(Object.values(itemScores).reduce((a, sc) => a + sc.earned, 0) * 100) / 100;
     const hasPending = Object.values(itemScores).some((sc) => sc.mode === 'pending');
-    saveSubmission({ ...submission, itemScores, totalEarned, status: hasPending ? 'submitted' : 'graded' });
+    saveSubmission({ ...current, itemScores, totalEarned, status: hasPending ? 'submitted' : 'graded' });
     onSaved();
   };
 

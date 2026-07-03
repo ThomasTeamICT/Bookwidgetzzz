@@ -35,6 +35,14 @@ export function EditorPage() {
     return () => { if (saveTimer.current) window.clearTimeout(saveTimer.current); };
   }, [widget]);
 
+  // flush bij unmount: wie binnen de debounce op "Terug" klikt, verliest anders
+  // de wijzigingen van de laatste 500 ms
+  const widgetRef = useRef(widget);
+  useEffect(() => { widgetRef.current = widget; }, [widget]);
+  useEffect(() => () => {
+    if (widgetRef.current) saveWidget(widgetRef.current);
+  }, []);
+
   if (!widget) {
     return (
       <div className="page page-narrow" style={{ textAlign: 'center', paddingTop: 80 }}>

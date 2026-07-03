@@ -43,7 +43,17 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
   const needsName = recordSubmission && def.hasSubmissions && widget.settings.requireName;
 
   const [name, setName] = useState('');
-  const [phase, setPhase] = useState<'gate' | 'playing'>(needsName || widget.settings.instructions ? 'gate' : 'playing');
+  // De gate is ook nodig zonder naamplicht: start() initialiseert timer,
+  // pogingenteller, live-registratie en toetsmodus — die mogen niet worden
+  // overgeslagen wanneer alleen requireName uit staat.
+  const needsGate =
+    needsName ||
+    !!widget.settings.instructions ||
+    widget.settings.timeLimitMin > 0 ||
+    widget.settings.maxAttempts > 0 ||
+    !!widget.settings.examMode ||
+    (recordSubmission && def.hasSubmissions);
+  const [phase, setPhase] = useState<'gate' | 'playing'>(needsGate ? 'gate' : 'playing');
   // Persoonlijk doel (optioneel, gekozen op het startscherm)
   const [doelProces, setDoelProces] = useState('');
   const [doelStreef, setDoelStreef] = useState(0);
@@ -316,6 +326,7 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
             {completedSub && (
               <DoelKaart
                 submission={completedSub}
+                showScore={widget.settings.showScore}
                 onSaved={(updated) => setCompletedSub(updated)}
               />
             )}
@@ -378,7 +389,6 @@ function FoutenAnalysePanel({
     ) : null;
   }
 
-  const gradableList: Question[] = questions.filter((q) => q.type !== 'info');
 
   return (
     <div className="card card-pad" style={{ marginTop: 18 }}>
@@ -389,7 +399,8 @@ function FoutenAnalysePanel({
       {wrong.map((q) => (
         <div key={q.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
           <p style={{ margin: '0 0 6px', fontWeight: 600 }}>
-            Vraag {gradableList.indexOf(q) + 1}: {q.prompt ? q.prompt.slice(0, 90) : '(invuloefening)'}
+            {/* geen vraagnummer: bij schudden/vragenpool wijkt de confignummering af van wat de leerling zag */}
+            {q.prompt ? q.prompt.slice(0, 110) : '(invuloefening)'}
           </p>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }} role="group" aria-label="Soort fout">
             {FOUT_LABELS.map((f) => (
@@ -457,8 +468,8 @@ const PROCES_DOELEN = [
  * wordt bij de inzending bewaard (answers._doelreflectie) via saveSubmission.
  */
 function DoelKaart({
-  submission, onSaved,
-}: { submission: Submission; onSaved: (s: Submission) => void }) {
+  submission, onSaved, showScore,
+}: { submission: Submission; onSaved: (s: Submission) => void; showScore: boolean }) {
   const answers = submission.answers as Record<string, unknown>;
   const doel = answers['_doel'] as PersoonlijkDoel | undefined;
   const [reflectie, setReflectie] = useState('');
@@ -466,7 +477,8 @@ function DoelKaart({
 
   if (!doel || (!doel.proces && doel.streef === undefined && !doel.vrij)) return null;
 
-  const procent = submission.totalMax > 0 ? pct(submission.totalEarned, submission.totalMax) : null;
+  // respecteer de instelling "score verbergen": dan geen percentages tonen
+  const procent = showScore && submission.totalMax > 0 ? pct(submission.totalEarned, submission.totalMax) : null;
   const behaald = doel.streef !== undefined && procent !== null ? procent >= doel.streef : null;
 
   return (

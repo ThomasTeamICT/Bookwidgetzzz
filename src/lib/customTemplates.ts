@@ -25,11 +25,20 @@ export function getCustomTemplates(): CustomTemplate[] {
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
-      (t): t is CustomTemplate =>
-        !!t && typeof t === 'object' &&
-        typeof (t as CustomTemplate).id === 'string' &&
-        typeof (t as CustomTemplate).name === 'string' &&
-        !!(t as CustomTemplate).widget
+      (t): t is CustomTemplate => {
+        if (!t || typeof t !== 'object') return false;
+        const c = t as CustomTemplate;
+        // widget zelf ook valideren: een corrupte entry mag nooit tot een
+        // widget zonder geldig type/config leiden (crasht anders het dashboard)
+        return (
+          typeof c.id === 'string' &&
+          typeof c.name === 'string' &&
+          !!c.widget && typeof c.widget === 'object' &&
+          typeof c.widget.type === 'string' &&
+          !!c.widget.config && typeof c.widget.config === 'object' &&
+          !!c.widget.settings && typeof c.widget.settings === 'object'
+        );
+      }
     );
   } catch {
     return [];

@@ -69,9 +69,17 @@ export function TeacherDashboard() {
       toast('Dit bestand is geen geldige widget', 'err');
       return;
     }
+    // onbekend widgettype zou het dashboard blijvend laten crashen
+    const def = WIDGET_TYPES.find((t) => t.id === w.type);
+    if (!def) {
+      toast(`Onbekend widgettype “${w.type}” — bestand niet geïmporteerd`, 'err');
+      return;
+    }
     w.id = uid();
     w.code = makeCode();
     w.folderId = null;
+    // ontbrekende config-velden aanvullen zodat editor en speler niet crashen
+    w.config = { ...(def.defaultConfig() as object), ...(w.config as object) };
     saveWidget(w as Widget);
     toast(`“${w.title}” geïmporteerd`, 'ok');
   };
@@ -315,11 +323,14 @@ function PackImportModal({ pack, onClose, onImported }: {
       });
     }
     for (const r of chosen) {
+      const raw = JSON.parse(JSON.stringify(r.widget)) as Widget;
       const copy: Widget = {
-        ...(JSON.parse(JSON.stringify(r.widget)) as Widget),
+        ...raw,
         id: uid(),
         code: makeCode(),
         folderId,
+        // onvolledige config van een bekend type aanvullen met defaults
+        config: { ...(r.def!.defaultConfig() as object), ...(raw.config as object) },
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
