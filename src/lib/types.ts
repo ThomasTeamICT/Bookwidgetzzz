@@ -144,6 +144,8 @@ export interface QuestionBase {
   goal?: string;
   /** Niveaulaag voor routes binnen één widget. */
   level?: 'basis' | 'kern' | 'uitbreiding';
+  /** Steuntaalversie van de vraag (vertaling/eenvoudiger taal); standaard verborgen. */
+  support?: string;
 }
 
 export interface MCQuestion extends QuestionBase {
@@ -172,6 +174,19 @@ export interface LongQuestion extends QuestionBase {
   modelAnswer?: string;
   /** Beoordelingsrubric: criteria met maximumpunten (som ≤ points). */
   rubric?: { criterion: string; points: number }[];
+  /** Leerling mag ook tekenen als antwoordvorm. */
+  allowDraw?: boolean;
+  /** Leerling mag ook een audio-antwoord inspreken. */
+  allowAudio?: boolean;
+}
+
+/** Antwoordvorm van een open vraag met meerdere modaliteiten. */
+export interface LongAnswerValue {
+  tekst?: string;
+  /** Tekening als data-URL (jpeg). */
+  tekening?: string;
+  /** Audio-opname als data-URL (webm/ogg). */
+  audio?: string;
 }
 export interface GapQuestion extends QuestionBase {
   type: 'gap';
@@ -225,6 +240,8 @@ export interface QuizConfig {
   stepCheck?: boolean;
   /** Niveauroutes aanbieden op basis van de level-tags van de vragen. */
   useRoutes?: boolean;
+  /** Klikbaar begrippenglossarium: schooltaalwoorden met korte uitleg. */
+  glossary?: { term: string; uitleg: string }[];
 }
 
 // ── Overige widget-configuraties ────────────────────────────────────────────

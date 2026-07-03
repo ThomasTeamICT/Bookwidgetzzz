@@ -51,15 +51,22 @@ De leerling ziet altijd dat registratie aanstaat — geen verborgen monitoring.
 > deellink en voorleestempo) is intussen **volledig geïmplementeerd** — zie de
 > tabel hierboven.
 
+> ✅ Ook de tweede kandidatenlijst is intussen geïmplementeerd:
+> **meeleesmarkering** bij het voorlezen (boundary-events; oog-oorkoppeling),
+> **steuntaal per vraag** (🌐, standaard dicht) en een **klikbaar glossarium**,
+> **meerdere antwoordvormen** bij open vragen (typen/tekenen/inspreken, max. 60 s audio),
+> **eigen sjablonen** (elke widget als herbruikbaar startpunt),
+> **"Mijn voortgang"** voor de leerling (groei t.o.v. eigen eerdere pogingen — bewust geen klasgemiddelden),
+> **persoonlijk doel** op het startscherm (proces- én streefdoelen, met reflectie achteraf),
+> **item-analyse** (voorzichtige signalen, alleen bij n ≥ 8) en
+> **vakgroeppakketten** (een map als één bestand delen met collega's, met dubbelendetectie bij import).
+
 ### Volgende kandidaten (haalbaar client-side)
-1. **Meeleesmarkering bij voorlezen** — het voorgelezen woord live markeren (Web Speech boundary-events) en per zin herbeluisteren; koppelt oog en oor zoals voorleessoftware bij dyslexie.
-2. **Eigen sjablonen** — elke widget als sjabloon met invulvelden kunnen bewaren (nu is er een vaste bibliotheek).
-3. **Taalsteun/glossarium** — steuntaalveld per vraag en klikbare schooltaalwoorden met uitleg, standaard dicht.
-4. **"Mijn voortgang"-pagina voor de leerling** — groei over eigen pogingen heen zichtbaar maken (per toestel).
-5. **Persoonlijk doel op het startscherm** — streef- of procesdoel kiezen; na afloop doel naast resultaat.
-6. **Meerdere antwoordvormen bij open vragen** — typen, tekenen of inspreken (MediaRecorder), voor leerlingen die mondeling sterker zijn.
-7. **Item-analyse over afnames heen** — moeilijkheids- en discriminatie-indicaties per vraag, voorzichtig geformuleerd ("bekijk deze vraag eens"), verborgen bij kleine n.
-8. **Vakgroeppakketten** — een hele map als één bestand delen met versie- en auteursmetadata, met slimme merge bij import.
+1. **Per-zin herbeluisteren** bij het voorlezen, naast de meeleesmarkering.
+2. **Sjablonen met invulvelden** — placeholders die de editor bij gebruik actief uitvraagt.
+3. **Leerdoelen over widgets heen** — één doelenlijst per vak, met beheersing over meerdere oefeningen samen.
+4. **Hintladders** (2-3 oplopende hints per vraag in plaats van één).
+5. **Exporteerbaar voortgangsbestand** voor de leerling (voortgang meenemen naar een ander toestel).
 
 ### Vergt een (lichte) server — bewust op de lange baan
 - Live klasoverzicht over toestellen heen (Live Widgets-equivalent).

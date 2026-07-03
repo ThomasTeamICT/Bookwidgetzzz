@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type {
-  GapQuestion, MatchQuestion, MCQuestion, MultiQuestion, NumberQuestion,
+  GapQuestion, LongAnswerValue, MatchQuestion, MCQuestion, MultiQuestion, NumberQuestion,
   OrderQuestion, Question, QuestionType, QuizConfig, ShortQuestion, SliderQuestion,
   TFQuestion, LongQuestion,
 } from '../lib/types';
@@ -13,23 +13,138 @@ import { getWidgets } from '../lib/storage';
 import { loadA11y } from '../components/A11yMenu';
 import type { Widget } from '../lib/types';
 
-// ── Voorlezen (tekst-naar-spraak) ───────────────────────────────────────────
+// ── Voorlezen (tekst-naar-spraak) met meeleesmarkering ──────────────────────
 
-function speakQuestion(q: Question) {
+/**
+ * Leest de vraag voor; tijdens het voorlezen van de vraagstam wordt het
+ * uitgesproken woord gemarkeerd (boundary-events), zodat oog en oor koppelen.
+ */
+function speakQuestion(q: Question, onWord?: (range: [number, number] | null) => void) {
   if (typeof speechSynthesis === 'undefined') return;
-  const parts: string[] = [];
-  if (q.prompt) parts.push(q.prompt);
-  if (q.type === 'gap') parts.push(q.text.replace(/\[([^\]]+)\]/g, ' … '));
-  if (q.type === 'mc' || q.type === 'multi') {
-    q.options.forEach((o, i) => parts.push(`Optie ${String.fromCharCode(65 + i)}: ${o}`));
-  }
-  if (q.type === 'tf') parts.push('Juist, of onjuist?');
-  if (q.type === 'order') parts.push(...q.items);
-  const u = new SpeechSynthesisUtterance(parts.join('. '));
-  u.lang = 'nl-BE';
-  u.rate = loadA11y().rate;
   speechSynthesis.cancel();
-  speechSynthesis.speak(u);
+  const rate = loadA11y().rate;
+  const rest: string[] = [];
+  if (q.type === 'gap') rest.push(q.text.replace(/\[([^\]]+)\]/g, ' … '));
+  if (q.type === 'mc' || q.type === 'multi') {
+    q.options.forEach((o, i) => rest.push(`Optie ${String.fromCharCode(65 + i)}: ${o}`));
+  }
+  if (q.type === 'tf') rest.push('Juist, of onjuist?');
+  if (q.type === 'order') rest.push(...q.items);
+
+  const main = q.prompt ?? '';
+  if (main.trim()) {
+    const u = new SpeechSynthesisUtterance(main);
+    u.lang = 'nl-BE';
+    u.rate = rate;
+    if (onWord) {
+      u.onboundary = (e) => {
+        if (e.name && e.name !== 'word') return;
+        const start = e.charIndex ?? 0;
+        let end = main.length;
+        for (let i = start; i < main.length; i++) {
+          if (/\s/.test(main[i])) { end = i; break; }
+        }
+        if (end > start) onWord([start, end]);
+      };
+      u.onend = () => onWord(null);
+      u.onerror = () => onWord(null);
+    }
+    speechSynthesis.speak(u);
+  }
+  for (const part of rest.filter((t) => t.trim())) {
+    const u = new SpeechSynthesisUtterance(part);
+    u.lang = 'nl-BE';
+    u.rate = rate;
+    speechSynthesis.speak(u);
+  }
+}
+
+// ── Vraagstam met meeleesmarkering en klikbaar glossarium ───────────────────
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export interface GlossaryEntry { term: string; uitleg: string }
+
+function PromptText({
+  text, spoken, glossary,
+}: { text: string; spoken: [number, number] | null; glossary?: GlossaryEntry[] }) {
+  const [openTerm, setOpenTerm] = useState<GlossaryEntry | null>(null);
+  if (!text) return null;
+
+  let content: React.ReactNode = text;
+  if (spoken) {
+    // tijdens het voorlezen: gemarkeerd meelezen
+    content = (
+      <>
+        {text.slice(0, spoken[0])}
+        <mark style={{
+          background: 'color-mix(in srgb, var(--player-accent, var(--brand)) 28%, transparent)',
+          color: 'inherit', borderRadius: 4, padding: '0 2px',
+        }}>
+          {text.slice(spoken[0], spoken[1])}
+        </mark>
+        {text.slice(spoken[1])}
+      </>
+    );
+  } else {
+    const valid = (glossary ?? []).filter((g) => g.term.trim() && g.uitleg.trim());
+    if (valid.length > 0) {
+      const pattern = valid
+        .map((g) => g.term.trim())
+        .sort((a, b) => b.length - a.length)
+        .map(escapeRegex)
+        .join('|');
+      const parts = text.split(new RegExp(`(${pattern})`, 'gi'));
+      content = parts.map((part, i) => {
+        const hit = valid.find((g) => g.term.trim().toLowerCase() === part.toLowerCase());
+        if (!hit) return <span key={i}>{part}</span>;
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setOpenTerm(openTerm === hit ? null : hit)}
+            aria-label={`Uitleg bij "${hit.term}"`}
+            style={{
+              font: 'inherit', background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+              color: 'inherit',
+              textDecoration: 'underline dotted 2px',
+              textDecorationColor: 'var(--player-accent, var(--brand))',
+              textUnderlineOffset: 3,
+            }}
+          >
+            {part}
+          </button>
+        );
+      });
+    }
+  }
+
+  return (
+    <div className="question-prompt">
+      {content}
+      {openTerm && (
+        <span
+          role="note"
+          style={{
+            display: 'block', fontSize: '0.85rem', fontWeight: 500,
+            background: 'var(--brand-soft)', borderRadius: 8, padding: '6px 10px', marginTop: 8,
+          }}
+        >
+          📖 <strong>{openTerm.term}:</strong> {openTerm.uitleg}
+          <button
+            className="btn btn-quiet btn-sm"
+            style={{ minHeight: 22, padding: '0 6px', marginLeft: 6 }}
+            onClick={() => setOpenTerm(null)}
+            aria-label="Uitleg sluiten"
+          >
+            ✕
+          </button>
+        </span>
+      )}
+    </div>
+  );
 }
 
 // ── Accenttekens voor taalvakken ────────────────────────────────────────────
@@ -535,6 +650,39 @@ export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
           <span>Niveauroutes: leerling kiest een route <span className="hint">(route 1 = basis · route 2 = + kern · route 3 = + uitbreiding; vragen zonder niveau zitten in elke route)</span></span>
         </label>
       )}
+      <details style={{ margin: '10px 0 14px' }} open={(config.glossary?.length ?? 0) > 0}>
+        <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.92rem' }}>
+          📖 Glossarium — schooltaalwoorden met uitleg ({(config.glossary ?? []).filter((g) => g.term.trim()).length})
+        </summary>
+        <div style={{ paddingTop: 8 }}>
+          <p className="hint" style={{ marginTop: 0 }}>
+            Deze woorden worden in de vragen klikbaar (gestippeld onderstreept); de leerling opent de uitleg zelf.
+            Taalsteun als vangnet, standaard dicht.
+          </p>
+          {(config.glossary ?? []).map((g, gi) => (
+            <div className="option-row" key={gi}>
+              <input className="input input-sm" style={{ maxWidth: 180 }} placeholder="woord" value={g.term}
+                onChange={(e) => {
+                  const glossary = (config.glossary ?? []).slice();
+                  glossary[gi] = { ...g, term: e.target.value };
+                  onChange({ ...config, glossary });
+                }} />
+              <input className="input input-sm" placeholder="korte uitleg, synoniem of vertaling" value={g.uitleg}
+                onChange={(e) => {
+                  const glossary = (config.glossary ?? []).slice();
+                  glossary[gi] = { ...g, uitleg: e.target.value };
+                  onChange({ ...config, glossary });
+                }} />
+              <button className="btn btn-quiet btn-icon btn-sm" aria-label="Woord verwijderen"
+                onClick={() => onChange({ ...config, glossary: (config.glossary ?? []).filter((_, j) => j !== gi) })}>✕</button>
+            </div>
+          ))}
+          <button className="btn btn-sm btn-ghost"
+            onClick={() => onChange({ ...config, glossary: [...(config.glossary ?? []), { term: '', uitleg: '' }] })}>
+            + Woord toevoegen
+          </button>
+        </div>
+      </details>
       <div className="field" style={{ marginTop: 8 }}>
         <label>Vragenpool</label>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -597,6 +745,22 @@ export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
                     <input className="input input-sm" value={q.hint ?? ''} placeholder='bv. "Herlees de vraag: wat wordt precies gevraagd?"'
                       onChange={(e) => update(i, { ...q, hint: e.target.value })} />
                   </Field>
+                )}
+                <Field label="In andere woorden / steuntaal (optioneel)" hint="Vertaling of eenvoudiger formulering; de leerling opent dit zelf via 🌐 — standaard verborgen.">
+                  <input className="input input-sm" value={q.support ?? ''} placeholder='bv. vertaling of "Wat moet je hier eigenlijk doen?"'
+                    onChange={(e) => update(i, { ...q, support: e.target.value })} />
+                </Field>
+                {q.type === 'long' && (
+                  <div>
+                    <label className="checkbox-row">
+                      <input type="checkbox" checked={q.allowDraw ?? false} onChange={(e) => update(i, { ...q, allowDraw: e.target.checked })} />
+                      <span>Leerling mag ook <strong>tekenen</strong> als antwoord</span>
+                    </label>
+                    <label className="checkbox-row">
+                      <input type="checkbox" checked={q.allowAudio ?? false} onChange={(e) => update(i, { ...q, allowAudio: e.target.checked })} />
+                      <span>Leerling mag ook <strong>inspreken</strong> (audio-antwoord, max. 60 s)</span>
+                    </label>
+                  </div>
                 )}
                 {q.type !== 'info' && (
                   <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
@@ -794,8 +958,164 @@ function ShortAnswer({ q, value, onChange, review }: { q: ShortQuestion; value: 
   );
 }
 
+/** Klein tekenvlak voor teken-antwoorden bij open vragen. */
+function MiniDrawPad({ value, onChange, disabled }: { value?: string; onChange: (dataUrl: string) => void; disabled?: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawingRef = useRef(false);
+  const pointerRef = useRef<number | null>(null);
+  const lastRef = useRef<[number, number] | null>(null);
+  const [eraser, setEraser] = useState(false);
+  const W = 700, H = 400;
+
+  useEffect(() => {
+    const ctx = canvasRef.current!.getContext('2d')!;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, W, H);
+    if (value) {
+      const img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0, W, H);
+      img.src = value;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const pos = (e: React.PointerEvent): [number, number] => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    return [((e.clientX - rect.left) / rect.width) * W, ((e.clientY - rect.top) / rect.height) * H];
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+        <button type="button" className={`btn btn-sm ${!eraser ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setEraser(false)} aria-pressed={!eraser}>✏️ Pen</button>
+        <button type="button" className={`btn btn-sm ${eraser ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setEraser(true)} aria-pressed={eraser}>🧽 Gom</button>
+        <button type="button" className="btn btn-sm btn-quiet" disabled={disabled}
+          onClick={() => {
+            const ctx = canvasRef.current!.getContext('2d')!;
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, W, H);
+            onChange(canvasRef.current!.toDataURL('image/jpeg', 0.8));
+          }}>
+          🗑 Wissen
+        </button>
+      </div>
+      <canvas
+        ref={canvasRef}
+        className="whiteboard-canvas"
+        width={W} height={H}
+        style={{ width: '100%', aspectRatio: `${W} / ${H}`, opacity: disabled ? 0.7 : 1 }}
+        aria-label="Tekenvlak voor je antwoord"
+        onPointerDown={(e) => {
+          if (disabled || drawingRef.current) return;
+          if (e.pointerType === 'mouse' && e.button !== 0) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          drawingRef.current = true;
+          pointerRef.current = e.pointerId;
+          lastRef.current = pos(e);
+        }}
+        onPointerMove={(e) => {
+          if (!drawingRef.current || e.pointerId !== pointerRef.current || !lastRef.current) return;
+          const ctx = canvasRef.current!.getContext('2d')!;
+          const [x, y] = pos(e);
+          const [lx, ly] = lastRef.current;
+          ctx.strokeStyle = eraser ? '#fff' : '#17203a';
+          ctx.lineWidth = eraser ? 22 : 4;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(lx, ly);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+          lastRef.current = [x, y];
+        }}
+        onPointerUp={(e) => {
+          if (e.pointerId !== pointerRef.current) return;
+          drawingRef.current = false;
+          pointerRef.current = null;
+          lastRef.current = null;
+          onChange(canvasRef.current!.toDataURL('image/jpeg', 0.8));
+        }}
+      />
+    </div>
+  );
+}
+
+/** Audio-antwoord opnemen (max. 60 s), lokaal als data-URL bewaard. */
+function AudioRecorder({ value, onChange }: { value?: string; onChange: (dataUrl: string | undefined) => void }) {
+  const [recording, setRecording] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+  const [error, setError] = useState('');
+  const recRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
+  useEffect(() => {
+    if (!recording) return;
+    if (seconds >= 60) { recRef.current?.stop(); return; }
+    const t = setTimeout(() => setSeconds((s) => s + 1), 1000);
+    return () => clearTimeout(t);
+  }, [recording, seconds]);
+
+  useEffect(() => () => { recRef.current?.stream.getTracks().forEach((t) => t.stop()); }, []);
+
+  const start = async () => {
+    setError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      rec.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' });
+        const reader = new FileReader();
+        reader.onload = () => onChange(String(reader.result));
+        reader.readAsDataURL(blob);
+        setRecording(false);
+      };
+      recRef.current = rec;
+      rec.start();
+      setSeconds(0);
+      setRecording(true);
+    } catch {
+      setError('Geen toegang tot de microfoon. Sta microfoongebruik toe in je browser, of typ je antwoord.');
+    }
+  };
+
+  if (value) {
+    return (
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <audio controls src={value} style={{ maxWidth: '100%' }} />
+        <button type="button" className="btn btn-sm btn-ghost" onClick={() => onChange(undefined)}>🗑 Opnieuw opnemen</button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {recording ? (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <span className="badge badge-err" aria-live="polite">● opname {seconds}s / 60s</span>
+          <button type="button" className="btn btn-primary" onClick={() => recRef.current?.stop()}>⏹ Stop</button>
+        </div>
+      ) : (
+        <button type="button" className="btn btn-ghost" onClick={start}>🎤 Start opname</button>
+      )}
+      {error && <p role="alert" style={{ color: 'var(--err)', fontWeight: 600, marginTop: 6 }}>{error}</p>}
+    </div>
+  );
+}
+
 function LongAnswer({ q, value, onChange, review }: { q: LongQuestion; value: unknown; onChange: (v: unknown) => void; review: boolean }) {
   const rubric = (q.rubric ?? []).filter((r) => r.criterion.trim());
+  const multi = !!(q.allowDraw || q.allowAudio);
+  const val: LongAnswerValue = typeof value === 'string' ? { tekst: value } : ((value as LongAnswerValue) ?? {});
+  const [mode, setMode] = useState<'typen' | 'tekenen' | 'audio'>('typen');
+
+  const setVal = (patch: Partial<LongAnswerValue>) => {
+    const next = { ...val, ...patch };
+    // zonder extra modaliteiten blijft het antwoord een gewone string
+    onChange(multi ? next : (next.tekst ?? ''));
+  };
+
   return (
     <div>
       {rubric.length > 0 && (
@@ -809,16 +1129,50 @@ function LongAnswer({ q, value, onChange, review }: { q: LongQuestion; value: un
           </div>
         </div>
       )}
-      <textarea
-        className="textarea" rows={5}
-        value={typeof value === 'string' ? value : ''}
-        placeholder="Typ je antwoord…"
-        disabled={review}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label="Je antwoord"
-        spellCheck
-      />
-      {review && <p className="hint" style={{ marginTop: 6 }}>✍️ Deze open vraag wordt door je leerkracht beoordeeld.</p>}
+      {multi && !review && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }} role="tablist" aria-label="Antwoordvorm kiezen">
+          <button type="button" role="tab" aria-selected={mode === 'typen'} className={`btn btn-sm ${mode === 'typen' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setMode('typen')}>
+            ✏️ Typen{val.tekst?.trim() ? ' ✓' : ''}
+          </button>
+          {q.allowDraw && (
+            <button type="button" role="tab" aria-selected={mode === 'tekenen'} className={`btn btn-sm ${mode === 'tekenen' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setMode('tekenen')}>
+              🎨 Tekenen{val.tekening ? ' ✓' : ''}
+            </button>
+          )}
+          {q.allowAudio && (
+            <button type="button" role="tab" aria-selected={mode === 'audio'} className={`btn btn-sm ${mode === 'audio' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setMode('audio')}>
+              🎤 Inspreken{val.audio ? ' ✓' : ''}
+            </button>
+          )}
+        </div>
+      )}
+      {review ? (
+        <div>
+          {val.tekst?.trim() && <p style={{ whiteSpace: 'pre-wrap', background: 'var(--bg-sunken)', borderRadius: 8, padding: '8px 12px' }}>{val.tekst}</p>}
+          {val.tekening && <img src={val.tekening} alt="Jouw tekening als antwoord" style={{ maxWidth: '100%', borderRadius: 8, border: '1px solid var(--line)' }} />}
+          {val.audio && <audio controls src={val.audio} style={{ maxWidth: '100%', marginTop: 6 }} />}
+          {!val.tekst?.trim() && !val.tekening && !val.audio && <p className="hint">(geen antwoord)</p>}
+          <p className="hint" style={{ marginTop: 6 }}>✍️ Deze open vraag wordt door je leerkracht beoordeeld.</p>
+        </div>
+      ) : (
+        <>
+          {(!multi || mode === 'typen') && (
+            <>
+              <textarea
+                className="textarea" rows={5}
+                value={val.tekst ?? ''}
+                placeholder="Typ je antwoord…"
+                onChange={(e) => setVal({ tekst: e.target.value })}
+                aria-label="Je antwoord"
+                spellCheck
+              />
+              {!multi && <AccentBar onInsert={(ch) => setVal({ tekst: (val.tekst ?? '') + ch })} />}
+            </>
+          )}
+          {multi && mode === 'tekenen' && <MiniDrawPad value={val.tekening} onChange={(tekening) => setVal({ tekening })} />}
+          {multi && mode === 'audio' && <AudioRecorder value={val.audio} onChange={(audio) => setVal({ audio })} />}
+        </>
+      )}
     </div>
   );
 }
@@ -997,7 +1351,7 @@ export type Confidence = (typeof CONF_OPTIONS)[number]['key'];
 
 export function QuestionView({
   q, index, total, value, onChange, review,
-  confidence, onConfidence, onHintUsed,
+  confidence, onConfidence, onHintUsed, glossary,
 }: {
   q: Question; index: number; total: number;
   value: unknown; onChange: (v: unknown) => void; review: boolean;
@@ -1005,9 +1359,18 @@ export function QuestionView({
   confidence?: Confidence | null;
   onConfidence?: (c: Confidence) => void;
   onHintUsed?: () => void;
+  /** Klikbare schooltaalwoorden met uitleg. */
+  glossary?: GlossaryEntry[];
 }) {
   const score = review && q.type !== 'info' ? gradeQuestion(q, value) : null;
   const [hintOpen, setHintOpen] = useState(false);
+  const [spoken, setSpoken] = useState<[number, number] | null>(null);
+  const [supportOpen, setSupportOpen] = useState(false);
+  useEffect(() => () => {
+    // voorlezen stoppen wanneer de vraag verdwijnt
+    if (typeof speechSynthesis !== 'undefined' && spoken) speechSynthesis.cancel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
     <div className="card question-card">
       <div className="question-num">
@@ -1017,12 +1380,25 @@ export function QuestionView({
           type="button"
           className="btn btn-quiet btn-icon btn-sm"
           style={{ minHeight: 26, minWidth: 26, padding: 2 }}
-          onClick={() => speakQuestion(q)}
-          aria-label="Vraag voorlezen"
+          onClick={() => speakQuestion(q, setSpoken)}
+          aria-label="Vraag voorlezen (met meeleesmarkering)"
           title="Vraag voorlezen"
         >
           🔊
         </button>
+        {q.support && !review && (
+          <button
+            type="button"
+            className="btn btn-quiet btn-icon btn-sm"
+            style={{ minHeight: 26, minWidth: 26, padding: 2 }}
+            onClick={() => setSupportOpen((v) => !v)}
+            aria-pressed={supportOpen}
+            aria-label="Vraag in andere woorden tonen"
+            title="In andere woorden"
+          >
+            🌐
+          </button>
+        )}
         {score && score.mode !== 'pending' && (
           <span className={`badge ${score.earned >= score.max ? 'badge-ok' : score.earned > 0 ? 'badge-warn' : 'badge-err'}`}>
             {score.earned}/{score.max}
@@ -1030,7 +1406,13 @@ export function QuestionView({
         )}
         {score?.mode === 'pending' && <span className="badge badge-warn">wordt beoordeeld</span>}
       </div>
-      {q.prompt && <div className="question-prompt">{q.prompt}</div>}
+      {q.prompt && <PromptText text={q.prompt} spoken={spoken} glossary={glossary} />}
+      {supportOpen && q.support && (
+        <div className="callout" style={{ marginTop: -6, marginBottom: 12 }} role="note">
+          <span aria-hidden>🌐</span>
+          <div>{q.support}</div>
+        </div>
+      )}
       {q.imageUrl && <img className="question-image" src={q.imageUrl} alt="" />}
       {q.type === 'mc' && <MCAnswer q={q} value={value} onChange={onChange} review={review} />}
       {q.type === 'multi' && <MultiAnswer q={q} value={value} onChange={onChange} review={review} />}
@@ -1091,6 +1473,10 @@ function answered(q: Question, v: unknown): boolean {
   if (v === undefined || v === null) return false;
   if (typeof v === 'string') return v.trim() !== '';
   if (Array.isArray(v)) return q.type === 'order' ? true : v.some((x) => x !== null && x !== undefined && x !== '');
+  if (typeof v === 'object') {
+    const lv = v as LongAnswerValue;
+    return !!(lv.tekst?.trim() || lv.tekening || lv.audio);
+  }
   return true;
 }
 
@@ -1329,7 +1715,7 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
           <div style={{ marginTop: 22 }}>
             <h2 style={{ textAlign: 'center' }}>Overzicht van je antwoorden</h2>
             {questions.map((q) => (
-              <QuestionView key={q.id} q={q} index={gradable.indexOf(q)} total={gradable.length} value={answers[q.id]} onChange={() => {}} review />
+              <QuestionView key={q.id} q={q} index={gradable.indexOf(q)} total={gradable.length} value={answers[q.id]} onChange={() => {}} review glossary={config.glossary} />
             ))}
           </div>
         )}
@@ -1367,6 +1753,7 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
             confidence={confs[q.id] ?? null}
             onConfidence={config.askConfidence ? (c) => setConfs((m) => ({ ...m, [q.id]: c })) : undefined}
             onHintUsed={() => hintsRef.current.add(q.id)}
+            glossary={config.glossary}
           />
         ))}
         <div className="player-nav">
@@ -1420,6 +1807,7 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
         confidence={confs[q.id] ?? null}
         onConfidence={config.askConfidence ? (c) => setConfs((m) => ({ ...m, [q.id]: c })) : undefined}
         onHintUsed={() => hintsRef.current.add(q.id)}
+        glossary={config.glossary}
       />
       {stepMode && qStep === 'retry' && (
         <div className="callout warn" role="alert">

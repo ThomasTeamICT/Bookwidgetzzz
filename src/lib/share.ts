@@ -87,3 +87,79 @@ export function importWidgetJson(json: string): Widget | null {
     return null;
   }
 }
+
+// ── Vakgroeppakketten: een hele map (met widgets) delen met collega's ────────
+
+export interface FolderPackMeta {
+  naam: string;
+  auteur: string;
+  /** ISO-datum van export. */
+  datum: string;
+  aantal: number;
+}
+
+export interface FolderPack {
+  meta: FolderPackMeta;
+  widgets: Widget[];
+}
+
+/**
+ * Exporteert een map als vakgroeppakket (JSON). Het pakket bevat diepe kopieën
+ * van de widgets, zodat latere wijzigingen het pakket niet meer beïnvloeden.
+ */
+export function exportFolderPack(folderName: string, widgets: Widget[], author: string): string {
+  const copies = JSON.parse(JSON.stringify(widgets)) as Widget[];
+  return JSON.stringify(
+    {
+      app: 'widgetfabriek',
+      kind: 'pakket',
+      v: 1,
+      meta: {
+        naam: folderName,
+        auteur: author,
+        datum: new Date().toISOString(),
+        aantal: copies.length,
+      },
+      widgets: copies,
+    },
+    null,
+    2
+  );
+}
+
+/**
+ * Leest een vakgroeppakket defensief in: kapotte widgets worden overgeslagen,
+ * ontbrekende velden aangevuld (zoals importWidgetJson dat doet).
+ * Geeft null terug als het geen pakketbestand is.
+ */
+export function importFolderPack(json: string): FolderPack | null {
+  try {
+    const data = JSON.parse(json);
+    if (!data || typeof data !== 'object' || data.kind !== 'pakket') return null;
+    if (!Array.isArray(data.widgets)) return null;
+
+    const widgets: Widget[] = [];
+    for (const raw of data.widgets as unknown[]) {
+      const w = raw as Record<string, unknown> | null;
+      if (!w || typeof w !== 'object' || typeof w.type !== 'string') continue;
+      if (!w.config || typeof w.config !== 'object') continue;
+      w.title = typeof w.title === 'string' && w.title.trim() ? w.title : 'Geïmporteerde widget';
+      w.settings = { ...FALLBACK_SETTINGS, ...(typeof w.settings === 'object' && w.settings ? w.settings : {}) };
+      w.folderId = typeof w.folderId === 'string' ? w.folderId : null;
+      w.createdAt = typeof w.createdAt === 'number' ? w.createdAt : Date.now();
+      w.updatedAt = Date.now();
+      widgets.push(w as unknown as Widget);
+    }
+
+    const m = (data.meta && typeof data.meta === 'object' ? data.meta : {}) as Record<string, unknown>;
+    const meta: FolderPackMeta = {
+      naam: typeof m.naam === 'string' && m.naam.trim() ? m.naam.trim() : 'Pakket',
+      auteur: typeof m.auteur === 'string' ? m.auteur : '',
+      datum: typeof m.datum === 'string' ? m.datum : '',
+      aantal: widgets.length,
+    };
+    return { meta, widgets };
+  } catch {
+    return null;
+  }
+}

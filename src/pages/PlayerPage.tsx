@@ -4,7 +4,7 @@ import { bumpAttemptCount, getAttemptCount, getWidgetByCode, markStarted, saveSu
 import { getTypeDef } from '../widgets/registry';
 import type { Question, Submission, Widget } from '../lib/types';
 import type { PlayerResult } from '../widgets/shared';
-import { uid } from '../lib/utils';
+import { pct, uid } from '../lib/utils';
 import { hasProgress } from '../lib/autosave';
 import { encodeSubmission } from '../lib/share';
 import { CopyButton } from '../components/ui';
@@ -44,6 +44,10 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
 
   const [name, setName] = useState('');
   const [phase, setPhase] = useState<'gate' | 'playing'>(needsName || widget.settings.instructions ? 'gate' : 'playing');
+  // Persoonlijk doel (optioneel, gekozen op het startscherm)
+  const [doelProces, setDoelProces] = useState('');
+  const [doelStreef, setDoelStreef] = useState(0);
+  const [doelVrij, setDoelVrij] = useState('');
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [timeUp, setTimeUp] = useState(false);
   const [blocked, setBlocked] = useState(false);
@@ -118,6 +122,13 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
     if (widget.settings.examMode && document.fullscreenElement) {
       document.exitFullscreen?.().catch(() => { /* negeren */ });
     }
+    // Persoonlijk doel (indien gekozen) bij de antwoorden bewaren
+    const doel: PersoonlijkDoel = {
+      ...(doelProces ? { proces: doelProces } : {}),
+      ...(doelStreef > 0 ? { streef: doelStreef } : {}),
+      ...(doelVrij.trim() ? { vrij: doelVrij.trim() } : {}),
+    };
+    const heeftDoel = Object.keys(doel).length > 0;
     const sub: Submission = {
       id: uid(),
       widgetId: widget.id,
@@ -126,7 +137,7 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
       startedAt: startRef.current,
       submittedAt: Date.now(),
       durationSec: Math.round((Date.now() - startRef.current) / 1000),
-      answers: result.answers,
+      answers: heeftDoel ? { ...result.answers, _doel: doel } : result.answers,
       itemScores: result.itemScores,
       totalEarned: result.earned,
       totalMax: result.max,
@@ -222,6 +233,57 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
                 <span className="hint">Een voornaam of klasnummer is genoeg.</span>
               </div>
             )}
+            {recordSubmission && def.hasSubmissions && (
+              <details className="card" style={{ textAlign: 'left', padding: '10px 14px', margin: '4px 0 14px' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 600 }}>🎯 Kies je doel (optioneel)</summary>
+                <p style={{ color: 'var(--text-soft)', fontSize: '0.88rem', margin: '10px 0 8px' }}>
+                  Een doel kiezen helpt je gerichter te werken. Het telt niet mee voor punten;
+                  na afloop kijk je er zelf even op terug.
+                </p>
+                <div
+                  style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}
+                  role="group"
+                  aria-label="Kies een procesdoel"
+                >
+                  {PROCES_DOELEN.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      className={`chip ${doelProces === d ? 'placed' : ''}`}
+                      style={{ padding: '4px 10px', fontSize: '0.83rem' }}
+                      aria-pressed={doelProces === d}
+                      onClick={() => setDoelProces((cur) => (cur === d ? '' : d))}
+                    >
+                      {doelProces === d ? '✓ ' : ''}{d}
+                    </button>
+                  ))}
+                </div>
+                <div className="field">
+                  <label htmlFor="doel-streef">Streefscore</label>
+                  <select
+                    id="doel-streef"
+                    className="select"
+                    value={doelStreef}
+                    onChange={(e) => setDoelStreef(Number(e.target.value))}
+                  >
+                    <option value={0}>Geen streefscore</option>
+                    <option value={50}>Minstens 50%</option>
+                    <option value={70}>Minstens 70%</option>
+                    <option value={90}>Minstens 90%</option>
+                  </select>
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label htmlFor="doel-vrij">Eigen doel (in je eigen woorden)</label>
+                  <input
+                    id="doel-vrij"
+                    className="input"
+                    value={doelVrij}
+                    placeholder='bv. "Ik controleer mijn antwoord voor ik verderga."'
+                    onChange={(e) => setDoelVrij(e.target.value)}
+                  />
+                </div>
+              </details>
+            )}
             <button className="btn btn-primary btn-lg" style={{ width: '100%' }} disabled={needsName && !name.trim()} onClick={start}>
               ▶ Starten
             </button>
@@ -247,6 +309,12 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
             {completedSub && widget.settings.showFeedback && (
               <FoutenAnalysePanel
                 widget={widget}
+                submission={completedSub}
+                onSaved={(updated) => setCompletedSub(updated)}
+              />
+            )}
+            {completedSub && (
+              <DoelKaart
                 submission={completedSub}
                 onSaved={(updated) => setCompletedSub(updated)}
               />
@@ -364,6 +432,104 @@ function FoutenAnalysePanel({
       >
         Bewaren ✓
       </button>
+    </div>
+  );
+}
+
+// ── Persoonlijk doel ─────────────────────────────────────────────────────────
+
+/** Vorm van answers._doel; lokaal gedefinieerd (geen wijziging aan types.ts). */
+interface PersoonlijkDoel {
+  proces?: string;
+  streef?: number;
+  vrij?: string;
+}
+
+const PROCES_DOELEN = [
+  'Ik lees elke vraag twee keer',
+  'Ik probeer het eerst zonder hint',
+  'Ik werk rustig, zonder haast',
+];
+
+/**
+ * Kaart die na afloop het persoonlijke doel naast het resultaat legt, met één
+ * korte reflectievraag. Volgt het patroon van FoutenAnalysePanel: de reflectie
+ * wordt bij de inzending bewaard (answers._doelreflectie) via saveSubmission.
+ */
+function DoelKaart({
+  submission, onSaved,
+}: { submission: Submission; onSaved: (s: Submission) => void }) {
+  const answers = submission.answers as Record<string, unknown>;
+  const doel = answers['_doel'] as PersoonlijkDoel | undefined;
+  const [reflectie, setReflectie] = useState('');
+  const [saved, setSaved] = useState(!!answers['_doelreflectie']);
+
+  if (!doel || (!doel.proces && doel.streef === undefined && !doel.vrij)) return null;
+
+  const procent = submission.totalMax > 0 ? pct(submission.totalEarned, submission.totalMax) : null;
+  const behaald = doel.streef !== undefined && procent !== null ? procent >= doel.streef : null;
+
+  return (
+    <div className="card card-pad" style={{ marginTop: 18 }}>
+      <h3>🎯 Jouw doel</h3>
+      {doel.streef !== undefined && (
+        procent !== null ? (
+          <p style={{ margin: '6px 0' }}>
+            Je doel: <strong>{doel.streef}%</strong> — behaald: <strong>{procent}%</strong>{' '}
+            {behaald
+              ? <span className="badge badge-ok">✔ behaald</span>
+              : <span className="badge badge-warn">✗ nog niet — elke poging telt</span>}
+          </p>
+        ) : (
+          <p style={{ margin: '6px 0' }}>
+            Je streefdoel was <strong>{doel.streef}%</strong>, maar deze opdracht krijgt (nog) geen score.
+            Kijk daarom vooral terug op je aanpak.
+          </p>
+        )
+      )}
+      {(doel.proces || doel.vrij) && (
+        <p style={{ margin: '6px 0' }}>
+          Je nam je voor: <em>“{[doel.proces, doel.vrij].filter(Boolean).join('” en “')}”</em>
+          {' '}— gelukt? Wat hielp?
+        </p>
+      )}
+      {saved ? (
+        <div className="callout" role="status" style={{ marginTop: 8 }}>
+          <span aria-hidden>💬</span>
+          <div>Je reflectie is bewaard bij je resultaat — knap dat je terugkeek op je doel!</div>
+        </div>
+      ) : (
+        <>
+          <div className="field" style={{ marginTop: 10 }}>
+            <label htmlFor="doel-reflectie">Korte reflectie (één zin is genoeg)</label>
+            <input
+              id="doel-reflectie"
+              className="input"
+              value={reflectie}
+              placeholder='bv. "Rustig lezen hielp; volgende keer mik ik op 80%."'
+              onChange={(e) => setReflectie(e.target.value)}
+            />
+          </div>
+          <button
+            className="btn btn-primary"
+            disabled={!reflectie.trim()}
+            onClick={() => {
+              const updated: Submission = {
+                ...submission,
+                answers: { ...submission.answers, _doelreflectie: reflectie.trim() },
+              };
+              saveSubmission(updated);
+              onSaved(updated);
+              setSaved(true);
+            }}
+          >
+            Bewaren ✓
+          </button>
+        </>
+      )}
+      <p style={{ margin: '12px 0 0' }}>
+        <Link to="/voortgang">📈 Bekijk je voortgang op dit toestel</Link>
+      </p>
     </div>
   );
 }

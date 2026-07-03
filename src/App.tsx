@@ -9,6 +9,7 @@ import { EditorPage } from './pages/EditorPage';
 import { PlayerPage } from './pages/PlayerPage';
 import { OpenSharedPage } from './pages/OpenSharedPage';
 import { JoinPage } from './pages/JoinPage';
+import { ProgressPage } from './pages/ProgressPage';
 import { ResultsPage } from './pages/ResultsPage';
 import { ResultsOverviewPage } from './pages/ResultsOverviewPage';
 import { PrintPage } from './pages/PrintPage';
@@ -33,6 +34,7 @@ const router = createHashRouter([
   { path: '/speel/:code', element: <PlayerPage /> },
   { path: '/open', element: <OpenSharedPage /> },
   { path: '/meedoen', element: <JoinPage /> },
+  { path: '/voortgang', element: <ProgressPage /> },
   { path: '*', element: <JoinPage /> },
 ]);
 

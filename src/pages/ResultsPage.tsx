@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { deleteSubmission, getLiveEntries, getSubmissions, getWidget, onStorageChange, saveSubmission } from '../lib/storage';
 import { getTypeDef } from '../widgets/registry';
-import type { Question, QuizConfig, Submission, Widget } from '../lib/types';
+import type { LongAnswerValue, Question, QuizConfig, Submission, Widget } from '../lib/types';
 import { csvCell, downloadFile, formatDate, formatDuration, pct } from '../lib/utils';
 import { ConfirmModal, EmptyState, Modal, ScoreRing, useToast } from '../components/ui';
 import { gradeQuestion } from '../lib/grading';
@@ -220,6 +220,12 @@ function formatAnswer(q: Question, answer: unknown): string {
     case 'multi': return Array.isArray(answer) ? (answer as number[]).map((i) => q.options[i]).join(', ') : '—';
     case 'tf': return answer === true ? 'Juist' : answer === false ? 'Onjuist' : '—';
     case 'match': return Array.isArray(answer) ? q.pairs.map((p, i) => `${p.left}→${typeof (answer as any[])[i] === 'number' ? q.pairs[(answer as any[])[i] as number]?.right ?? '?' : '?'}`).join('; ') : '—';
+    case 'long': {
+      if (typeof answer === 'string') return answer;
+      const lv = answer as LongAnswerValue | null;
+      const parts = [lv?.tekst, lv?.tekening ? '🎨 [tekening]' : '', lv?.audio ? '🎤 [audio]' : ''].filter(Boolean);
+      return parts.length > 0 ? parts.join(' · ') : '—';
+    }
     case 'order': return Array.isArray(answer) ? (answer as number[]).map((i) => q.items[i]).join(' → ') : '—';
     case 'gap': return Array.isArray(answer) ? (answer as string[]).join(' / ') : '—';
     default: return String(answer);
@@ -280,11 +286,22 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
 
       {(() => {
         const fa = submission.answers['_foutenanalyse'] as { volgendeKeer?: string } | undefined;
-        if (!fa?.volgendeKeer) return null;
+        const doel = submission.answers['_doel'] as { proces?: string; streef?: number; vrij?: string } | undefined;
+        const doelReflectie = submission.answers['_doelreflectie'] as string | undefined;
+        if (!fa?.volgendeKeer && !doel && !doelReflectie) return null;
         return (
           <div className="callout" style={{ marginBottom: 12 }}>
             <span aria-hidden>🧠</span>
-            <div><strong>Voornemen van de leerling:</strong> “{fa.volgendeKeer}”</div>
+            <div>
+              {doel && (
+                <p style={{ margin: '0 0 4px' }}>
+                  <strong>Doel van de leerling:</strong>{' '}
+                  {[doel.proces, doel.streef ? `streefscore ${doel.streef}%` : '', doel.vrij].filter(Boolean).join(' · ')}
+                </p>
+              )}
+              {doelReflectie && <p style={{ margin: '0 0 4px' }}><strong>Reflectie op het doel:</strong> “{doelReflectie}”</p>}
+              {fa?.volgendeKeer && <p style={{ margin: 0 }}><strong>Voornemen na foutenanalyse:</strong> “{fa.volgendeKeer}”</p>}
+            </div>
           </div>
         );
       })()}
@@ -333,6 +350,16 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
                 <p style={{ margin: '6px 0 0', color: 'var(--text-soft)' }}>
                   <strong>Antwoord:</strong> {formatAnswer(q, ans)}
                 </p>
+                {q.type === 'long' && typeof ans === 'object' && ans !== null && (
+                  <div style={{ marginTop: 6 }}>
+                    {(ans as LongAnswerValue).tekening && (
+                      <img src={(ans as LongAnswerValue).tekening} alt={`Tekening van ${submission.studentName}`} style={{ maxWidth: 320, width: '100%', borderRadius: 8, border: '1px solid var(--line)', background: '#fff' }} />
+                    )}
+                    {(ans as LongAnswerValue).audio && (
+                      <audio controls src={(ans as LongAnswerValue).audio} style={{ display: 'block', maxWidth: '100%', marginTop: 6 }} />
+                    )}
+                  </div>
+                )}
                 {q.type === 'long' && q.modelAnswer && (
                   <p style={{ margin: '4px 0 0', color: 'var(--text-faint)', fontSize: '0.88rem' }}>
                     <strong>Modelantwoord:</strong> {q.modelAnswer}
@@ -712,6 +739,38 @@ function QuestionStats({ widget, subs }: { widget: Widget; subs: Submission[] })
               {got < subs.length ? ` · (${got} van ${subs.length} leerlingen kreeg deze vraag)` : ''}
             </div>
             <DistractorBars q={q} subs={subs} />
+            {(() => {
+              // voorzichtige item-analyse: alleen signalen, alleen bij voldoende inzendingen
+              const MIN_N = 8;
+              if (got < MIN_N) return null;
+              const relevant = subs.filter((s) => (!s.itemScores || q.id in s.itemScores) && s.totalMax > 0);
+              if (relevant.length < MIN_N) return null;
+              const correct = (s: Submission) => {
+                const sc = s.itemScores?.[q.id] ?? gradeQuestion(q, s.answers[q.id]);
+                return sc.mode !== 'pending' && sc.max > 0 && sc.earned >= sc.max;
+              };
+              const sorted = relevant.slice().sort((a, b) => (b.totalEarned / b.totalMax) - (a.totalEarned / a.totalMax));
+              const half = Math.floor(sorted.length / 2);
+              const top = sorted.slice(0, half);
+              const bottom = sorted.slice(sorted.length - half);
+              const pTop = top.filter(correct).length / Math.max(1, top.length);
+              const pBottom = bottom.filter(correct).length / Math.max(1, bottom.length);
+              const p = full / got;
+              let signal: string | null = null;
+              if (pTop <= pBottom && p > 0.05 && p < 0.95) {
+                signal = 'Sterk scorende leerlingen doen het hier niet beter dan de rest — bekijk deze vraag eens (dubbelzinnig? verkeerde sleutel?).';
+              } else if (p < 0.2) {
+                signal = 'Erg moeilijk voor deze groep — was de instructie of vraagstelling helder?';
+              } else if (p > 0.92) {
+                signal = 'Vrijwel iedereen juist — prima als opwarmer; als toetsvraag onderscheidt hij weinig.';
+              }
+              if (!signal) return null;
+              return (
+                <p className="hint" style={{ marginTop: 6 }}>
+                  🔎 <em>Signaal (n={got}):</em> {signal}
+                </p>
+              );
+            })()}
           </div>
         );
       })}
@@ -823,9 +882,21 @@ function CockpitRow({
         <strong>{submission.studentName}</strong>
         {graded ? <span className="badge badge-ok">✓ {existing.earned}/{question.points}</span> : <span className="badge badge-warn">te beoordelen</span>}
       </div>
-      <p style={{ whiteSpace: 'pre-wrap', background: 'var(--bg-sunken)', borderRadius: 8, padding: '8px 12px' }}>
-        {typeof answer === 'string' && answer.trim() ? answer : <em style={{ color: 'var(--text-faint)' }}>(geen antwoord)</em>}
-      </p>
+      <div style={{ background: 'var(--bg-sunken)', borderRadius: 8, padding: '8px 12px', marginBottom: 8 }}>
+        {(() => {
+          const lv: LongAnswerValue = typeof answer === 'string' ? { tekst: answer } : ((answer as LongAnswerValue) ?? {});
+          if (!lv.tekst?.trim() && !lv.tekening && !lv.audio) {
+            return <em style={{ color: 'var(--text-faint)' }}>(geen antwoord)</em>;
+          }
+          return (
+            <>
+              {lv.tekst?.trim() && <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{lv.tekst}</p>}
+              {lv.tekening && <img src={lv.tekening} alt={`Tekening van ${submission.studentName}`} style={{ maxWidth: 320, width: '100%', borderRadius: 8, border: '1px solid var(--line)', background: '#fff', marginTop: lv.tekst ? 8 : 0 }} />}
+              {lv.audio && <audio controls src={lv.audio} style={{ display: 'block', maxWidth: '100%', marginTop: 6 }} />}
+            </>
+          );
+        })()}
+      </div>
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <label style={{ fontWeight: 600, fontSize: '0.88rem', whiteSpace: 'nowrap' }}>
           Punten:

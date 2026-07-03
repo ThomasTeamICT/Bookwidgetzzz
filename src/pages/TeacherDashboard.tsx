@@ -1,10 +1,11 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { deleteFolder, deleteWidget, getFolders, getSubmissions, getWidgets, onStorageChange, saveFolder, saveWidget } from '../lib/storage';
-import { importWidgetJson } from '../lib/share';
-import { formatDateShort, makeCode, uid } from '../lib/utils';
-import { getTypeDef } from '../widgets/registry';
-import { ConfirmModal, EmptyState, Field, Modal, useToast } from '../components/ui';
+import { deleteFolder, deleteWidget, getFolders, getPrefs, getSubmissions, getWidgets, onStorageChange, saveFolder, saveWidget } from '../lib/storage';
+import { exportFolderPack, importFolderPack, importWidgetJson } from '../lib/share';
+import type { FolderPack } from '../lib/share';
+import { downloadFile, formatDateShort, makeCode, uid } from '../lib/utils';
+import { getTypeDef, WIDGET_TYPES } from '../widgets/registry';
+import { CheckRow, ConfirmModal, EmptyState, Field, Modal, useToast } from '../components/ui';
 import type { Folder, Widget } from '../lib/types';
 import { ShareModal } from '../components/ShareModal';
 
@@ -22,6 +23,7 @@ export function TeacherDashboard() {
   const [deleteTarget, setDeleteTarget] = useState<Widget | null>(null);
   const [deleteFolderTarget, setDeleteFolderTarget] = useState<Folder | null>(null);
   const [shareTarget, setShareTarget] = useState<Widget | null>(null);
+  const [packImport, setPackImport] = useState<FolderPack | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
@@ -52,6 +54,16 @@ export function TeacherDashboard() {
 
   const importFile = async (file: File) => {
     const text = await file.text();
+    // Eerst kijken of het een vakgroeppakket is (hele map met widgets).
+    const pack = importFolderPack(text);
+    if (pack) {
+      if (pack.widgets.length === 0) {
+        toast('Dit pakket bevat geen bruikbare widgets', 'err');
+        return;
+      }
+      setPackImport(pack);
+      return;
+    }
     const w = importWidgetJson(text);
     if (!w) {
       toast('Dit bestand is geen geldige widget', 'err');
@@ -62,6 +74,21 @@ export function TeacherDashboard() {
     w.folderId = null;
     saveWidget(w as Widget);
     toast(`“${w.title}” geïmporteerd`, 'ok');
+  };
+
+  const exportActiveFolderPack = () => {
+    if (activeFolder === 'all' || activeFolder === null) return;
+    const folder = folders.find((f) => f.id === activeFolder);
+    if (!folder) return;
+    const inFolder = widgets.filter((w) => w.folderId === folder.id);
+    if (inFolder.length === 0) {
+      toast('Deze map bevat geen widgets om te delen', 'err');
+      return;
+    }
+    const json = exportFolderPack(folder.name, inFolder, getPrefs().teacherName);
+    const safeName = folder.name.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '-') || 'map';
+    downloadFile(`${safeName}.widgetpak.json`, json);
+    toast(`Map “${folder.name}” gedownload als pakket (${inFolder.length} widget${inFolder.length === 1 ? '' : 's'})`, 'ok');
   };
 
   return (
@@ -109,10 +136,16 @@ export function TeacherDashboard() {
           ))}
           <button className="btn btn-sm btn-quiet" onClick={() => setFolderModal('new')}>+ Map</button>
           {activeFolder !== 'all' && activeFolder !== null && (
-            <button className="btn btn-sm btn-quiet" style={{ color: 'var(--err)' }}
-              onClick={() => setDeleteFolderTarget(folders.find((f) => f.id === activeFolder) ?? null)}>
-              Map verwijderen
-            </button>
+            <>
+              <button className="btn btn-sm btn-quiet" onClick={exportActiveFolderPack}
+                title="Download deze map als pakket voor je vakgroep">
+                📦 Map delen
+              </button>
+              <button className="btn btn-sm btn-quiet" style={{ color: 'var(--err)' }}
+                onClick={() => setDeleteFolderTarget(folders.find((f) => f.id === activeFolder) ?? null)}>
+                Map verwijderen
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -222,7 +255,148 @@ export function TeacherDashboard() {
         />
       )}
       {shareTarget && <ShareModal widget={shareTarget} onClose={() => setShareTarget(null)} />}
+      {packImport && (
+        <PackImportModal
+          pack={packImport}
+          onClose={() => setPackImport(null)}
+          onImported={(folderId) => { if (folderId) setActiveFolder(folderId); }}
+        />
+      )}
     </div>
+  );
+}
+
+// ── Vakgroeppakket importeren ────────────────────────────────────────────────
+
+function PackImportModal({ pack, onClose, onImported }: {
+  pack: FolderPack;
+  onClose: () => void;
+  onImported: (folderId: string | null) => void;
+}) {
+  const toast = useToast();
+
+  // Dubbelendetectie: zelfde titel + type bestaat al in de eigen collectie.
+  const rows = useMemo(() => {
+    const existing = new Set(getWidgets().map((w) => `${w.type}::${w.title.trim().toLowerCase()}`));
+    return pack.widgets.map((widget, index) => ({
+      index,
+      widget,
+      def: WIDGET_TYPES.find((t) => t.id === widget.type),
+      duplicate: existing.has(`${widget.type}::${widget.title.trim().toLowerCase()}`),
+    }));
+  }, [pack]);
+
+  const [checked, setChecked] = useState<Set<number>>(
+    () => new Set(rows.filter((r) => r.def && !r.duplicate).map((r) => r.index))
+  );
+  const [inNewFolder, setInNewFolder] = useState(true);
+
+  const toggle = (index: number, on: boolean) => {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(index);
+      else next.delete(index);
+      return next;
+    });
+  };
+
+  const chosen = rows.filter((r) => r.def && checked.has(r.index));
+
+  const doImport = () => {
+    if (chosen.length === 0) return;
+    let folderId: string | null = null;
+    if (inNewFolder) {
+      folderId = uid();
+      saveFolder({
+        id: folderId,
+        name: pack.meta.naam,
+        color: FOLDER_COLORS[getFolders().length % FOLDER_COLORS.length],
+        createdAt: Date.now(),
+      });
+    }
+    for (const r of chosen) {
+      const copy: Widget = {
+        ...(JSON.parse(JSON.stringify(r.widget)) as Widget),
+        id: uid(),
+        code: makeCode(),
+        folderId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      saveWidget(copy);
+    }
+    toast(
+      `${chosen.length} widget${chosen.length === 1 ? '' : 's'} geïmporteerd${inNewFolder ? ` in map “${pack.meta.naam}”` : ''}`,
+      'ok'
+    );
+    onImported(folderId);
+    onClose();
+  };
+
+  const parsedDate = pack.meta.datum ? new Date(pack.meta.datum) : null;
+  const dateTxt = parsedDate && !Number.isNaN(parsedDate.getTime())
+    ? parsedDate.toLocaleDateString('nl-BE', { day: '2-digit', month: 'long', year: 'numeric' })
+    : null;
+
+  return (
+    <Modal
+      title="Vakgroeppakket importeren"
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn btn-ghost" onClick={onClose}>Annuleren</button>
+          <button className="btn btn-primary" disabled={chosen.length === 0} onClick={doImport}>
+            {chosen.length === 0 ? 'Importeren' : `${chosen.length} widget${chosen.length === 1 ? '' : 's'} importeren`}
+          </button>
+        </>
+      }
+    >
+      <div className="callout" style={{ marginBottom: 14 }}>
+        <strong>📦 {pack.meta.naam}</strong>
+        <div className="hint" style={{ marginTop: 4 }}>
+          {pack.meta.auteur ? `Gedeeld door ${pack.meta.auteur}` : 'Auteur onbekend'}
+          {dateTxt ? ` · ${dateTxt}` : ''} · {pack.widgets.length} widget{pack.widgets.length === 1 ? '' : 's'}
+        </div>
+      </div>
+
+      <Field label="Welke widgets wil je importeren?" hint="Widgets met dezelfde titel en hetzelfde type als een bestaande widget staan standaard uitgevinkt.">
+        <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+          <button className="btn btn-sm btn-quiet"
+            onClick={() => setChecked(new Set(rows.filter((r) => r.def).map((r) => r.index)))}>
+            Alles aanvinken
+          </button>
+          <button className="btn btn-sm btn-quiet" onClick={() => setChecked(new Set())}>
+            Alles uitvinken
+          </button>
+        </div>
+        <div style={{ display: 'grid', gap: 2, maxHeight: 260, overflowY: 'auto' }}>
+          {rows.map((r) => (
+            <label key={r.index} className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={checked.has(r.index)}
+                disabled={!r.def}
+                onChange={(e) => toggle(r.index, e.target.checked)}
+              />
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
+                <span aria-hidden>{r.def?.icon ?? '❔'}</span>
+                <span>{r.widget.title}</span>
+                <span className="hint">({r.def ? r.def.name : 'onbekend type'})</span>
+                {r.duplicate && <span className="badge badge-warn">bestaat al</span>}
+                {!r.def && <span className="badge badge-err">kan niet geïmporteerd worden</span>}
+              </span>
+            </label>
+          ))}
+        </div>
+      </Field>
+
+      <CheckRow
+        checked={inNewFolder}
+        onChange={setInNewFolder}
+        label={`Importeren in nieuwe map “${pack.meta.naam}”`}
+      />
+      {!inNewFolder && <p className="hint" style={{ marginTop: 4 }}>De widgets komen dan bij “Zonder map” terecht.</p>}
+    </Modal>
   );
 }
 

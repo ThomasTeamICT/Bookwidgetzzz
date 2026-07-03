@@ -3,8 +3,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getSubmissions, getWidget, saveWidget } from '../lib/storage';
 import { getTypeDef } from '../widgets/registry';
 import type { Widget } from '../lib/types';
-import { CheckRow, Field, useToast } from '../components/ui';
+import { CheckRow, Field, Modal, useToast } from '../components/ui';
 import { ShareModal } from '../components/ShareModal';
+import { saveCustomTemplate } from '../lib/customTemplates';
 import { lintQuiz } from '../lib/linter';
 import type { QuizConfig } from '../lib/types';
 
@@ -18,6 +19,7 @@ export function EditorPage() {
   const [previewMode, setPreviewMode] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
   const [shareOpen, setShareOpen] = useState(false);
+  const [templateOpen, setTemplateOpen] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const saveTimer = useRef<number | null>(null);
 
@@ -73,6 +75,13 @@ export function EditorPage() {
         {['quiz', 'worksheet', 'exitticket'].includes(widget.type) && (
           <Link to={`/print/${widget.id}`} className="btn btn-sm btn-ghost" title="Afdrukken of als PDF bewaren">🖨 Afdrukken</Link>
         )}
+        <button
+          className="btn btn-sm btn-ghost"
+          onClick={() => setTemplateOpen(true)}
+          title="Bewaar deze widget als eigen sjabloon voor later hergebruik"
+        >
+          ⭐ Bewaar als sjabloon
+        </button>
         <button className="btn btn-sm btn-ghost" onClick={() => setShareOpen(true)}>📤 Delen</button>
         <button
           className={`btn btn-sm ${previewMode ? 'btn-primary' : 'btn-ghost'}`}
@@ -153,7 +162,50 @@ export function EditorPage() {
       )}
 
       {shareOpen && <ShareModal widget={widget} onClose={() => setShareOpen(false)} />}
+      {templateOpen && <SaveTemplateModal widget={widget} onClose={() => setTemplateOpen(false)} />}
     </div>
+  );
+}
+
+function SaveTemplateModal({ widget, onClose }: { widget: Widget; onClose: () => void }) {
+  const toast = useToast();
+  const [name, setName] = useState(widget.title);
+
+  const save = () => {
+    if (!name.trim()) return;
+    try {
+      saveCustomTemplate(name, widget);
+      toast('Sjabloon bewaard — je vindt het terug bij "Nieuwe widget"', 'ok');
+      onClose();
+    } catch {
+      toast('Bewaren mislukt: de lokale opslag is vol. Verwijder oude widgets of sjablonen.', 'err');
+    }
+  };
+
+  return (
+    <Modal
+      title="Bewaar als sjabloon"
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn btn-ghost" onClick={onClose}>Annuleren</button>
+          <button className="btn btn-primary" onClick={save} disabled={!name.trim()}>⭐ Bewaren</button>
+        </>
+      }
+    >
+      <Field
+        label="Naam van het sjabloon"
+        hint="Bewaart de inhoud én instellingen van deze widget als startpunt voor nieuwe widgets."
+      >
+        <input
+          className="input"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') save(); }}
+          placeholder="bv. Weektoets woordenschat"
+        />
+      </Field>
+    </Modal>
   );
 }
 
