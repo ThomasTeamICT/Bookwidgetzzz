@@ -5,6 +5,8 @@ import { getTypeDef } from '../widgets/registry';
 import type { Widget } from '../lib/types';
 import { CheckRow, Field, useToast } from '../components/ui';
 import { ShareModal } from '../components/ShareModal';
+import { lintQuiz } from '../lib/linter';
+import type { QuizConfig } from '../lib/types';
 
 export function EditorPage() {
   const { id } = useParams();
@@ -126,6 +128,25 @@ export function EditorPage() {
               <button className="btn btn-primary" style={{ marginTop: 14, width: '100%' }} onClick={() => setShareOpen(true)}>
                 📤 Delen met je klas
               </button>
+              {['quiz', 'worksheet', 'exitticket', 'splitworksheet'].includes(widget.type) && (() => {
+                const warnings = lintQuiz(widget.config as QuizConfig);
+                if (warnings.length === 0) return null;
+                return (
+                  <>
+                    <hr className="divider" />
+                    <h3 style={{ fontSize: '0.95rem' }}>🔍 Vraag-check</h3>
+                    <p className="hint" style={{ marginTop: -4 }}>Signalen uit de toetsliteratuur — jij beslist.</p>
+                    <ul style={{ paddingLeft: 16, margin: 0, fontSize: '0.85rem', color: 'var(--text-soft)' }}>
+                      {warnings.slice(0, 6).map((w, i) => (
+                        <li key={i} style={{ marginBottom: 6 }}>
+                          {w.questionNo !== null && <strong>V{w.questionNo}: </strong>}{w.text}
+                        </li>
+                      ))}
+                      {warnings.length > 6 && <li>… en nog {warnings.length - 6} signalen.</li>}
+                    </ul>
+                  </>
+                );
+              })()}
             </aside>
           </div>
         </main>

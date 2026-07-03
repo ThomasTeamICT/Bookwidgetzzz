@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import type { Widget } from '../lib/types';
 import { encodeWidgetToUrl, exportWidgetJson, playUrlForCode } from '../lib/share';
 import { downloadFile } from '../lib/utils';
-import { CopyButton, Modal } from './ui';
+import { CheckRow, CopyButton, Modal } from './ui';
 
 export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () => void }) {
   const codeUrl = playUrlForCode(widget.code);
@@ -80,6 +80,10 @@ export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () =>
 
       <hr className="divider" />
 
+      <AdaptedLinkSection widget={widget} />
+
+      <hr className="divider" />
+
       <details style={{ marginBottom: 12 }}>
         <summary style={{ cursor: 'pointer', fontWeight: 600 }}>🔗 Insluiten in je eigen website (embed)</summary>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 8 }}>
@@ -99,5 +103,51 @@ export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () =>
         <span className="hint">Importeer dit bestand op een ander toestel of geef het aan een collega.</span>
       </div>
     </Modal>
+  );
+}
+
+/**
+ * Redelijke aanpassingen, discreet: een aangepaste variant van de draagbare
+ * link (meer tijd, extra poging) die er voor de leerling identiek uitziet.
+ */
+function AdaptedLinkSection({ widget }: { widget: Widget }) {
+  const [open, setOpen] = useState(false);
+  const [extraTime, setExtraTime] = useState(true);
+  const [noLimit, setNoLimit] = useState(false);
+  const [extraAttempt, setExtraAttempt] = useState(false);
+
+  const adaptedUrl = useMemo(() => {
+    const w: Widget = JSON.parse(JSON.stringify(widget));
+    if (noLimit) w.settings.timeLimitMin = 0;
+    else if (extraTime && w.settings.timeLimitMin > 0) w.settings.timeLimitMin = Math.ceil(w.settings.timeLimitMin * 1.5);
+    if (extraAttempt && w.settings.maxAttempts > 0) w.settings.maxAttempts += 1;
+    return encodeWidgetToUrl(w);
+  }, [widget, extraTime, noLimit, extraAttempt]);
+
+  const hasEffect = noLimit || (extraTime && widget.settings.timeLimitMin > 0) || (extraAttempt && widget.settings.maxAttempts > 0);
+
+  return (
+    <details open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)} style={{ marginBottom: 4 }}>
+      <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
+        ♿ Aangepaste link (redelijke aanpassingen)
+      </summary>
+      <div style={{ paddingTop: 8 }}>
+        <p className="hint" style={{ marginTop: 0 }}>
+          Voor leerlingen met bv. dyslexie of aandachtproblemen: dezelfde oefening, discreet aangepast.
+          De leerling ziet geen verschil met de gewone link.
+        </p>
+        <CheckRow checked={extraTime && !noLimit} onChange={(v) => { setExtraTime(v); if (v) setNoLimit(false); }} label={`Tijdslimiet × 1,5${widget.settings.timeLimitMin > 0 ? ` (${widget.settings.timeLimitMin} → ${Math.ceil(widget.settings.timeLimitMin * 1.5)} min)` : ' (geen limiet ingesteld)'}`} />
+        <CheckRow checked={noLimit} onChange={(v) => { setNoLimit(v); if (v) setExtraTime(false); }} label="Geen tijdslimiet" />
+        <CheckRow checked={extraAttempt} onChange={setExtraAttempt} label={`Eén extra poging${widget.settings.maxAttempts > 0 ? ` (${widget.settings.maxAttempts} → ${widget.settings.maxAttempts + 1})` : ' (onbeperkt ingesteld)'}`} />
+        {hasEffect ? (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
+            <input className="input input-sm" readOnly value={adaptedUrl} aria-label="Aangepaste deellink" onFocus={(e) => e.target.select()} />
+            <CopyButton text={adaptedUrl} label="Kopiëren" />
+          </div>
+        ) : (
+          <p className="hint">Vink een aanpassing aan die effect heeft op deze widget.</p>
+        )}
+      </div>
+    </details>
   );
 }

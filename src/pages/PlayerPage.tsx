@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { bumpAttemptCount, getAttemptCount, getWidgetByCode, markStarted, saveSubmission } from '../lib/storage';
 import { getTypeDef } from '../widgets/registry';
-import type { Submission, Widget } from '../lib/types';
+import type { Question, Submission, Widget } from '../lib/types';
 import type { PlayerResult } from '../widgets/shared';
 import { uid } from '../lib/utils';
 import { hasProgress } from '../lib/autosave';
@@ -244,9 +244,17 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
               </div>
             )}
             <def.Player widget={widget} studentName={name.trim() || 'Anoniem'} timeUp={timeUp} onComplete={onComplete} />
+            {completedSub && widget.settings.showFeedback && (
+              <FoutenAnalysePanel
+                widget={widget}
+                submission={completedSub}
+                onSaved={(updated) => setCompletedSub(updated)}
+              />
+            )}
             {offerResultCode && completedSub && (
               <div className="card card-pad" style={{ marginTop: 18 }}>
                 <h3>📮 Stuur je resultaat naar je leerkracht</h3>
+                {/* resultaatcode bevat ook de foutenanalyse als die vóór het kopiëren is ingevuld */}
                 <p style={{ color: 'var(--text-soft)', fontSize: '0.92rem' }}>
                   Je werkte op je eigen toestel, dus je leerkracht ziet dit resultaat nog niet vanzelf.
                   Kopieer deze resultaatcode en bezorg ze via je gebruikelijke kanaal (bv. Smartschool of mail).
@@ -265,6 +273,97 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+const FOUT_LABELS = [
+  { key: 'slordig', label: '🙈 Slordigheidsfout' },
+  { key: 'gelezen', label: '👓 Vraag verkeerd gelezen' },
+  { key: 'kennis', label: '📖 Stof nog niet gekend' },
+  { key: 'aanpak', label: '🧭 Aanpak niet gekend' },
+] as const;
+
+/**
+ * Foutenanalyse door de leerling zelf ("exam wrapper"): fouten labelen en één
+ * voornemen noteren. Wordt bij de inzending bewaard zodat de leerkracht het ziet.
+ */
+function FoutenAnalysePanel({
+  widget, submission, onSaved,
+}: { widget: Widget; submission: Submission; onSaved: (s: Submission) => void }) {
+  const questions = (widget.config as { questions?: Question[] }).questions;
+  const wrong = (questions ?? []).filter((q) => {
+    if (q.type === 'info') return false;
+    const s = submission.itemScores?.[q.id];
+    return !!s && s.mode !== 'pending' && s.earned < s.max;
+  });
+  const [labels, setLabels] = useState<Record<string, string>>({});
+  const [nextTime, setNextTime] = useState('');
+  const [saved, setSaved] = useState(!!(submission.answers as Record<string, unknown>)['_foutenanalyse']);
+
+  if (!questions || wrong.length === 0 || saved) {
+    return saved && wrong.length > 0 ? (
+      <div className="callout" role="status" style={{ marginTop: 18 }}>
+        <span aria-hidden>🧠</span>
+        <div>Je foutenanalyse is bewaard — sterk dat je naar je eigen fouten keek!</div>
+      </div>
+    ) : null;
+  }
+
+  const gradableList: Question[] = questions.filter((q) => q.type !== 'info');
+
+  return (
+    <div className="card card-pad" style={{ marginTop: 18 }}>
+      <h3>🧠 Kijk even terug op je fouten</h3>
+      <p style={{ color: 'var(--text-soft)', fontSize: '0.92rem' }}>
+        Wat voor soort fout was het? Dit telt niet mee voor punten — het helpt jou (en je leerkracht) om te zien wat je volgende stap is.
+      </p>
+      {wrong.map((q) => (
+        <div key={q.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
+          <p style={{ margin: '0 0 6px', fontWeight: 600 }}>
+            Vraag {gradableList.indexOf(q) + 1}: {q.prompt ? q.prompt.slice(0, 90) : '(invuloefening)'}
+          </p>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }} role="group" aria-label="Soort fout">
+            {FOUT_LABELS.map((f) => (
+              <button
+                key={f.key}
+                className={`chip ${labels[q.id] === f.key ? 'placed' : ''}`}
+                style={{ padding: '4px 10px', fontSize: '0.83rem' }}
+                aria-pressed={labels[q.id] === f.key}
+                onClick={() => setLabels((m) => ({ ...m, [q.id]: f.key }))}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div className="field" style={{ marginTop: 12 }}>
+        <label htmlFor="fa-next">Wat doe je de volgende keer anders? (één zin)</label>
+        <input
+          id="fa-next" className="input" value={nextTime}
+          placeholder='bv. "Ik lees elke vraag twee keer voor ik antwoord."'
+          onChange={(e) => setNextTime(e.target.value)}
+        />
+      </div>
+      <button
+        className="btn btn-primary"
+        disabled={Object.keys(labels).length === 0 && !nextTime.trim()}
+        onClick={() => {
+          const updated: Submission = {
+            ...submission,
+            answers: {
+              ...submission.answers,
+              _foutenanalyse: { labels, volgendeKeer: nextTime.trim() },
+            },
+          };
+          saveSubmission(updated);
+          onSaved(updated);
+          setSaved(true);
+        }}
+      >
+        Bewaren ✓
+      </button>
     </div>
   );
 }

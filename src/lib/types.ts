@@ -140,6 +140,10 @@ export interface QuestionBase {
   explanation?: string;
   /** Optionele hulp die de leerling zelf kan openvouwen (scaffolding). */
   hint?: string;
+  /** Leerdoel waar deze vraag bij hoort (voor score-per-doel). */
+  goal?: string;
+  /** Niveaulaag voor routes binnen één widget. */
+  level?: 'basis' | 'kern' | 'uitbreiding';
 }
 
 export interface MCQuestion extends QuestionBase {
@@ -214,6 +218,13 @@ export interface QuizConfig {
   askConfidence?: boolean;
   /** Trek per leerling n willekeurige vragen uit de pool (0/undefined = alle vragen). */
   drawCount?: number;
+  /**
+   * Getrapte feedback (alleen bij layout 'single'): de leerling controleert per
+   * vraag; bij een fout eerst de hint en een tweede kans, pas daarna de oplossing.
+   */
+  stepCheck?: boolean;
+  /** Niveauroutes aanbieden op basis van de level-tags van de vragen. */
+  useRoutes?: boolean;
 }
 
 // ── Overige widget-configuraties ────────────────────────────────────────────

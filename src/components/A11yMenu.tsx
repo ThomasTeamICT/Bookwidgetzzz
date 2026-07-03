@@ -7,16 +7,19 @@ export interface A11yPrefs {
   calm: boolean;
   /** Ruimere letter- en regelafstand (leesbaarheid, o.a. bij dyslexie). */
   spacing: boolean;
+  /** Voorleestempo voor de TTS-knoppen. */
+  rate: number;
 }
 
 const KEY = 'wf.a11y.v1';
+const DEFAULTS: A11yPrefs = { scale: 1, calm: false, spacing: false, rate: 0.95 };
 
 export function loadA11y(): A11yPrefs {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { scale: 1, calm: false, spacing: false, ...JSON.parse(raw) };
+    if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
   } catch { /* standaard gebruiken */ }
-  return { scale: 1, calm: false, spacing: false };
+  return { ...DEFAULTS };
 }
 
 function save(p: A11yPrefs) {
@@ -84,6 +87,20 @@ export function A11yMenu({ value, onChange }: { value: A11yPrefs; onChange: (p: 
             <input type="checkbox" checked={value.calm} onChange={(e) => set({ calm: e.target.checked })} />
             <span>Rustmodus (minder beweging)</span>
           </label>
+          <p style={{ margin: '8px 0 4px', fontWeight: 700, fontSize: '0.85rem' }}>Voorleestempo</p>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {[{ r: 0.75, l: '🐢 Traag' }, { r: 0.95, l: 'Normaal' }, { r: 1.15, l: '🐇 Vlot' }].map(({ r, l }) => (
+              <button
+                key={r}
+                className={`btn btn-sm ${value.rate === r ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ flex: 1, fontSize: '0.78rem' }}
+                aria-pressed={value.rate === r}
+                onClick={() => set({ rate: r })}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -7,6 +7,8 @@ interface AutosaveData {
   savedAt: number;
   /** Vraag-ids in de getoonde volgorde, zodat schudden/vragenpool stabiel hervat. */
   order?: string[];
+  /** Status van getrapte controle per vraag, zodat gecheckte vragen vergrendeld blijven. */
+  step?: Record<string, 'retry' | 'locked'>;
 }
 
 const key = (widgetId: string, studentName: string) =>
@@ -17,10 +19,11 @@ export function saveProgress(
   studentName: string,
   answers: Record<string, unknown>,
   idx: number,
-  order?: string[]
+  order?: string[],
+  step?: Record<string, 'retry' | 'locked'>
 ) {
   try {
-    localStorage.setItem(key(widgetId, studentName), JSON.stringify({ answers, idx, order, savedAt: Date.now() } satisfies AutosaveData));
+    localStorage.setItem(key(widgetId, studentName), JSON.stringify({ answers, idx, order, step, savedAt: Date.now() } satisfies AutosaveData));
   } catch {
     // opslag vol — stil negeren, autosave is best-effort
   }

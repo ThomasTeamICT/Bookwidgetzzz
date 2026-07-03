@@ -10,6 +10,7 @@ import { Field, ImagePicker, Modal, useToast } from '../components/ui';
 import { EditorProps, ItemHeader, moveItem, PlayerProps, ResultHero } from './shared';
 import { clearProgress, loadProgress, saveProgress } from '../lib/autosave';
 import { getWidgets } from '../lib/storage';
+import { loadA11y } from '../components/A11yMenu';
 import type { Widget } from '../lib/types';
 
 // ── Voorlezen (tekst-naar-spraak) ───────────────────────────────────────────
@@ -26,7 +27,7 @@ function speakQuestion(q: Question) {
   if (q.type === 'order') parts.push(...q.items);
   const u = new SpeechSynthesisUtterance(parts.join('. '));
   u.lang = 'nl-BE';
-  u.rate = 0.95;
+  u.rate = loadA11y().rate;
   speechSynthesis.cancel();
   speechSynthesis.speak(u);
 }
@@ -512,10 +513,28 @@ export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
           </button>
         </div>
       </div>
+      {/* gedeelde suggestielijst voor leerdoelen */}
+      <datalist id="wf-goals">
+        {[...new Set(config.questions.map((q) => q.goal).filter((g): g is string => !!g && g.trim() !== ''))].map((g) => (
+          <option key={g} value={g} />
+        ))}
+      </datalist>
       <label className="checkbox-row" style={{ marginBottom: 4 }}>
         <input type="checkbox" checked={config.askConfidence ?? false} onChange={(e) => onChange({ ...config, askConfidence: e.target.checked })} />
         <span>Vraag per vraag hoe zeker de leerling is <span className="hint">(traint zelfinschatting; telt nooit mee voor punten)</span></span>
       </label>
+      {config.layout === 'single' && (
+        <label className="checkbox-row" style={{ marginBottom: 4 }}>
+          <input type="checkbox" checked={config.stepCheck ?? false} onChange={(e) => onChange({ ...config, stepCheck: e.target.checked })} />
+          <span>Getrapte feedback: controleren per vraag <span className="hint">(fout → hint en tweede kans, dán pas de oplossing)</span></span>
+        </label>
+      )}
+      {config.questions.some((q) => q.level) && (
+        <label className="checkbox-row" style={{ marginBottom: 4 }}>
+          <input type="checkbox" checked={config.useRoutes ?? false} onChange={(e) => onChange({ ...config, useRoutes: e.target.checked })} />
+          <span>Niveauroutes: leerling kiest een route <span className="hint">(route 1 = basis · route 2 = + kern · route 3 = + uitbreiding; vragen zonder niveau zitten in elke route)</span></span>
+        </label>
+      )}
       <div className="field" style={{ marginTop: 8 }}>
         <label>Vragenpool</label>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -578,6 +597,28 @@ export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
                     <input className="input input-sm" value={q.hint ?? ''} placeholder='bv. "Herlees de vraag: wat wordt precies gevraagd?"'
                       onChange={(e) => update(i, { ...q, hint: e.target.value })} />
                   </Field>
+                )}
+                {q.type !== 'info' && (
+                  <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                    <Field label="Leerdoel (optioneel)" hint="Vragen met hetzelfde doel worden samen gerapporteerd.">
+                      <input className="input input-sm" list="wf-goals" value={q.goal ?? ''} placeholder='bv. "Werkwoordspelling"'
+                        style={{ minWidth: 220 }}
+                        onChange={(e) => update(i, { ...q, goal: e.target.value })} />
+                    </Field>
+                    <Field label="Niveau (voor routes)" hint="Zonder niveau telt de vraag mee in elke route.">
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {([undefined, 'basis', 'kern', 'uitbreiding'] as const).map((lv) => (
+                          <button
+                            key={lv ?? 'geen'}
+                            className={`btn btn-sm ${(q.level ?? undefined) === lv ? 'btn-primary' : 'btn-ghost'}`}
+                            onClick={() => update(i, { ...q, level: lv })}
+                          >
+                            {lv ?? '—'}
+                          </button>
+                        ))}
+                      </div>
+                    </Field>
+                  </div>
                 )}
               </div>
             </details>
@@ -1083,19 +1124,24 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
   const [practice, setPractice] = useState(false);
   const [confs, setConfs] = useState<Record<string, Confidence>>({});
   const hintsRef = useRef<Set<string>>(new Set());
+  const routeRef = useRef<number | null>(null);
+  // getrapte controle per vraag: 'retry' = fout, tweede kans loopt; 'locked' = afgehandeld
+  const [stepState, setStepState] = useState<Record<string, 'retry' | 'locked'>>(restored?.step ?? {});
   const [answers, setAnswers] = useState<Answers>(restored?.answers ?? {});
   const [idx, setIdx] = useState(() =>
     restored ? Math.min(Math.max(0, restored.idx), Math.max(0, (restoredQuestions ?? baseQuestions).length - 1)) : 0
   );
-  const [phase, setPhase] = useState<'answering' | 'done'>('answering');
+  // routekeuze alleen bij een verse start (bij hervatten ligt de set al vast)
+  const needRoute = !!config.useRoutes && !restoredQuestions && baseQuestions.some((q) => q.level);
+  const [phase, setPhase] = useState<'route' | 'answering' | 'done'>(needRoute ? 'route' : 'answering');
   const [showRestored, setShowRestored] = useState(!!restored && Object.keys(restored.answers).length > 0);
   const submittedRef = useRef(false);
 
   useEffect(() => {
     if (!preview && !practice && phase === 'answering') {
-      saveProgress(widget.id, studentName, answers, idx, questions.map((q) => q.id));
+      saveProgress(widget.id, studentName, answers, idx, questions.map((q) => q.id), stepState);
     }
-  }, [answers, idx, phase, practice]);
+  }, [answers, idx, phase, practice, stepState]);
 
   const gradable: Question[] = questions.filter((q) => q.type !== 'info');
   const answeredCount = gradable.filter((q) => answered(q, answers[q.id])).length;
@@ -1109,6 +1155,7 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
       const meta: Record<string, unknown> = {};
       if (Object.keys(confs).length > 0) meta['_zekerheid'] = confs;
       if (hintsRef.current.size > 0) meta['_hints'] = [...hintsRef.current];
+      if (routeRef.current !== null) meta['_route'] = routeRef.current;
       onComplete({
         answers: { ...answers, ...meta },
         itemScores: res.itemScores, earned: res.earned, max: res.max, hasPending: res.hasPending,
@@ -1130,6 +1177,7 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
     setQuestions(wrong);
     setAnswers({});
     setConfs({});
+    setStepState({});
     setIdx(0);
     setPractice(true);
     setShowRestored(false);
@@ -1138,15 +1186,54 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
   };
 
   useEffect(() => {
-    if (timeUp && phase === 'answering') submit();
+    if (timeUp && phase !== 'done') submit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeUp]);
 
-  if (questions.length === 0) {
+  if (questions.length === 0 && phase !== 'route') {
     return <p style={{ textAlign: 'center', color: 'var(--text-soft)' }}>Deze widget bevat nog geen vragen.</p>;
   }
 
   const review = phase === 'done' && widget.settings.showFeedback;
+
+  // ── routekeuze (niveaulagen, neutraal benoemd) ──
+  if (phase === 'route') {
+    const forRoute = (r: 1 | 2 | 3) => {
+      const allow = r === 1 ? ['basis'] : r === 2 ? ['basis', 'kern'] : ['basis', 'kern', 'uitbreiding'];
+      return baseQuestions.filter((q) => !q.level || allow.includes(q.level));
+    };
+    const pick = (r: 1 | 2 | 3) => {
+      routeRef.current = r;
+      setQuestions(forRoute(r));
+      setIdx(0);
+      setPhase('answering');
+    };
+    const meta: { r: 1 | 2 | 3; icon: string; label: string; desc: string }[] = [
+      { r: 1, icon: '🟢', label: 'Route 1', desc: 'De kernvragen — een stevige basis.' },
+      { r: 2, icon: '🔵', label: 'Route 2', desc: 'Basis plus verdiepende vragen.' },
+      { r: 3, icon: '🟣', label: 'Route 3', desc: 'Alles, inclusief uitdagende vragen.' },
+    ];
+    return (
+      <div style={{ maxWidth: 520, margin: '0 auto', textAlign: 'center' }}>
+        <h2>Kies je route</h2>
+        <p style={{ color: 'var(--text-soft)' }}>
+          Elke route werkt aan dezelfde leerstof. Kies wat nu bij je past — je mag altijd een andere route proberen.
+        </p>
+        {meta.map(({ r, icon, label, desc }) => {
+          const n = forRoute(r).filter((q) => q.type !== 'info').length;
+          return (
+            <button key={r} className="answer-option" onClick={() => pick(r)} style={{ textAlign: 'left' }}>
+              <span style={{ fontSize: '1.4rem' }} aria-hidden>{icon}</span>
+              <span style={{ flex: 1 }}>
+                <strong>{label}</strong> · {n} vragen
+                <span style={{ display: 'block', fontSize: '0.86rem', color: 'var(--text-soft)' }}>{desc}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
 
   if (phase === 'done') {
     const res = gradeQuiz({ ...config, questions }, answers);
@@ -1184,6 +1271,40 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
             </button>
           )}
         </ResultHero>
+        {review && (() => {
+          // score per leerdoel: diagnostischer dan één totaalcijfer
+          const goalList = [...new Set(questions.filter((q) => q.type !== 'info' && q.goal?.trim()).map((q) => q.goal!.trim()))];
+          if (goalList.length === 0) return null;
+          return (
+            <div className="card card-pad" style={{ marginTop: 16 }}>
+              <h3>🎯 Per leerdoel</h3>
+              {goalList.map((goal) => {
+                const qs = questions.filter((q) => q.type !== 'info' && q.goal?.trim() === goal);
+                let earned = 0, max = 0, pending = false;
+                for (const q of qs) {
+                  const s = res.itemScores[q.id] ?? gradeQuestion(q, answers[q.id]);
+                  if (s.mode === 'pending') pending = true;
+                  earned += s.earned; max += s.max;
+                }
+                const p = max > 0 ? Math.round((earned / max) * 100) : 0;
+                return (
+                  <div key={goal} style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, marginBottom: 4 }}>
+                      <span>{goal}</span>
+                      <span style={{ color: p >= 70 ? 'var(--ok)' : p >= 45 ? 'var(--warn)' : 'var(--err)' }}>
+                        {pending ? 'deels nog te beoordelen · ' : ''}{Math.round(earned * 100) / 100}/{max}
+                      </span>
+                    </div>
+                    <div className="progressbar">
+                      <div style={{ width: `${p}%`, background: p >= 70 ? 'var(--ok)' : p >= 45 ? 'var(--warn)' : 'var(--err)' }} />
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="hint" style={{ margin: 0 }}>Zo zie je wat je al beheerst en wat je best nog eens herhaalt.</p>
+            </div>
+          );
+        })()}
         {config.askConfidence && review && (misconcepties.length > 0 || verborgenKennis.length > 0) && (
           <div className="card card-pad" style={{ marginTop: 16 }}>
             <h3>🧭 Jouw zelfinschatting</h3>
@@ -1261,6 +1382,24 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
   // één vraag per scherm
   const q = questions[idx];
   const isLast = idx === questions.length - 1;
+  const stepMode = !!config.stepCheck;
+  const qStep = stepState[q.id];
+  const isLocked = qStep === 'locked';
+  const needsCheck = stepMode && q.type !== 'info' && !isLocked;
+
+  const checkCurrent = () => {
+    const s = gradeQuestion(q, answers[q.id]);
+    const fullyCorrect = s.mode !== 'pending' && s.max > 0 && s.earned >= s.max;
+    if (fullyCorrect || s.mode === 'pending' || s.max === 0 || qStep === 'retry') {
+      // juist, open vraag, of tweede poging voorbij → vergrendelen (oplossing wordt zichtbaar)
+      setStepState((m) => ({ ...m, [q.id]: 'locked' }));
+    } else {
+      // eerste fout: hint tonen en één herkansing geven
+      if (q.hint) hintsRef.current.add(q.id);
+      setStepState((m) => ({ ...m, [q.id]: 'retry' }));
+    }
+  };
+
   return (
     <div>
       {restoredBanner}
@@ -1273,19 +1412,33 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
         </span>
       </div>
       <QuestionView
+        key={`${q.id}-${isLocked ? 'r' : 'a'}`}
         q={q} index={gradable.indexOf(q)} total={gradable.length}
         value={answers[q.id]}
         onChange={(v) => setAnswers((a) => ({ ...a, [q.id]: v }))}
-        review={false}
+        review={stepMode && isLocked && q.type !== 'info'}
         confidence={confs[q.id] ?? null}
         onConfidence={config.askConfidence ? (c) => setConfs((m) => ({ ...m, [q.id]: c })) : undefined}
         onHintUsed={() => hintsRef.current.add(q.id)}
       />
+      {stepMode && qStep === 'retry' && (
+        <div className="callout warn" role="alert">
+          <span aria-hidden>🔁</span>
+          <div>
+            <strong>Nog niet helemaal juist.</strong> Kijk nog eens goed en probeer één keer opnieuw.
+            {q.hint && <div style={{ marginTop: 4 }}>💡 <strong>Hint:</strong> {q.hint}</div>}
+          </div>
+        </div>
+      )}
       <div className="player-nav">
         <button className="btn btn-ghost" onClick={() => setIdx((i) => Math.max(0, i - 1))} disabled={idx === 0}>
           ← Vorige
         </button>
-        {isLast ? (
+        {needsCheck ? (
+          <button className="btn btn-primary" onClick={checkCurrent} disabled={!answered(q, answers[q.id])}>
+            {qStep === 'retry' ? 'Opnieuw controleren ✓' : 'Controleren ✓'}
+          </button>
+        ) : isLast ? (
           <button className="btn btn-primary btn-lg" onClick={submit}>Indienen ✓</button>
         ) : (
           <button className="btn btn-primary" onClick={() => setIdx((i) => Math.min(questions.length - 1, i + 1))}>

@@ -53,11 +53,40 @@ export function FlashcardsEditor({ config, onChange }: EditorProps<FlashcardsCon
   );
 }
 
-export function FlashcardsPlayer({ widget, onComplete }: PlayerProps<FlashcardsConfig>) {
-  const cards = useMemo(
-    () => (widget.settings.shuffle ? shuffled(widget.config.cards) : widget.config.cards).filter((c) => c.front || c.back || c.frontImage || c.backImage),
-    [widget.id]
-  );
+// ── Leitner-bakjes: gespreid herhalen, lokaal per toestel ───────────────────
+
+const BOX_MAX = 3;
+const boxKeyFor = (widgetId: string) => `wf.leitner.${widgetId}`;
+
+function loadBoxes(widgetId: string): Record<string, number> {
+  try {
+    return JSON.parse(localStorage.getItem(boxKeyFor(widgetId)) ?? '{}');
+  } catch {
+    return {};
+  }
+}
+function saveBoxes(widgetId: string, boxes: Record<string, number>) {
+  try { localStorage.setItem(boxKeyFor(widgetId), JSON.stringify(boxes)); } catch { /* best effort */ }
+}
+
+const BOX_META = [
+  { box: 1, icon: '📕', label: 'nog lastig' },
+  { box: 2, icon: '📙', label: 'bijna' },
+  { box: 3, icon: '📗', label: 'gekend' },
+];
+
+export function FlashcardsPlayer({ widget, preview, onComplete }: PlayerProps<FlashcardsConfig>) {
+  const cards = useMemo(() => {
+    const valid = (widget.settings.shuffle ? shuffled(widget.config.cards) : widget.config.cards)
+      .filter((c) => c.front || c.back || c.frontImage || c.backImage);
+    // Leitner: kaarten uit lagere bakjes (nog lastig) komen eerst
+    const boxes = preview ? {} : loadBoxes(widget.id);
+    return valid
+      .map((c, i) => ({ c, i, box: boxes[c.id] ?? 1 }))
+      .sort((a, b) => (a.box - b.box) || (a.i - b.i))
+      .map((x) => x.c);
+  }, [widget.id]);
+  const [boxes, setBoxes] = useState<Record<string, number>>(() => (preview ? {} : loadBoxes(widget.id)));
   const [idx, setIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [known, setKnown] = useState<Set<string>>(new Set());
@@ -95,6 +124,13 @@ export function FlashcardsPlayer({ widget, onComplete }: PlayerProps<FlashcardsC
     if (done || !card) return;
     if (knewIt) setKnown((s) => new Set(s).add(card.id));
     else setAgain((s) => new Set(s).add(card.id));
+    // Leitner: gekend schuift een bakje op, lastig gaat terug naar bakje 1
+    const nextBoxes = {
+      ...boxes,
+      [card.id]: knewIt ? Math.min(BOX_MAX, (boxes[card.id] ?? 1) + 1) : 1,
+    };
+    setBoxes(nextBoxes);
+    if (!preview) saveBoxes(widget.id, nextBoxes);
     if (idx + 1 >= cards.length) {
       setDone(true);
       const knownCount = known.size + (knewIt ? 1 : 0);
@@ -111,6 +147,7 @@ export function FlashcardsPlayer({ widget, onComplete }: PlayerProps<FlashcardsC
   };
 
   if (done) {
+    const counts = BOX_META.map(({ box }) => cards.filter((c) => (boxes[c.id] ?? 1) === box).length);
     return (
       <ResultHero
         earned={known.size} max={cards.length}
@@ -118,11 +155,27 @@ export function FlashcardsPlayer({ widget, onComplete }: PlayerProps<FlashcardsC
         title="Set afgewerkt! 🎓"
         subtitle={`Je kende ${known.size} van de ${cards.length} kaarten.`}
       >
-        <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => {
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10, flexWrap: 'wrap' }}>
+          {BOX_META.map(({ box, icon, label }, i) => (
+            <span key={box} className="badge">{icon} {counts[i]} {label}</span>
+          ))}
+        </div>
+        <p className="hint" style={{ marginTop: 8 }}>
+          De app onthoudt dit op dit toestel: bij de volgende ronde komen de lastige kaarten eerst.
+        </p>
+        <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={() => {
           setIdx(0); setFlipped(false); setKnown(new Set()); setAgain(new Set()); setDone(false);
         }}>
           🔁 Opnieuw oefenen
         </button>
+        {Object.keys(boxes).length > 0 && (
+          <button className="btn btn-quiet btn-sm" style={{ marginTop: 8 }} onClick={() => {
+            setBoxes({});
+            if (!preview) saveBoxes(widget.id, {});
+          }}>
+            Bakjes leegmaken (opnieuw vanaf nul)
+          </button>
+        )}
       </ResultHero>
     );
   }
@@ -133,6 +186,11 @@ export function FlashcardsPlayer({ widget, onComplete }: PlayerProps<FlashcardsC
         <span>Kaart {idx + 1} / {cards.length}</span>
         <span className="badge badge-ok">✓ {known.size} gekend</span>
         <span className="badge badge-warn">↻ {again.size} herhalen</span>
+        {card && (boxes[card.id] ?? 1) > 1 && (
+          <span className="badge" title="Leitner-bakje van deze kaart">
+            {BOX_META[(boxes[card.id] ?? 1) - 1].icon} bakje {boxes[card.id] ?? 1}
+          </span>
+        )}
       </GameStatus>
       <div className="flashcard-stage">
         <button

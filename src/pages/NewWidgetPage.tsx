@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CATEGORIES, createWidget, WIDGET_TYPES } from '../widgets/registry';
 import { saveWidget } from '../lib/storage';
+import { TEMPLATES } from '../lib/templates';
 import type { WidgetTypeId } from '../lib/types';
 
 export function NewWidgetPage() {
@@ -30,6 +31,32 @@ export function NewWidgetPage() {
           <p className="sub">Kies het type dat bij je les past — je kan alles daarna nog aanpassen.</p>
         </div>
       </div>
+      <section style={{ marginBottom: 30 }} aria-labelledby="cat-templates">
+        <h2 id="cat-templates" style={{ fontSize: '1.1rem', marginBottom: 4 }}>🎁 Start van een sjabloon</h2>
+        <p className="hint" style={{ marginBottom: 12 }}>
+          Didactisch doordachte startpunten — vul de [placeholders] in en klaar.
+        </p>
+        <div className="type-grid">
+          {TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              className="card type-card"
+              onClick={() => {
+                const w = t.build();
+                saveWidget(w);
+                navigate(`/bewerk/${w.id}`);
+              }}
+            >
+              <span className="type-icon" style={{ background: 'linear-gradient(135deg, var(--brand), var(--accent))' }} aria-hidden>{t.icon}</span>
+              <span>
+                <h3>{t.name}</h3>
+                <p>{t.description}</p>
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
       {CATEGORIES.map((cat) => {
         const types = WIDGET_TYPES.filter((t) => t.category === cat.id);
         return (

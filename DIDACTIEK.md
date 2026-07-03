@@ -24,6 +24,17 @@ bewust *niet* gebouwd wordt.
 | **Anonieme CSV-export** | De meeste analysevragen hebben geen namen nodig; de privacyvriendelijke keuze wordt de makkelijke keuze. |
 | **Feedbackveld met taakgerichte prompt** | Feedback op taak en proces werkt; feedback op de persoon nauwelijks. De placeholder stuurt richting "wat lukt / wat nog niet / volgende stap". |
 | **Toetsmodus** (volledig scherm + registratie venster-verlaten) | ⚠️ Bewust bescheiden gehouden en transparant naar de leerling. Zie kanttekening hieronder. |
+| **Leerdoelen per vraag** + score-per-doel voor de leerling én doel-heatmap (leerlingen × doelen) voor de klassenraad | Feed-up én diagnostiek: "3/4 op werkwoordspelling" stuurt het vervolgleren, "7/10" niet. |
+| **Getrapte feedback** (controleren per vraag: fout → hint + tweede kans → dán de oplossing) | Het juiste antwoord meteen weggeven ondermijnt het ophaal-effect; de tweede poging is zelf een leermoment. |
+| **Foutenanalyse door de leerling** (fouten labelen + één voornemen; zichtbaar voor de leerkracht) | Exam-wrapper-principe: de toets wordt leermateriaal en attributie wordt gezond ("slordig gelezen" is beïnvloedbaar, "ik ben slecht in wiskunde" niet). |
+| **Distractor-analyse per vraag** | "De halve klas kiest dezelfde foute optie bij vraag 4" is precies het signaal om de les van morgen bij te sturen. |
+| **Nakijkcockpit** (per vráág verbeteren, met herbruikbare feedbackbank) | Eén beoordelingskader per vraag = sneller én consistenter; de bank maakt taakgerichte feedback goedkoop. |
+| **Leitner-bakjes in flitskaarten** (persistent per toestel; lastige kaarten eerst) | Gespreid actief ophalen is een van de best onderbouwde leerstrategieën — de tool organiseert de spreiding zelf. |
+| **Niveauroutes binnen één widget** (neutraal benoemd: route 1/2/3; opschuiven kan altijd) | Differentiatie zonder drie aparte werkbladen en zonder etikettering. |
+| **Vraag-linter in de editor** | Bekende constructiefouten (te lange juiste optie, dubbele ontkenning, alleen herkenvragen) gesignaleerd op het moment dat het telt. |
+| **Sjabloonbibliotheek** (3-2-1, troebelste punt, diagnostische instap, herhaalquiz met pool, practicum-stappenplan) | Lesdoel-eerst in plaats van leeg canvas; tijdwinst mét didactische kwaliteit. |
+| **Aangepaste deellink** (tijd ×1,5 / geen limiet / extra poging — onzichtbaar voor klasgenoten) | Redelijke aanpassingen, discreet: geen hand opsteken, geen aparte behandeling. |
+| **Instelbaar voorleestempo** | Trager voor zwakke lezers, vlotter voor geoefende luisteraars — per toestel onthouden. |
 
 ### Kanttekening bij de toetsmodus
 Client-side anti-fraude is principieel te omzeilen (de correctiesleutel reist mee in de
@@ -34,19 +45,21 @@ De leerling ziet altijd dat registratie aanstaat — geen verborgen monitoring.
 
 ## 🗺️ Aanbevolen vervolgstappen (didactisch geprioriteerd)
 
-### Hoge prioriteit (haalbaar client-side)
-1. **Leerdoelen als feed-up** — leerdoel-tags per vraag; resultaat per doel i.p.v. alleen een totaalscore ("3/4 op werkwoordspelling" stuurt het leren, "7/10" niet). Ook als heatmap doelen × leerlingen voor de klassenraad.
-2. **Getrapte feedback** — bij een fout eerst een hint en een tweede poging, pas daarna het juiste antwoord met uitleg. Direct het antwoord weggeven ondermijnt het ophaal-effect.
-3. **Leitner-herhaalschema in flitskaarten** — gekende kaarten later terug, moeilijke sneller; "vandaag te herhalen"-teller. Gespreid ophalen is een van de best onderbouwde leerstrategieën.
-4. **Foutenanalyse door de leerling** — na de feedback fouten labelen (slordig / verkeerd gelezen / stof niet gekend / aanpak fout) + één zin "volgende keer…". Exam-wrapper-principe; stuurt gezonde attributie.
-5. **Reflectiesjablonen voor exit-tickets** — 3-2-1, troebelste punt, stoplicht; puntloos. Het exit-ticket wordt zo reflectie-instrument in plaats van mini-toets.
-6. **Distractor-analyse per vraag** — welke foute optie koos de klas het vaakst? Misconceptie-detector voor de les van morgen.
-7. **Niveaulagen binnen één widget** (basis/kern/uitbreiding met neutrale namen) — differentiatie zonder drie aparte werkbladen en zonder etikettering.
-8. **Sjabloonbibliotheek** met lesdoel-eerst-flow en eigen sjablonen met invulvelden.
-9. **Nakijkcockpit**: per vráág verbeteren (alle antwoorden op vraag 3 onder elkaar) + herbruikbare feedbackbank.
-10. **Vraag-linter**: waarschuwt voor bekende constructiefouten (te korte afleiders, dubbele ontkenning, alleen reproductievragen).
-11. **Aangepaste deellink per leerling** (tijd ×1,5, hints open, voorlezen aan) — redelijke aanpassingen, discreet.
-12. **Meeleesmarkering bij voorlezen** (Web Speech boundary-events) + instelbaar tempo.
+> ✅ De oorspronkelijke "hoge prioriteit"-lijst (leerdoelen, getrapte feedback,
+> Leitner-flitskaarten, foutenanalyse, reflectiesjablonen, distractor-analyse,
+> niveauroutes, sjabloonbibliotheek, nakijkcockpit, vraag-linter, aangepaste
+> deellink en voorleestempo) is intussen **volledig geïmplementeerd** — zie de
+> tabel hierboven.
+
+### Volgende kandidaten (haalbaar client-side)
+1. **Meeleesmarkering bij voorlezen** — het voorgelezen woord live markeren (Web Speech boundary-events) en per zin herbeluisteren; koppelt oog en oor zoals voorleessoftware bij dyslexie.
+2. **Eigen sjablonen** — elke widget als sjabloon met invulvelden kunnen bewaren (nu is er een vaste bibliotheek).
+3. **Taalsteun/glossarium** — steuntaalveld per vraag en klikbare schooltaalwoorden met uitleg, standaard dicht.
+4. **"Mijn voortgang"-pagina voor de leerling** — groei over eigen pogingen heen zichtbaar maken (per toestel).
+5. **Persoonlijk doel op het startscherm** — streef- of procesdoel kiezen; na afloop doel naast resultaat.
+6. **Meerdere antwoordvormen bij open vragen** — typen, tekenen of inspreken (MediaRecorder), voor leerlingen die mondeling sterker zijn.
+7. **Item-analyse over afnames heen** — moeilijkheids- en discriminatie-indicaties per vraag, voorzichtig geformuleerd ("bekijk deze vraag eens"), verborgen bij kleine n.
+8. **Vakgroeppakketten** — een hele map als één bestand delen met versie- en auteursmetadata, met slimme merge bij import.
 
 ### Vergt een (lichte) server — bewust op de lange baan
 - Live klasoverzicht over toestellen heen (Live Widgets-equivalent).
