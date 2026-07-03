@@ -153,6 +153,26 @@ function PromptText({
   );
 }
 
+/** Effectieve hintladder van een vraag (nieuw hints-veld met terugval op hint). */
+export function questionHints(q: Question): string[] {
+  const ladder = (q.hints ?? []).map((h) => h.trim()).filter(Boolean);
+  if (ladder.length > 0) return ladder;
+  return q.hint?.trim() ? [q.hint.trim()] : [];
+}
+
+/** Zinnen met hun tekstposities, voor zin-per-zin voorlezen. */
+function splitSentences(text: string): { start: number; end: number }[] {
+  const out: { start: number; end: number }[] = [];
+  const re = /[^.!?…\n]+[.!?…]*\s*/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    const raw = m[0];
+    const trimmedLen = raw.trimEnd().length;
+    if (trimmedLen > 0) out.push({ start: m.index, end: m.index + trimmedLen });
+  }
+  return out;
+}
+
 // ── Accenttekens voor taalvakken ────────────────────────────────────────────
 
 const ACCENTS = ['é', 'è', 'ê', 'ë', 'à', 'â', 'ç', 'î', 'ï', 'ô', 'û', 'ù', 'ü', 'ñ'];
@@ -747,9 +767,34 @@ export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
                   <textarea className="textarea" rows={2} value={q.explanation ?? ''} onChange={(e) => update(i, { ...q, explanation: e.target.value })} />
                 </Field>
                 {q.type !== 'info' && (
-                  <Field label="Hint voor de leerling (optioneel)" hint="De leerling kan de hint zelf openen tijdens het maken; hintgebruik zie je bij de resultaten.">
-                    <input className="input input-sm" value={q.hint ?? ''} placeholder='bv. "Herlees de vraag: wat wordt precies gevraagd?"'
-                      onChange={(e) => update(i, { ...q, hint: e.target.value })} />
+                  <Field
+                    label="Hintladder (optioneel, max. 3 oplopende hints)"
+                    hint="Trede 1: strategie (“herlees de vraag”), trede 2: inhoudelijke aanwijzing, trede 3: bijna-voorbeeld. De leerling opent ze zelf, één voor één; het gebruik zie je bij de resultaten."
+                  >
+                    <div>
+                      {questionHints(q).map((h, hi) => (
+                        <div className="option-row" key={hi}>
+                          <span className="badge">{hi + 1}</span>
+                          <input className="input input-sm" value={h}
+                            onChange={(e) => {
+                              const hints = questionHints(q).slice();
+                              hints[hi] = e.target.value;
+                              update(i, { ...q, hints, hint: undefined });
+                            }} />
+                          <button className="btn btn-quiet btn-icon btn-sm" aria-label={`Hint ${hi + 1} verwijderen`}
+                            onClick={() => {
+                              const hints = questionHints(q).filter((_, j) => j !== hi);
+                              update(i, { ...q, hints, hint: undefined });
+                            }}>✕</button>
+                        </div>
+                      ))}
+                      {questionHints(q).length < 3 && (
+                        <button className="btn btn-sm btn-ghost"
+                          onClick={() => update(i, { ...q, hints: [...questionHints(q), ''], hint: undefined })}>
+                          + Hint toevoegen
+                        </button>
+                      )}
+                    </div>
                   </Field>
                 )}
                 <Field label="In andere woorden / steuntaal (optioneel)" hint="Vertaling of eenvoudiger formulering; de leerling opent dit zelf via 🌐 — standaard verborgen.">
@@ -1382,14 +1427,34 @@ export function QuestionView({
   /** Zekerheidsgraad tonen/registreren (kalibratie). */
   confidence?: Confidence | null;
   onConfidence?: (c: Confidence) => void;
-  onHintUsed?: () => void;
+  /** Meldt hoeveel hints (diepste trede) de leerling opende. */
+  onHintUsed?: (level: number) => void;
   /** Klikbare schooltaalwoorden met uitleg. */
   glossary?: GlossaryEntry[];
 }) {
   const score = review && q.type !== 'info' ? gradeQuestion(q, value) : null;
-  const [hintOpen, setHintOpen] = useState(false);
+  const hints = questionHints(q);
+  const [hintLevel, setHintLevel] = useState(0);
   const [spoken, setSpoken] = useState<[number, number] | null>(null);
   const [supportOpen, setSupportOpen] = useState(false);
+  const sentences = useMemo(() => splitSentences(q.prompt ?? ''), [q.prompt]);
+  const sentIdxRef = useRef(0);
+
+  // zin-per-zin voorlezen: elke klik leest de volgende zin, met markering
+  const speakNextSentence = () => {
+    if (typeof speechSynthesis === 'undefined' || sentences.length === 0 || !q.prompt) return;
+    const i = sentIdxRef.current % sentences.length;
+    sentIdxRef.current = i + 1;
+    const { start, end } = sentences[i];
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(q.prompt.slice(start, end));
+    u.lang = 'nl-BE';
+    u.rate = loadA11y().rate;
+    setSpoken([start, end]);
+    u.onend = () => setSpoken(null);
+    u.onerror = () => setSpoken(null);
+    speechSynthesis.speak(u);
+  };
   useEffect(() => () => {
     // voorlezen stoppen wanneer de vraag verdwijnt (onvoorwaardelijk: de
     // closure zou anders een verouderde 'spoken' zien die altijd null is)
@@ -1410,6 +1475,18 @@ export function QuestionView({
         >
           🔊
         </button>
+        {sentences.length >= 2 && (
+          <button
+            type="button"
+            className="btn btn-quiet btn-sm"
+            style={{ minHeight: 26, padding: '2px 6px', fontSize: '0.75rem' }}
+            onClick={speakNextSentence}
+            aria-label="Zin per zin voorlezen (volgende zin)"
+            title="Zin per zin voorlezen"
+          >
+            🔊¹²³
+          </button>
+        )}
         {q.support && !review && (
           <button
             type="button"
@@ -1448,19 +1525,24 @@ export function QuestionView({
       {q.type === 'order' && <OrderAnswer q={q} value={value} onChange={onChange} review={review} />}
       {q.type === 'number' && <NumberAnswer q={q} value={value} onChange={onChange} review={review} />}
       {q.type === 'slider' && <SliderAnswer q={q} value={value} onChange={onChange} review={review} />}
-      {!review && q.hint && q.type !== 'info' && (
+      {!review && hints.length > 0 && q.type !== 'info' && (
         <div style={{ marginTop: 12 }}>
-          {hintOpen ? (
-            <div className="callout warn" style={{ marginBottom: 0 }}>
+          {hints.slice(0, hintLevel).map((h, i) => (
+            <div key={i} className="callout warn" style={{ marginBottom: 8 }}>
               <span aria-hidden>💡</span>
-              <div><strong>Hint:</strong> {q.hint}</div>
+              <div><strong>Hint {hints.length > 1 ? `${i + 1}/${hints.length}` : ''}:</strong> {h}</div>
             </div>
-          ) : (
+          ))}
+          {hintLevel < hints.length && (
             <button
               type="button" className="btn btn-sm btn-quiet"
-              onClick={() => { setHintOpen(true); onHintUsed?.(); }}
+              onClick={() => {
+                const next = hintLevel + 1;
+                setHintLevel(next);
+                onHintUsed?.(next);
+              }}
             >
-              💡 Ik wil een hint
+              💡 {hintLevel === 0 ? 'Ik wil een hint' : `Nog een hint (${hintLevel + 1}/${hints.length})`}
             </button>
           )}
         </div>
@@ -1533,7 +1615,8 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
   const [questions, setQuestions] = useState<Question[]>(restoredQuestions ?? baseQuestions);
   const [practice, setPractice] = useState(false);
   const [confs, setConfs] = useState<Record<string, Confidence>>({});
-  const hintsRef = useRef<Set<string>>(new Set());
+  /** Diepste geopende hinttrede per vraag. */
+  const hintsRef = useRef<Map<string, number>>(new Map());
   const routeRef = useRef<number | null>(null);
   // getrapte controle per vraag: 'retry' = fout, tweede kans loopt; 'locked' = afgehandeld
   const [stepState, setStepState] = useState<Record<string, 'retry' | 'locked'>>(restored?.step ?? {});
@@ -1564,7 +1647,10 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
       const res = gradeQuiz({ ...config, questions }, answers);
       const meta: Record<string, unknown> = {};
       if (Object.keys(confs).length > 0) meta['_zekerheid'] = confs;
-      if (hintsRef.current.size > 0) meta['_hints'] = [...hintsRef.current];
+      if (hintsRef.current.size > 0) {
+        // "vraagid" = 1 hint, "vraagid:2" = twee treden, enz.
+        meta['_hints'] = [...hintsRef.current.entries()].map(([id, lv]) => (lv > 1 ? `${id}:${lv}` : id));
+      }
       if (routeRef.current !== null) meta['_route'] = routeRef.current;
       onComplete({
         answers: { ...answers, ...meta },
@@ -1776,7 +1862,7 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
             review={false}
             confidence={confs[q.id] ?? null}
             onConfidence={config.askConfidence ? (c) => setConfs((m) => ({ ...m, [q.id]: c })) : undefined}
-            onHintUsed={() => hintsRef.current.add(q.id)}
+            onHintUsed={(lv) => hintsRef.current.set(q.id, Math.max(lv, hintsRef.current.get(q.id) ?? 0))}
             glossary={config.glossary}
           />
         ))}
@@ -1806,7 +1892,9 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
       setStepState((m) => ({ ...m, [q.id]: 'locked' }));
     } else {
       // eerste fout: hint tonen en één herkansing geven
-      if (q.hint) hintsRef.current.add(q.id);
+      if (questionHints(q).length > 0) {
+        hintsRef.current.set(q.id, Math.max(1, hintsRef.current.get(q.id) ?? 0));
+      }
       setStepState((m) => ({ ...m, [q.id]: 'retry' }));
     }
   };
@@ -1830,7 +1918,7 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
         review={stepMode && isLocked && q.type !== 'info'}
         confidence={confs[q.id] ?? null}
         onConfidence={config.askConfidence ? (c) => setConfs((m) => ({ ...m, [q.id]: c })) : undefined}
-        onHintUsed={() => hintsRef.current.add(q.id)}
+        onHintUsed={(lv) => hintsRef.current.set(q.id, Math.max(lv, hintsRef.current.get(q.id) ?? 0))}
         glossary={config.glossary}
       />
       {stepMode && qStep === 'retry' && (
@@ -1838,7 +1926,9 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
           <span aria-hidden>🔁</span>
           <div>
             <strong>Nog niet helemaal juist.</strong> Kijk nog eens goed en probeer één keer opnieuw.
-            {q.hint && <div style={{ marginTop: 4 }}>💡 <strong>Hint:</strong> {q.hint}</div>}
+            {questionHints(q).length > 0 && (
+              <div style={{ marginTop: 4 }}>💡 <strong>Hint:</strong> {questionHints(q)[0]}</div>
+            )}
           </div>
         </div>
       )}

@@ -139,3 +139,77 @@ export const TEMPLATES: Template[] = [
     },
   },
 ];
+
+// ── Invulvelden: [PLACEHOLDERS] in sjablonen ────────────────────────────────
+
+/**
+ * Patroon voor invulvelden zoals [ONDERWERP] of [HERHAALVRAAG 1]: begint met
+ * een hoofdletter en bevat verder alleen hoofdletters, cijfers, spaties en
+ * "/", ":" of "-". Gaten in invulteksten (bv. "[Parijs]") matchen zo niet.
+ */
+const PLACEHOLDER_RE = /\[([A-Z][A-Z0-9 /:-]{1,40})\]/g;
+
+/** Roept `visit` aan voor elke string in een geneste JSON-achtige waarde. */
+function scanStrings(value: unknown, visit: (s: string) => void): void {
+  if (typeof value === 'string') {
+    visit(value);
+  } else if (Array.isArray(value)) {
+    value.forEach((v) => scanStrings(v, visit));
+  } else if (value && typeof value === 'object') {
+    Object.values(value).forEach((v) => scanStrings(v, visit));
+  }
+}
+
+/**
+ * Zoekt alle invulvelden ([PLACEHOLDER]) in de titel en de config van een
+ * widget. Gededupliceerd, in volgorde van eerste voorkomen; de vierkante
+ * haken zelf worden weggelaten.
+ */
+export function extractPlaceholders(widget: Widget): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  const visit = (s: string) => {
+    for (const m of s.matchAll(PLACEHOLDER_RE)) {
+      const name = m[1];
+      if (!seen.has(name)) {
+        seen.add(name);
+        result.push(name);
+      }
+    }
+  };
+  scanStrings(widget.title, visit);
+  scanStrings(widget.config, visit);
+  return result;
+}
+
+/**
+ * Vervangt in een diepe kopie van de widget alle voorkomens van elk ingevuld
+ * [PLACEHOLDER] (in titel en config) door de opgegeven waarde. Lege of enkel
+ * uit spaties bestaande waarden laten de placeholder staan, zodat die later
+ * in de editor alsnog ingevuld kan worden.
+ */
+export function fillPlaceholders(widget: Widget, values: Record<string, string>): Widget {
+  const copy = JSON.parse(JSON.stringify(widget)) as Widget;
+  const filled = Object.entries(values)
+    .map(([name, value]) => [name, value.trim()] as const)
+    .filter(([, value]) => value !== '');
+  if (filled.length === 0) return copy;
+
+  const replaceAll = (s: string): string =>
+    filled.reduce((acc, [name, value]) => acc.split(`[${name}]`).join(value), s);
+
+  const walk = (value: unknown): unknown => {
+    if (typeof value === 'string') return replaceAll(value);
+    if (Array.isArray(value)) return value.map(walk);
+    if (value && typeof value === 'object') {
+      const obj = value as Record<string, unknown>;
+      for (const key of Object.keys(obj)) obj[key] = walk(obj[key]);
+      return obj;
+    }
+    return value;
+  };
+
+  copy.title = replaceAll(copy.title);
+  copy.config = walk(copy.config);
+  return copy;
+}

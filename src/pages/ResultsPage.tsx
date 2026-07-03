@@ -326,7 +326,11 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
             const score = scores[q.id] ?? gradeQuestion(q, ans);
             const isOpen = q.type === 'long';
             const conf = (submission.answers['_zekerheid'] as Record<string, string> | undefined)?.[q.id];
-            const usedHint = Array.isArray(submission.answers['_hints']) && (submission.answers['_hints'] as string[]).includes(q.id);
+            // "_hints"-vorm: "vraagid" (1 hint) of "vraagid:2" (twee treden)
+            const hintEntry = Array.isArray(submission.answers['_hints'])
+              ? (submission.answers['_hints'] as string[]).find((h) => h === q.id || h.startsWith(q.id + ':'))
+              : undefined;
+            const hintLevel = hintEntry ? (hintEntry.includes(':') ? parseInt(hintEntry.split(':')[1], 10) || 1 : 1) : 0;
             const foutLabel = (submission.answers['_foutenanalyse'] as { labels?: Record<string, string> } | undefined)?.labels?.[q.id];
             const FOUT_TEKST: Record<string, string> = { slordig: '🙈 slordig', gelezen: '👓 verkeerd gelezen', kennis: '📖 stof niet gekend', aanpak: '🧭 aanpak niet gekend' };
             return (
@@ -334,7 +338,11 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
                 <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
                   <strong>V{i + 1}.</strong>
                   <span style={{ flex: 1 }}>{q.prompt || (q.type === 'gap' ? 'Invuloefening' : '')}</span>
-                  {usedHint && <span className="badge" title="De leerling opende de hint">💡 hint</span>}
+                  {hintLevel > 0 && (
+                    <span className="badge" title="Aantal geopende hints (hintladder)">
+                      💡 {hintLevel === 1 ? 'hint' : `${hintLevel} hints`}
+                    </span>
+                  )}
                   {foutLabel && FOUT_TEKST[foutLabel] && (
                     <span className="badge" title="Eigen foutenanalyse van de leerling">{FOUT_TEKST[foutLabel]}</span>
                   )}

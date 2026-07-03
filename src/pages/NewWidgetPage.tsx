@@ -2,14 +2,26 @@ import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CATEGORIES, createWidget, WIDGET_TYPES } from '../widgets/registry';
 import { saveWidget } from '../lib/storage';
-import { TEMPLATES } from '../lib/templates';
+import { extractPlaceholders, fillPlaceholders, TEMPLATES } from '../lib/templates';
 import {
   deleteCustomTemplate, getCustomTemplates, instantiateTemplate,
 } from '../lib/customTemplates';
 import type { CustomTemplate } from '../lib/customTemplates';
 import { formatDateShort } from '../lib/utils';
-import { ConfirmModal } from '../components/ui';
-import type { WidgetTypeId } from '../lib/types';
+import { ConfirmModal, Field, Modal } from '../components/ui';
+import type { Widget, WidgetTypeId } from '../lib/types';
+
+/** "HERHAALVRAAG 1" → "Herhaalvraag 1": leesbaar label voor een invulveld. */
+function readableLabel(placeholder: string): string {
+  return placeholder.charAt(0) + placeholder.slice(1).toLowerCase();
+}
+
+/** Sjabloon dat klaarstaat om ingevuld te worden via de invul-modal. */
+interface FillState {
+  widget: Widget;
+  placeholders: string[];
+  values: Record<string, string>;
+}
 
 export function NewWidgetPage() {
   const navigate = useNavigate();
@@ -17,6 +29,7 @@ export function NewWidgetPage() {
   const preselect = params.get('type');
   const [customTemplates, setCustomTemplates] = React.useState<CustomTemplate[]>(() => getCustomTemplates());
   const [templateToDelete, setTemplateToDelete] = React.useState<CustomTemplate | null>(null);
+  const [fill, setFill] = React.useState<FillState | null>(null);
 
   const create = (type: WidgetTypeId) => {
     const w = createWidget(type);
@@ -24,12 +37,22 @@ export function NewWidgetPage() {
     navigate(`/bewerk/${w.id}`, { replace: true });
   };
 
+  const finishWidget = (w: Widget) => {
+    saveWidget(w);
+    navigate(`/bewerk/${w.id}`);
+  };
+
+  /** Opent eerst de invul-modal wanneer het sjabloon [PLACEHOLDERS] bevat. */
+  const startWithPlaceholders = (w: Widget) => {
+    const placeholders = extractPlaceholders(w);
+    if (placeholders.length === 0) finishWidget(w);
+    else setFill({ widget: w, placeholders, values: {} });
+  };
+
   const startFromTemplate = (t: CustomTemplate) => {
     // sjablonen met een (na een update) onbekend widgettype nooit instantiëren
     if (!WIDGET_TYPES.some((wt) => wt.id === t.typeId)) return;
-    const w = instantiateTemplate(t);
-    saveWidget(w);
-    navigate(`/bewerk/${w.id}`);
+    startWithPlaceholders(instantiateTemplate(t));
   };
 
   const preselectDone = React.useRef(false);
@@ -61,11 +84,7 @@ export function NewWidgetPage() {
             <button
               key={t.id}
               className="card type-card"
-              onClick={() => {
-                const w = t.build();
-                saveWidget(w);
-                navigate(`/bewerk/${w.id}`);
-              }}
+              onClick={() => startWithPlaceholders(t.build())}
             >
               <span className="type-icon" style={{ background: 'linear-gradient(135deg, var(--brand), var(--accent))' }} aria-hidden>{t.icon}</span>
               <span>
@@ -115,6 +134,55 @@ export function NewWidgetPage() {
             })}
           </div>
         </section>
+      )}
+
+      {fill && (
+        <Modal
+          title="Vul je sjabloon in"
+          onClose={() => setFill(null)}
+          footer={
+            <>
+              <button
+                className="btn btn-ghost"
+                onClick={() => {
+                  const w = fill.widget;
+                  setFill(null);
+                  finishWidget(w);
+                }}
+              >
+                Overslaan
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  const w = fillPlaceholders(fill.widget, fill.values);
+                  setFill(null);
+                  finishWidget(w);
+                }}
+              >
+                Widget aanmaken
+              </button>
+            </>
+          }
+        >
+          <p className="hint" style={{ marginBottom: 14 }}>
+            Dit sjabloon bevat invulvelden. Velden die je leeg laat, blijven als [placeholder] in
+            de widget staan — die kan je later in de editor nog invullen.
+          </p>
+          {fill.placeholders.map((p) => (
+            <Field key={p} label={readableLabel(p)}>
+              <input
+                type="text"
+                value={fill.values[p] ?? ''}
+                placeholder={`[${p}]`}
+                aria-label={readableLabel(p)}
+                onChange={(e) =>
+                  setFill((f) => (f ? { ...f, values: { ...f.values, [p]: e.target.value } } : f))
+                }
+              />
+            </Field>
+          ))}
+        </Modal>
       )}
 
       {templateToDelete && (

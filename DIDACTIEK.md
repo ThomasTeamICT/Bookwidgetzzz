@@ -61,12 +61,17 @@ De leerling ziet altijd dat registratie aanstaat — geen verborgen monitoring.
 > **item-analyse** (voorzichtige signalen, alleen bij n ≥ 8) en
 > **vakgroeppakketten** (een map als één bestand delen met collega's, met dubbelendetectie bij import).
 
-### Volgende kandidaten (haalbaar client-side)
-1. **Per-zin herbeluisteren** bij het voorlezen, naast de meeleesmarkering.
-2. **Sjablonen met invulvelden** — placeholders die de editor bij gebruik actief uitvraagt.
-3. **Leerdoelen over widgets heen** — één doelenlijst per vak, met beheersing over meerdere oefeningen samen.
-4. **Hintladders** (2-3 oplopende hints per vraag in plaats van één).
-5. **Exporteerbaar voortgangsbestand** voor de leerling (voortgang meenemen naar een ander toestel).
+> ✅ Ook deze lijst is intussen geïmplementeerd: **zin-per-zin voorlezen** (🔊¹²³, met
+> markering per zin), **sjablonen met invulvelden** (placeholders worden bij gebruik
+> uitgevraagd), **leerdoelen over widgets heen** (aggregatie + heatmap op de
+> resultatenpagina), **hintladders** (max. 3 oplopende hints; de leerkracht ziet hoeveel
+> treden een leerling gebruikte) en het **exporteerbare voortgangsbestand** (leerling
+> neemt voortgang mee naar een ander toestel).
+
+### Volgende kandidaten
+De client-side roadmap is hiermee afgewerkt. Wat didactisch nog waardevol is, vraagt
+een (lichte) server: live klasoverzicht over toestellen heen, cijferdoorstroom naar
+het LMS-puntenboek (LTI/Smartschool), en realtime samen ontwikkelen met collega's.
 
 ### Vergt een (lichte) server — bewust op de lange baan
 - Live klasoverzicht over toestellen heen (Live Widgets-equivalent).

@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getSubmissions, getWidgets, onStorageChange } from '../lib/storage';
 import type { Submission } from '../lib/types';
-import { EmptyState } from '../components/ui';
-import { formatDate, pct } from '../lib/utils';
+import { EmptyState, useToast } from '../components/ui';
+import { downloadFile, formatDate, pct } from '../lib/utils';
+import { exportProgress, importProgress } from '../lib/progressTransfer';
 
 /**
  * "Mijn voortgang" voor de leerling op dit toestel.
@@ -63,6 +64,44 @@ export function ProgressPage() {
   const actieveNaam =
     (gekozen && namen.find((n) => n.toLowerCase() === gekozen.toLowerCase())) || (namen[0] ?? '');
 
+  // ── Voortgang meenemen naar een ander toestel ─────────────────────────────
+  const toast = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const exporteerVoortgang = () => {
+    if (!actieveNaam) return;
+    const safe =
+      actieveNaam.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '-').toLowerCase() ||
+      'leerling';
+    downloadFile(`voortgang-${safe}.json`, exportProgress(actieveNaam));
+    toast(`Voortgang van ${actieveNaam} gedownload`, 'ok');
+  };
+
+  const importeerBestand = async (f: File) => {
+    let tekst: string;
+    try {
+      tekst = await f.text();
+    } catch {
+      toast('Het bestand kon niet gelezen worden', 'err');
+      return;
+    }
+    const res = importProgress(tekst);
+    if (!res) {
+      toast('Dit is geen geldig voortgangsbestand van WidgetFabriek', 'err');
+      return;
+    }
+    if (res.imported === 0) {
+      toast('Geen nieuwe pogingen gevonden — alles stond hier al', 'info');
+    } else {
+      toast(
+        `${res.imported} poging${res.imported === 1 ? '' : 'en'}${res.naam ? ` van ${res.naam}` : ''} geïmporteerd`,
+        'ok'
+      );
+    }
+    // meteen naar de geïmporteerde naam springen
+    if (res.naam) setGekozen(res.naam);
+  };
+
   const groepen = useMemo<WidgetGroep[]>(() => {
     const mijn = subs.filter(
       (s) => s.studentName.trim().toLowerCase() === actieveNaam.trim().toLowerCase()
@@ -103,14 +142,33 @@ export function ProgressPage() {
       <div className="player-main">
         <h1 style={{ fontSize: '1.5rem' }}>📈 Mijn voortgang</h1>
 
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json,.json"
+          hidden
+          aria-label="Voortgangsbestand kiezen"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void importeerBestand(f);
+            e.target.value = '';
+          }}
+        />
+
         {subs.length === 0 ? (
           <EmptyState icon="🌱" title="Nog geen voortgang op dit toestel">
             <p>
               Zodra je hier een opdracht maakt, zie je op deze pagina al je pogingen en hoe je groeit.
               Je voortgang wordt <strong>per toestel</strong> bewaard: werkte je eerder op een ander
-              toestel, dan staat je voortgang daar.
+              toestel, dan staat je voortgang daar. Heb je daar een voortgangsbestand geëxporteerd?
+              Importeer het hier.
             </p>
-            <Link to="/meedoen" className="btn btn-primary">🎓 Meedoen met een opdracht</Link>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link to="/meedoen" className="btn btn-primary">🎓 Meedoen met een opdracht</Link>
+              <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>
+                📥 Voortgang importeren
+              </button>
+            </div>
           </EmptyState>
         ) : (
           <>
@@ -132,6 +190,30 @@ export function ProgressPage() {
                 ))}
               </select>
               <span className="hint">Alle namen die op dit toestel een opdracht maakten.</span>
+            </div>
+
+            <div className="field" style={{ maxWidth: 520 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  onClick={exporteerVoortgang}
+                  aria-label={`Voortgang van ${actieveNaam} exporteren als bestand`}
+                >
+                  💾 Voortgang exporteren
+                </button>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => fileRef.current?.click()}
+                  aria-label="Voortgangsbestand importeren"
+                >
+                  📥 Voortgang importeren
+                </button>
+              </div>
+              <span className="hint">
+                Zo neem je je voortgang mee naar een ander toestel (bv. van de klas-pc naar thuis):
+                exporteer hier, importeer daar. Het bestand bevat jouw antwoorden — deel het niet
+                met anderen.
+              </span>
             </div>
 
             {groepen.length === 0 ? (

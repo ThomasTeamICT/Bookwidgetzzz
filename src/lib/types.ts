@@ -140,6 +140,11 @@ export interface QuestionBase {
   explanation?: string;
   /** Optionele hulp die de leerling zelf kan openvouwen (scaffolding). */
   hint?: string;
+  /**
+   * Hintladder: oplopende hulpstappen (strategie → aanwijzing → voorbeeld).
+   * Heeft voorrang op het oudere enkelvoudige hint-veld.
+   */
+  hints?: string[];
   /** Leerdoel waar deze vraag bij hoort (voor score-per-doel). */
   goal?: string;
   /** Niveaulaag voor routes binnen één widget. */
