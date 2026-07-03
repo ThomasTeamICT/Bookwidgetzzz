@@ -47,9 +47,11 @@ export function gradeQuestion(q: Question, answer: unknown): ItemScore {
     }
     case 'short': {
       const given = typeof answer === 'string' ? answer : '';
-      const ok = q.accepted.some(
-        (a) => normalizeAnswer(a, q.caseSensitive) === normalizeAnswer(given, q.caseSensitive)
-      );
+      // blanco is nooit juist, en lege regels in de antwoordenlijst tellen niet mee
+      if (normalizeAnswer(given) === '') return wrong;
+      const ok = q.accepted
+        .filter((a) => normalizeAnswer(a) !== '')
+        .some((a) => normalizeAnswer(a, q.caseSensitive) === normalizeAnswer(given, q.caseSensitive));
       return ok ? right : wrong;
     }
     case 'number': {

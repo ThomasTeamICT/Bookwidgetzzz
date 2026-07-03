@@ -56,6 +56,8 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
 
   const expired = !!widget.settings.expiresAt && Date.now() > new Date(widget.settings.expiresAt).getTime();
 
+  const deadlineKey = (studentKey: string) => `wf.deadline.${widget.id}.${studentKey.toLowerCase()}`;
+
   const start = () => {
     if (needsName && !name.trim()) return;
     const studentKey = name || 'anoniem';
@@ -73,17 +75,26 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
       document.documentElement.requestFullscreen?.().catch(() => { /* volledig scherm is best-effort */ });
     }
     startRef.current = Date.now();
-    if (widget.settings.timeLimitMin > 0) setTimeLeft(widget.settings.timeLimitMin * 60);
+    if (widget.settings.timeLimitMin > 0) {
+      // deadline overleeft herladen: hervatten geeft geen verse tijd
+      let end = Date.now() + widget.settings.timeLimitMin * 60000;
+      if (resuming) {
+        const saved = parseInt(localStorage.getItem(deadlineKey(studentKey)) ?? '', 10);
+        if (!Number.isNaN(saved)) end = saved;
+      }
+      try { localStorage.setItem(deadlineKey(studentKey), String(end)); } catch { /* best effort */ }
+      setTimeLeft(Math.max(0, Math.round((end - Date.now()) / 1000)));
+    }
     setPhase('playing');
   };
 
-  // aftellen
+  // aftellen (stopt zodra de leerling ingediend heeft)
   useEffect(() => {
-    if (phase !== 'playing' || timeLeft === null) return;
+    if (phase !== 'playing' || timeLeft === null || completedSub) return;
     if (timeLeft <= 0) { setTimeUp(true); return; }
     const t = setTimeout(() => setTimeLeft((s) => (s === null ? null : s - 1)), 1000);
     return () => clearTimeout(t);
-  }, [phase, timeLeft]);
+  }, [phase, timeLeft, completedSub]);
 
   // toetsmodus: registreren wanneer de leerling het venster verlaat
   useEffect(() => {
@@ -100,7 +111,10 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
 
   const onComplete = (result: PlayerResult) => {
     if (doneRef.current || !recordSubmission || !def.hasSubmissions) return;
+    // lege widget die door timeUp "afrondt" zonder enige inhoud: niets registreren
+    if (result.max === 0 && Object.keys(result.answers).length === 0) return;
     doneRef.current = true;
+    try { localStorage.removeItem(deadlineKey(name || 'anoniem')); } catch { /* best effort */ }
     if (widget.settings.examMode && document.fullscreenElement) {
       document.exitFullscreen?.().catch(() => { /* negeren */ });
     }
@@ -217,7 +231,7 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
           </div>
         ) : (
           <>
-            {timeUp && (
+            {timeUp && !completedSub && (
               <div className="callout err" role="alert">
                 <span aria-hidden>⏰</span>
                 <div><strong>De tijd is om!</strong> Je antwoorden worden automatisch ingediend.</div>

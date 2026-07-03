@@ -165,6 +165,8 @@ function ViewerStage({
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = stageRef.current;
     if (!el) return;
+    // alleen de primaire muisknop; rechtsklik laat anders de pan-status hangen
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     try { el.setPointerCapture(e.pointerId); } catch { /* niet ondersteund → geen probleem */ }
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     setDragging(true);
@@ -174,6 +176,11 @@ function ViewerStage({
     const el = stageRef.current;
     const prev = pointers.current.get(e.pointerId);
     if (!el || !prev) return;
+    if (e.pointerType === 'mouse' && e.buttons === 0) {
+      pointers.current.delete(e.pointerId);
+      if (pointers.current.size === 0) setDragging(false);
+      return;
+    }
     const rect = el.getBoundingClientRect();
     const cur = { x: e.clientX, y: e.clientY };
 

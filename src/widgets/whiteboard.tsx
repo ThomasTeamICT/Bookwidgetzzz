@@ -31,6 +31,7 @@ export function WhiteboardPlayer({ widget, timeUp, onComplete }: PlayerProps<Whi
   const [eraser, setEraser] = useState(false);
   const [done, setDone] = useState(false);
   const drawingRef = useRef(false);
+  const activePointerRef = useRef<number | null>(null);
   const lastRef = useRef<[number, number] | null>(null);
   const historyRef = useRef<ImageData[]>([]);
   const submittedRef = useRef(false);
@@ -150,13 +151,18 @@ export function WhiteboardPlayer({ widget, timeUp, onComplete }: PlayerProps<Whi
           style={{ width: '100%', aspectRatio: `${W} / ${H}` }}
           aria-label="Tekenvlak"
           onPointerDown={(e) => {
+            // één actieve pointer: een tweede vinger mag de streek niet overnemen
+            if (drawingRef.current) return;
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
             e.currentTarget.setPointerCapture(e.pointerId);
             saveHistory();
             drawingRef.current = true;
+            activePointerRef.current = e.pointerId;
             lastRef.current = pos(e);
           }}
           onPointerMove={(e) => {
             if (!drawingRef.current || !lastRef.current) return;
+            if (e.pointerId !== activePointerRef.current) return;
             const ctx = canvasRef.current!.getContext('2d')!;
             const [x, y] = pos(e);
             const [lx, ly] = lastRef.current;
@@ -170,8 +176,14 @@ export function WhiteboardPlayer({ widget, timeUp, onComplete }: PlayerProps<Whi
             ctx.stroke();
             lastRef.current = [x, y];
           }}
-          onPointerUp={() => { drawingRef.current = false; lastRef.current = null; }}
-          onPointerLeave={() => { drawingRef.current = false; lastRef.current = null; }}
+          onPointerUp={(e) => {
+            if (e.pointerId !== activePointerRef.current) return;
+            drawingRef.current = false; activePointerRef.current = null; lastRef.current = null;
+          }}
+          onPointerLeave={(e) => {
+            if (e.pointerId !== activePointerRef.current) return;
+            drawingRef.current = false; activePointerRef.current = null; lastRef.current = null;
+          }}
         />
       </div>
       <div className="player-nav">

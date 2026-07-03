@@ -59,11 +59,29 @@ export function exportWidgetJson(widget: Widget): string {
   return JSON.stringify({ app: 'widgetfabriek', v: 1, widget }, null, 2);
 }
 
+const FALLBACK_SETTINGS = {
+  accentColor: '#4f46e5',
+  shuffle: false,
+  showFeedback: true,
+  showScore: true,
+  timeLimitMin: 0,
+  maxAttempts: 0,
+  requireName: true,
+  instructions: '',
+};
+
 export function importWidgetJson(json: string): Widget | null {
   try {
     const data = JSON.parse(json);
     const w = data?.widget ?? data;
-    if (!w || typeof w !== 'object' || !w.type || !w.config) return null;
+    if (!w || typeof w !== 'object' || typeof w.type !== 'string') return null;
+    if (!w.config || typeof w.config !== 'object') return null;
+    // ontbrekende of kapotte velden aanvullen zodat spelen/bewerken niet crasht
+    w.title = typeof w.title === 'string' && w.title.trim() ? w.title : 'Geïmporteerde widget';
+    w.settings = { ...FALLBACK_SETTINGS, ...(typeof w.settings === 'object' && w.settings ? w.settings : {}) };
+    w.folderId = typeof w.folderId === 'string' ? w.folderId : null;
+    w.createdAt = typeof w.createdAt === 'number' ? w.createdAt : Date.now();
+    w.updatedAt = Date.now();
     return w as Widget;
   } catch {
     return null;

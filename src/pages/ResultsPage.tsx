@@ -9,7 +9,8 @@ import { gradeQuestion } from '../lib/grading';
 import { decodeSubmission } from '../lib/share';
 import { uid } from '../lib/utils';
 
-const QUIZ_FAMILY = new Set(['quiz', 'worksheet', 'exitticket']);
+// widgets met een QuizConfig-achtige 'questions'-lijst → volledige beoordelings-UI
+const QUIZ_FAMILY = new Set(['quiz', 'worksheet', 'exitticket', 'splitworksheet']);
 
 export function ResultsPage() {
   const { id } = useParams();
@@ -279,7 +280,11 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
 
       {isQuiz ? (
         <div>
-          {questions.filter((q) => q.type !== 'info').map((q, i) => {
+          {questions
+            .filter((q) => q.type !== 'info')
+            // vragenpool: toon alleen vragen die deze leerling effectief kreeg
+            .filter((q) => !submission.itemScores || q.id in submission.itemScores)
+            .map((q, i) => {
             const ans = submission.answers[q.id];
             const score = scores[q.id] ?? gradeQuestion(q, ans);
             const isOpen = q.type === 'long';
@@ -362,25 +367,34 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
         )
       )}
 
-      {typeof drawing === 'string' && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-          <label style={{ fontWeight: 600 }}>
-            Punten voor de tekening:
-            <input
-              className="input input-sm" type="number" min={0} max={10} step={0.5}
-              style={{ width: 80, marginLeft: 6 }}
-              value={scores['tekening']?.mode === 'pending' ? '' : scores['tekening']?.earned ?? ''}
-              placeholder="?"
-              onChange={(e) => {
-                const v = e.target.value === '' ? null : Math.max(0, Math.min(10, parseFloat(e.target.value) || 0));
-                setScores((sc) => ({
-                  ...sc,
-                  tekening: v === null ? { earned: 0, max: 10, mode: 'pending' } : { earned: v, max: 10, mode: 'manual' },
-                }));
-              }}
-            />
-          </label>
-          <span className="hint">van 10</span>
+      {!isQuiz && Object.keys(scores).length > 0 && (
+        // generieke manuele beoordeling voor widgets zonder vragenlijst (tekening, mindmap, …)
+        <div style={{ marginTop: 8 }}>
+          {Object.entries(scores)
+            .filter(([, sc]) => sc.mode === 'pending' || sc.mode === 'manual')
+            .map(([key, sc]) => (
+              <div key={key} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                <label style={{ fontWeight: 600 }}>
+                  Punten voor {key === 'tekening' ? 'de tekening' : key === 'mindmap' ? 'de mindmap' : `“${key}”`}:
+                  <input
+                    className="input input-sm" type="number" min={0} max={sc.max} step={0.5}
+                    style={{ width: 80, marginLeft: 6 }}
+                    value={sc.mode === 'pending' ? '' : sc.earned}
+                    placeholder="?"
+                    onChange={(e) => {
+                      const v = e.target.value === '' ? null : Math.max(0, Math.min(sc.max, parseFloat(e.target.value) || 0));
+                      setScores((prev) => ({
+                        ...prev,
+                        [key]: v === null
+                          ? { earned: 0, max: sc.max, mode: 'pending' }
+                          : { earned: v, max: sc.max, mode: 'manual' },
+                      }));
+                    }}
+                  />
+                </label>
+                <span className="hint">van {sc.max}</span>
+              </div>
+            ))}
         </div>
       )}
 
@@ -407,12 +421,15 @@ function ResultCodeImportModal({
     const codes = text.split(/\s+/).map((s) => s.trim()).filter(Boolean);
     let ok = 0;
     const existing = getSubmissions();
+    const seen = new Set(existing.map((s) => `${s.widgetId}::${s.studentName}::${s.submittedAt}`));
     for (const code of codes) {
       const sub = decodeSubmission(code);
       if (!sub) continue;
       if (sub.widgetId !== widget.id && sub.widgetCode !== widget.code) continue;
-      // dubbele import vermijden (zelfde leerling + zelfde indientijd)
-      if (existing.some((s) => s.studentName === sub.studentName && s.submittedAt === sub.submittedAt && s.widgetId === sub.widgetId)) continue;
+      // dubbele import vermijden — ook binnen dezelfde plak-actie
+      const dupKey = `${widget.id}::${sub.studentName}::${sub.submittedAt}`;
+      if (seen.has(dupKey)) continue;
+      seen.add(dupKey);
       saveSubmission({ ...sub, id: uid(), widgetId: widget.id });
       ok++;
     }
@@ -508,21 +525,24 @@ function RubricGrader({
 function QuestionStats({ widget, subs }: { widget: Widget; subs: Submission[] }) {
   const questions = (widget.config as QuizConfig).questions.filter((q) => q.type !== 'info');
   const stats = useMemo(() => questions.map((q) => {
-    let full = 0, partial = 0, zero = 0, pending = 0;
+    let full = 0, partial = 0, zero = 0, pending = 0, got = 0;
     for (const s of subs) {
+      // vragenpool: leerlingen die deze vraag niet kregen, tellen niet mee
+      if (s.itemScores && !(q.id in s.itemScores)) continue;
+      got++;
       const score = s.itemScores?.[q.id] ?? gradeQuestion(q, s.answers[q.id]);
       if (score.mode === 'pending') pending++;
       else if (score.earned >= score.max && score.max > 0) full++;
       else if (score.earned > 0) partial++;
       else zero++;
     }
-    return { q, full, partial, zero, pending };
-  }), [widget.id, subs.length]);
+    return { q, full, partial, zero, pending, got };
+  }), [widget.id, subs]);
 
   return (
     <div>
-      {stats.map(({ q, full, partial, zero, pending }, i) => {
-        const total = Math.max(1, subs.length);
+      {stats.map(({ q, full, partial, zero, pending, got }, i) => {
+        const total = Math.max(1, got);
         const okPct = Math.round((full / total) * 100);
         return (
           <div key={q.id} className="card" style={{ padding: '13px 16px', marginBottom: 10 }}>
@@ -540,6 +560,7 @@ function QuestionStats({ widget, subs }: { widget: Widget; subs: Submission[] })
             </div>
             <div className="hint" style={{ marginTop: 6 }}>
               ✓ {full} juist · ◐ {partial} deels · ✗ {zero} fout{pending > 0 ? ` · ✍️ ${pending} te beoordelen` : ''}
+              {got < subs.length ? ` · (${got} van ${subs.length} leerlingen kreeg deze vraag)` : ''}
             </div>
           </div>
         );

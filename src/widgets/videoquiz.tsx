@@ -480,6 +480,12 @@ export function VideoQuizPlayer({ widget, timeUp, onComplete }: PlayerProps<Vide
           onStateChange: (e) => {
             if (cancelled || submittedRef.current) return;
             const endedState = window.YT?.PlayerState.ENDED ?? 0;
+            const playingState = window.YT?.PlayerState.PLAYING ?? 1;
+            if (e.data === playingState && endedRef.current) {
+              // leerling spoelde terug na het einde: einde-modus weer uitzetten
+              endedRef.current = false;
+              setEnded(false);
+            }
             if (e.data === endedState) {
               endedRef.current = true;
               setEnded(true);

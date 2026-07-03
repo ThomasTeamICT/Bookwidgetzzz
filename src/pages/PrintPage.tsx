@@ -64,7 +64,7 @@ export function PrintPage() {
           return (
             <div key={q.id} style={{ margin: '18px 0', breakInside: 'avoid' }}>
               <p style={{ margin: '0 0 6px', fontWeight: 650 }}>
-                {printNum}. {q.type === 'gap' ? '' : q.prompt}
+                {printNum}. {q.prompt}
                 <span style={{ float: 'right', fontWeight: 400, fontSize: '0.85rem' }}>… / {q.points}</span>
               </p>
               {q.imageUrl && <img src={q.imageUrl} alt="" style={{ maxWidth: '100%', maxHeight: 240, marginBottom: 8 }} />}

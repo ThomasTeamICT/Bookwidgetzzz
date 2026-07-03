@@ -5,7 +5,7 @@ import type {
   TFQuestion, LongQuestion,
 } from '../lib/types';
 import { extractGaps, gradeQuestion, gradeQuiz, splitGapText } from '../lib/grading';
-import { shuffled, uid } from '../lib/utils';
+import { normalizeAnswer, shuffled, uid } from '../lib/utils';
 import { Field, ImagePicker, Modal, useToast } from '../components/ui';
 import { EditorProps, ItemHeader, moveItem, PlayerProps, ResultHero } from './shared';
 import { clearProgress, loadProgress, saveProgress } from '../lib/autosave';
@@ -793,8 +793,9 @@ function GapAnswer({ q, value, onChange, review }: { q: GapQuestion; value: unkn
         const given = answers[gi] ?? '';
         let cls = 'gap-input';
         if (review) {
+          // zelfde normalisatie als de beoordeling, anders kleurt een juist antwoord rood
           const options = p.value.split('|');
-          const ok = options.some((o) => o.trim().toLocaleLowerCase('nl') === given.trim().toLocaleLowerCase('nl'));
+          const ok = options.some((o) => normalizeAnswer(o) === normalizeAnswer(given));
           cls += ok ? ' correct' : ' incorrect';
         }
         return (

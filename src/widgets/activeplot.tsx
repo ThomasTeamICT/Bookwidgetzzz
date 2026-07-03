@@ -196,7 +196,8 @@ function compile(src: string): { fn: PlotEvalFn; variables: string[] } {
     if (t.kind === 'ident') {
       p++;
       const name = t.text;
-      const mathFn = FUNCTIONS[name];
+      // own-property check: 'constructor' e.d. mogen niet via de prototype-keten binnenkomen
+      const mathFn = Object.prototype.hasOwnProperty.call(FUNCTIONS, name) ? FUNCTIONS[name] : undefined;
       if (mathFn) {
         if (!isSym('(')) throw new ExprError(`Na '${name}' horen haakjes: ${name}(…).`);
         p++;
@@ -208,7 +209,7 @@ function compile(src: string): { fn: PlotEvalFn; variables: string[] } {
         throw new ExprError(`Onbekende functie '${name}'. Beschikbaar: sin, cos, tan, sqrt, abs, log, ln, exp.`);
       }
       if (name === 'x') return (x) => x;
-      const constVal = CONSTANTS[name];
+      const constVal = Object.prototype.hasOwnProperty.call(CONSTANTS, name) ? CONSTANTS[name] : undefined;
       if (constVal !== undefined) return () => constVal;
       vars.add(name);
       return (_x, ps) => {

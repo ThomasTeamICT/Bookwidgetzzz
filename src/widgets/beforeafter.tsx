@@ -55,6 +55,8 @@ function CompareStage({
   };
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // alleen de primaire knop; rechtsklik zou de sleepstatus laten hangen
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
     draggingRef.current = true;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -66,6 +68,7 @@ function CompareStage({
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!draggingRef.current) return;
+    if (e.pointerType === 'mouse' && e.buttons === 0) { draggingRef.current = false; return; }
     updateFromClientX(e.clientX);
   };
 
