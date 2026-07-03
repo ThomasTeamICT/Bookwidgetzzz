@@ -22,6 +22,11 @@ function emit() {
   listeners.forEach((fn) => fn());
 }
 
+/** Voor andere opslagmodules (bv. cursussen) om dezelfde luisteraars te verwittigen. */
+export function notifyChange() {
+  emit();
+}
+
 // Ook wijzigingen uit ándere tabbladen doorgeven (bv. leerling dient in op
 // hetzelfde toestel) zodat dashboards en resultaten live verversen.
 if (typeof window !== 'undefined') {
