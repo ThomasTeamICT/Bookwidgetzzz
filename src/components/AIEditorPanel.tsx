@@ -768,6 +768,7 @@ ${payload}`;
         <h3 style={{ margin: '4px 0 10px' }}>➕ {forQuestions ? 'Vragen' : 'Items'} bijmaken</h3>
         <Field label="Aantal">
           <input
+            className="input input-sm"
             type="number"
             min={1}
             max={20}
@@ -783,13 +784,13 @@ ${payload}`;
           label="Focus of onderwerp (optioneel)"
           hint={forQuestions ? 'Bv. "de waterkringloop" of "moeilijkere toepassingsvragen".' : 'Bv. "hoofdsteden van Europa" of "moeilijkere begrippen".'}
         >
-          <input value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="Waarover moet het gaan?" />
+          <input className="input" value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="Waarover moet het gaan?" />
         </Field>
         <Field
           label="Bronmateriaal (optioneel)"
           hint="Plak hier leerstof; de AI baseert zich dan uitsluitend hierop."
         >
-          <textarea rows={5} value={source} onChange={(e) => setSource(e.target.value)} placeholder="Plak hier je tekst, hoofdstuk of samenvatting…" />
+          <textarea className="textarea" rows={5} value={source} onChange={(e) => setSource(e.target.value)} placeholder="Plak hier je tekst, hoofdstuk of samenvatting…" />
         </Field>
         <div>
           <button className="btn btn-primary" onClick={forQuestions ? runAddQuestions : runAddItems}>

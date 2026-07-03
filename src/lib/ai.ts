@@ -189,22 +189,28 @@ async function askAnthropic(s: AISettings, opts: AskAIOptions): Promise<string> 
   let full = '';
   let inputTokens = 0;
   let outputTokens = 0;
-  await readSSE(res, (data) => {
-    try {
-      const ev = JSON.parse(data);
-      if (ev.type === 'message_start') inputTokens = ev.message?.usage?.input_tokens ?? 0;
-      if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
-        full += ev.delta.text;
-        opts.onDelta?.(ev.delta.text);
+  try {
+    await readSSE(res, (data) => {
+      try {
+        const ev = JSON.parse(data);
+        if (ev.type === 'message_start') inputTokens = ev.message?.usage?.input_tokens ?? 0;
+        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+          full += ev.delta.text;
+          opts.onDelta?.(ev.delta.text);
+        }
+        if (ev.type === 'message_delta' && ev.usage?.output_tokens) outputTokens = ev.usage.output_tokens;
+        if (ev.type === 'error') throw new AIError(ev.error?.message ?? 'De AI-dienst meldde een fout tijdens het genereren.');
+      } catch (e) {
+        if (e instanceof AIError) throw e;
+        /* niet-JSON regels negeren */
       }
-      if (ev.type === 'message_delta' && ev.usage?.output_tokens) outputTokens = ev.usage.output_tokens;
-      if (ev.type === 'error') throw new AIError(ev.error?.message ?? 'De AI-dienst meldde een fout tijdens het genereren.');
-    } catch (e) {
-      if (e instanceof AIError) throw e;
-      /* niet-JSON regels negeren */
-    }
-  });
-  logUsage({ at: Date.now(), task: opts.task, model: s.model, inputTokens, outputTokens });
+    });
+  } finally {
+    // Ook geannuleerde of halverwege mislukte aanvragen loggen: de
+    // invoertokens zijn dan al aangerekend door de aanbieder.
+    if (outputTokens === 0 && full) outputTokens = Math.round(full.length / 4);
+    logUsage({ at: Date.now(), task: opts.task, model: s.model, inputTokens, outputTokens });
+  }
   return full;
 }
 
@@ -239,24 +245,30 @@ async function askOpenAICompatible(s: AISettings, opts: AskAIOptions): Promise<s
   let full = '';
   let inputTokens = 0;
   let outputTokens = 0;
-  await readSSE(res, (data) => {
-    if (data === '[DONE]') return;
-    try {
-      const ev = JSON.parse(data);
-      const delta = ev.choices?.[0]?.delta?.content;
-      if (typeof delta === 'string' && delta) {
-        full += delta;
-        opts.onDelta?.(delta);
+  try {
+    await readSSE(res, (data) => {
+      if (data === '[DONE]') return;
+      try {
+        const ev = JSON.parse(data);
+        const delta = ev.choices?.[0]?.delta?.content;
+        if (typeof delta === 'string' && delta) {
+          full += delta;
+          opts.onDelta?.(delta);
+        }
+        if (ev.usage) {
+          inputTokens = ev.usage.prompt_tokens ?? inputTokens;
+          outputTokens = ev.usage.completion_tokens ?? outputTokens;
+        }
+      } catch {
+        /* niet-JSON regels negeren */
       }
-      if (ev.usage) {
-        inputTokens = ev.usage.prompt_tokens ?? inputTokens;
-        outputTokens = ev.usage.completion_tokens ?? outputTokens;
-      }
-    } catch {
-      /* niet-JSON regels negeren */
-    }
-  });
-  logUsage({ at: Date.now(), task: opts.task, model: s.model, inputTokens, outputTokens });
+    });
+  } finally {
+    // Aanbieders zonder usage in de stream (of afgebroken streams): ruw
+    // schatten op tekstlengte, zodat het logboek nooit stil onderrapporteert.
+    if (outputTokens === 0 && full) outputTokens = Math.round(full.length / 4);
+    logUsage({ at: Date.now(), task: opts.task, model: s.model, inputTokens, outputTokens });
+  }
   return full;
 }
 
@@ -283,25 +295,27 @@ async function readSSE(res: Response, onData: (data: string) => void): Promise<v
 
 /**
  * Haalt het eerste JSON-object of de eerste JSON-array uit modeluitvoer.
- * Verdraagt ```json-hekken en tekst er omheen. Gooit AIError bij mislukking.
+ * Verdraagt ```json-hekken en tekst er omheen zónder de inhoud aan te raken:
+ * de gebalanceerde scanner begint bij de eerste { of [ en respecteert
+ * strings, dus backticks BINNEN stringwaarden blijven intact.
  */
 export function extractJson(text: string): unknown {
-  const stripped = text.replace(/```(?:json)?/gi, '').trim();
+  const raw = text.trim();
   // snelle poging: alles is al JSON
   try {
-    return JSON.parse(stripped);
+    return JSON.parse(raw);
   } catch {
     /* verder zoeken */
   }
-  const start = stripped.search(/[{[]/);
+  const start = raw.search(/[{[]/);
   if (start < 0) throw new AIError('De AI gaf geen bruikbare JSON terug. Probeer het opnieuw.');
-  const open = stripped[start];
+  const open = raw[start];
   const close = open === '{' ? '}' : ']';
   let depth = 0;
   let inString = false;
   let escaped = false;
-  for (let i = start; i < stripped.length; i++) {
-    const ch = stripped[i];
+  for (let i = start; i < raw.length; i++) {
+    const ch = raw[i];
     if (inString) {
       if (escaped) escaped = false;
       else if (ch === '\\') escaped = true;
@@ -313,7 +327,7 @@ export function extractJson(text: string): unknown {
     else if (ch === close) {
       depth--;
       if (depth === 0) {
-        const candidate = stripped.slice(start, i + 1);
+        const candidate = raw.slice(start, i + 1);
         try {
           return JSON.parse(candidate);
         } catch {

@@ -1,7 +1,7 @@
 // ── Opslag, voortgang en delen van cursussen ────────────────────────────────
 
 import LZString from 'lz-string';
-import type { Widget } from './types';
+import type { Widget, WidgetSettings } from './types';
 import type {
   Course, CourseBlock, CourseBlockType, CourseChapter, CourseProgress,
   CourseSection, SectionProgress,
@@ -9,6 +9,7 @@ import type {
 import { referencedWidgetIds } from './courseTypes';
 import { makeCode, uid } from './utils';
 import { getWidget, getWidgets, notifyChange, saveWidget } from './storage';
+import { defaultSettings, getTypeDef, WIDGET_TYPES } from '../widgets/registry';
 
 const COURSES_KEY = 'wf.courses.v1';
 const PROGRESS_KEY = 'wf.courseprogress.v1';
@@ -118,10 +119,48 @@ export function saveStudentProgress(progress: CourseProgress) {
   const i = all.findIndex(
     (p) => p.courseId === progress.courseId && p.studentName.trim().toLowerCase() === name
   );
-  const updated = { ...progress, lastSeenAt: Date.now() };
+  // lastSeenAt óók op het doorgegeven object bijwerken: de viewer serialiseert
+  // ditzelfde object naar de voortgangscode.
+  progress.lastSeenAt = Date.now();
+  const updated = { ...progress };
   if (i >= 0) all[i] = updated;
   else all.push(updated);
   write(PROGRESS_KEY, all);
+}
+
+/**
+ * Voegt twee voortgangsrecords van dezelfde leerling samen zonder verlies:
+ * unie van checks, vroegste openedAt, hoogste secondsSpent, completedAt blijft
+ * staan zodra één van beide hem heeft. Gebruikt door de viewer (tegen verlies
+ * bij twee tabbladen) en door de voortgangscode-import.
+ */
+export function mergeProgressRecords(a: CourseProgress, b: CourseProgress): CourseProgress {
+  const newer = b.lastSeenAt >= a.lastSeenAt ? b : a;
+  const merged: CourseProgress = {
+    ...a,
+    startedAt: Math.min(a.startedAt || Date.now(), b.startedAt || Date.now()),
+    lastSeenAt: Math.max(a.lastSeenAt, b.lastSeenAt),
+    lastSectionId: newer.lastSectionId ?? a.lastSectionId ?? b.lastSectionId,
+    sections: { ...a.sections },
+  };
+  for (const [sid, sp] of Object.entries(b.sections)) {
+    const cur = merged.sections[sid];
+    if (!cur) {
+      merged.sections[sid] = sp;
+      continue;
+    }
+    const checks: Record<string, string[]> = { ...(cur.checks ?? {}) };
+    for (const [blockId, items] of Object.entries(sp.checks ?? {})) {
+      checks[blockId] = [...new Set([...(checks[blockId] ?? []), ...items])];
+    }
+    merged.sections[sid] = {
+      openedAt: Math.min(cur.openedAt, sp.openedAt),
+      completedAt: cur.completedAt ?? sp.completedAt,
+      secondsSpent: Math.max(cur.secondsSpent, sp.secondsSpent),
+      checks: Object.keys(checks).length ? checks : undefined,
+    };
+  }
+  return merged;
 }
 
 export function deleteStudentProgress(courseId: string, studentName: string) {
@@ -164,6 +203,8 @@ interface CoursePayload {
   c: Course;
   /** Widgets waar de cursus naar verwijst, zodat de link zelfstandig werkt. */
   w: Widget[];
+  /** true = de link bevat maar een deel van de hoofdstukken. */
+  partial?: boolean;
 }
 
 /**
@@ -171,6 +212,7 @@ interface CoursePayload {
  * (deel van de cursus delen). Ingebedde widgets reizen mee in de link.
  */
 export function encodeCourseToUrl(course: Course, chapterIds?: string[]): string {
+  const partial = Boolean(chapterIds && chapterIds.length && chapterIds.length < course.chapters.length);
   const c: Course = {
     ...course,
     chapters: chapterIds && chapterIds.length
@@ -180,13 +222,42 @@ export function encodeCourseToUrl(course: Course, chapterIds?: string[]): string
   const w = referencedWidgetIds(c)
     .map((id) => getWidget(id))
     .filter((x): x is Widget => Boolean(x));
-  const payload: CoursePayload = { v: 1, kind: 'cursus', c, w };
+  const payload: CoursePayload = { v: 1, kind: 'cursus', c, w, ...(partial ? { partial: true } : {}) };
   const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(payload));
   const base = location.origin + location.pathname;
   return `${base}#/cursus/open?d=${compressed}`;
 }
 
-export function decodeCourseFromParam(d: string): { course: Course; widgets: Widget[] } | null {
+const KNOWN_TYPES = new Set(WIDGET_TYPES.map((t) => t.id));
+
+/** Meegereisde widget defensief saneren: onbekend type weigeren, ontbrekende velden aanvullen. */
+function sanitizeSharedWidget(raw: unknown): Widget | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const w = raw as Record<string, unknown>;
+  if (typeof w.type !== 'string' || !KNOWN_TYPES.has(w.type as Widget['type'])) return null;
+  if (!w.config || typeof w.config !== 'object') return null;
+  const type = w.type as Widget['type'];
+  const base = getTypeDef(type).defaultConfig() as Record<string, unknown>;
+  return {
+    id: typeof w.id === 'string' && w.id ? w.id : uid(),
+    type,
+    title: typeof w.title === 'string' && w.title.trim() ? w.title : 'Oefening',
+    folderId: typeof w.folderId === 'string' ? (w.folderId as string) : null,
+    config: { ...base, ...(w.config as Record<string, unknown>) },
+    settings: { ...defaultSettings(), ...(typeof w.settings === 'object' && w.settings ? (w.settings as Partial<WidgetSettings>) : {}) },
+    code: typeof w.code === 'string' && w.code ? (w.code as string) : makeCode(),
+    createdAt: typeof w.createdAt === 'number' ? (w.createdAt as number) : Date.now(),
+    updatedAt: Date.now(),
+  };
+}
+
+export interface DecodedCourse {
+  course: Course;
+  widgets: Widget[];
+  partial: boolean;
+}
+
+export function decodeCourseFromParam(d: string): DecodedCourse | null {
   try {
     const json = LZString.decompressFromEncodedURIComponent(d);
     if (!json) return null;
@@ -195,9 +266,9 @@ export function decodeCourseFromParam(d: string): { course: Course; widgets: Wid
     const course = sanitizeCourse(payload.c);
     if (!course) return null;
     const widgets = Array.isArray(payload.w)
-      ? payload.w.filter((w) => w && typeof w === 'object' && typeof w.type === 'string' && w.config)
+      ? payload.w.map(sanitizeSharedWidget).filter((x): x is Widget => x !== null)
       : [];
-    return { course, widgets };
+    return { course, widgets, partial: payload.partial === true };
   } catch {
     return null;
   }
@@ -205,18 +276,46 @@ export function decodeCourseFromParam(d: string): { course: Course; widgets: Wid
 
 /**
  * Slaat een gedeelde cursus + meegereisde widgets lokaal op (voor de
- * leerling die via een link opent). Bestaande items worden niet overschreven.
+ * leerling die via een link opent). Bestaande widgets worden nooit
+ * overschreven. Een gedeeltelijke link (enkele hoofdstukken) wordt per
+ * hoofdstuk samengevoegd met de lokale kopie, zodat eerder gedeelde
+ * hoofdstukken blijven bestaan.
  */
-export function adoptSharedCourse(course: Course, widgets: Widget[]) {
+export function adoptSharedCourse(course: Course, widgets: Widget[], opts: { partial?: boolean; force?: boolean } = {}) {
   for (const w of widgets) {
     if (!getWidget(w.id)) saveWidget(w);
   }
   const existing = getCourse(course.id);
-  // Nieuwere versie van dezelfde cursus mag de lokale kopie wél verversen
-  // (de leerkracht deelt een bijgewerkte link), voortgang blijft staan.
-  if (!existing || (course.updatedAt ?? 0) >= (existing.updatedAt ?? 0)) {
+  if (!existing) {
+    saveCourse(course);
+    return;
+  }
+  if (opts.partial) {
+    // Hoofdstukken uit de link vervangen hun lokale naamgenoot (op id) of
+    // komen er achteraan bij; niet-gedeelde hoofdstukken blijven staan.
+    const incoming = new Map(course.chapters.map((ch) => [ch.id, ch]));
+    const merged: CourseChapter[] = existing.chapters.map((ch) => incoming.get(ch.id) ?? ch);
+    for (const ch of course.chapters) {
+      if (!existing.chapters.some((x) => x.id === ch.id)) merged.push(ch);
+    }
+    saveCourse({ ...course, chapters: merged });
+    return;
+  }
+  if (opts.force || (course.updatedAt ?? 0) >= (existing.updatedAt ?? 0)) {
     saveCourse(course);
   }
+}
+
+/**
+ * Is dit een wezenlijk andere versie dan wat er lokaal staat? (Voor een
+ * eerlijke bevestigingsvraag vóór overschrijven — een gedeelde link kan
+ * door iedereen met de link nagemaakt worden.)
+ */
+export function sharedCourseDiffers(course: Course): boolean {
+  const existing = getCourse(course.id);
+  if (!existing) return false;
+  const strip = (c: Course) => JSON.stringify({ ...c, updatedAt: 0, createdAt: 0 });
+  return strip(existing) !== strip(course);
 }
 
 export function courseReadUrl(code: string): string {
@@ -236,9 +335,42 @@ export function decodeCourseProgress(code: string): CourseProgress | null {
     if (!raw.startsWith('WFC1.')) return null;
     const json = LZString.decompressFromEncodedURIComponent(raw.slice(5));
     if (!json) return null;
-    const p = JSON.parse(json) as CourseProgress;
-    if (!p || typeof p !== 'object' || !p.courseId || !p.studentName || typeof p.sections !== 'object') return null;
-    return p;
+    const p = JSON.parse(json) as Record<string, unknown>;
+    if (!p || typeof p !== 'object') return null;
+    if (typeof p.courseId !== 'string' || !p.courseId) return null;
+    if (typeof p.studentName !== 'string' || !p.studentName.trim()) return null;
+    // Secties defensief opbouwen: een geknutselde code (sections: null,
+    // arrays, rommelvelden) mag de volgpagina nooit kunnen breken.
+    const sections: Record<string, SectionProgress> = {};
+    if (p.sections && typeof p.sections === 'object' && !Array.isArray(p.sections)) {
+      for (const [sid, raw2] of Object.entries(p.sections as Record<string, unknown>)) {
+        if (!raw2 || typeof raw2 !== 'object' || Array.isArray(raw2)) continue;
+        const sp = raw2 as Record<string, unknown>;
+        const checks: Record<string, string[]> = {};
+        if (sp.checks && typeof sp.checks === 'object' && !Array.isArray(sp.checks)) {
+          for (const [bid, items] of Object.entries(sp.checks as Record<string, unknown>)) {
+            if (Array.isArray(items)) {
+              checks[bid] = items.filter((x): x is string => typeof x === 'string');
+            }
+          }
+        }
+        sections[sid] = {
+          openedAt: typeof sp.openedAt === 'number' ? sp.openedAt : Date.now(),
+          completedAt: typeof sp.completedAt === 'number' ? sp.completedAt : undefined,
+          secondsSpent: typeof sp.secondsSpent === 'number' && sp.secondsSpent >= 0 ? Math.min(sp.secondsSpent, 1e7) : 0,
+          checks: Object.keys(checks).length ? checks : undefined,
+        };
+      }
+    }
+    return {
+      courseId: p.courseId,
+      courseCode: typeof p.courseCode === 'string' ? p.courseCode : '',
+      studentName: p.studentName.trim().slice(0, 60),
+      sections,
+      lastSectionId: typeof p.lastSectionId === 'string' ? p.lastSectionId : undefined,
+      lastSeenAt: typeof p.lastSeenAt === 'number' ? p.lastSeenAt : Date.now(),
+      startedAt: typeof p.startedAt === 'number' ? p.startedAt : Date.now(),
+    };
   } catch {
     return null;
   }
@@ -247,28 +379,7 @@ export function decodeCourseProgress(code: string): CourseProgress | null {
 /** Binnengekomen voortgangscode samenvoegen met wat er al lokaal staat. */
 export function importProgressCode(p: CourseProgress) {
   const existing = getStudentProgress(p.courseId, p.studentName);
-  if (!existing) {
-    saveStudentProgress(p);
-    return;
-  }
-  const merged: CourseProgress = {
-    ...existing,
-    lastSeenAt: Math.max(existing.lastSeenAt, p.lastSeenAt),
-    lastSectionId: p.lastSeenAt > existing.lastSeenAt ? p.lastSectionId : existing.lastSectionId,
-    sections: { ...existing.sections },
-  };
-  for (const [sid, sp] of Object.entries(p.sections)) {
-    const cur = merged.sections[sid];
-    merged.sections[sid] = cur
-      ? {
-          openedAt: Math.min(cur.openedAt, sp.openedAt),
-          completedAt: cur.completedAt ?? sp.completedAt,
-          secondsSpent: Math.max(cur.secondsSpent, sp.secondsSpent),
-          checks: { ...sp.checks, ...cur.checks },
-        }
-      : sp;
-  }
-  saveStudentProgress(merged);
+  saveStudentProgress(existing ? mergeProgressRecords(existing, p) : p);
 }
 
 // ── JSON-export/-import & defensieve sanering ───────────────────────────────

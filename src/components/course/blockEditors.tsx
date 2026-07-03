@@ -4,14 +4,14 @@
 // zijn eigen compacte formulier; BLOCK_META levert icoon/naam/uitleg voor
 // blokkaarten en het blokkenpalet.
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   AccordionBlock, AttachmentBlock, AudioBlock, CalloutBlock, ChecklistBlock,
   ColumnsBlock, CourseBlock, CourseBlockType, EmbedBlock, HeadingBlock,
   ImageBlock, QuoteBlock, TableBlock, TermsBlock, TextBlock, VideoBlock,
   WidgetBlock,
 } from '../../lib/courseTypes';
-import { getWidgets } from '../../lib/storage';
+import { getWidgets, onStorageChange } from '../../lib/storage';
 import { getTypeDef } from '../../widgets/registry';
 import { fileToDataUrl, uid } from '../../lib/utils';
 import { CheckRow, Field, ImagePicker, useToast } from '../ui';
@@ -618,7 +618,10 @@ function ChecklistEditor({ b, onChange }: { b: ChecklistBlock; onChange: OnChang
 // ── Widget-blok: zoekbare keuze uit bestaande widgets ───────────────────────
 
 function WidgetBlockEditor({ b, onChange }: { b: WidgetBlock; onChange: OnChange }) {
-  const widgets = useMemo(() => getWidgets(), []);
+  // Live meebewegen met de opslag: wie in een ander tabblad net een widget
+  // maakte ("🆕 Nieuwe widget maken"), ziet hem hier meteen verschijnen.
+  const [widgets, setWidgets] = useState(() => getWidgets());
+  useEffect(() => onStorageChange(() => setWidgets(getWidgets())), []);
   const [search, setSearch] = useState('');
 
   const selected = widgets.find((w) => w.id === b.widgetId);

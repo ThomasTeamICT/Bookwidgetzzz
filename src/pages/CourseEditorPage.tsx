@@ -80,11 +80,22 @@ export function CourseEditorPage() {
   }, [course]);
 
   // Flush bij unmount: wie binnen de debounce wegklikt, verliest anders de
-  // laatste wijzigingen.
+  // laatste wijzigingen. Ook bij F5/tabblad sluiten (pagehide), want dan
+  // draait de React-cleanup niet.
   const courseRef = useRef(course);
   useEffect(() => { courseRef.current = course; }, [course]);
-  useEffect(() => () => {
-    if (dirtyRef.current && courseRef.current) saveCourse(courseRef.current);
+  useEffect(() => {
+    const flush = () => {
+      if (dirtyRef.current && courseRef.current) {
+        saveCourse(courseRef.current);
+        dirtyRef.current = false;
+      }
+    };
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
   }, []);
 
   if (!course) {

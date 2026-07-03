@@ -5,7 +5,7 @@ import type {
   TableBlock, TermsBlock, TextBlock, VideoBlock, WidgetBlock,
 } from '../../lib/courseTypes';
 import { renderMarkdown } from '../../lib/markdown';
-import { getSubmissions, getWidget, saveSubmission } from '../../lib/storage';
+import { bumpAttemptCount, getAttemptCount, getSubmissions, getWidget, saveSubmission } from '../../lib/storage';
 import { getTypeDef, type WidgetTypeDef } from '../../widgets/registry';
 import type { PlayerResult } from '../../widgets/shared';
 import type { Submission } from '../../lib/types';
@@ -373,6 +373,15 @@ function WidgetBlockView({
   const [sub, setSub] = useState<Submission | null>(null);
   const doneRef = useRef(false);
   const startRef = useRef(Date.now());
+  const bumpedRef = useRef(false);
+
+  // Dezelfde grenzen als de gewone speler: deadline en maximum aantal pogingen.
+  const expired = Boolean(
+    widget?.settings.expiresAt && Date.now() > new Date(widget.settings.expiresAt).getTime()
+  );
+  const maxAttempts = widget?.settings.maxAttempts ?? 0;
+  const usedAttempts = widget ? getAttemptCount(widget.id, name) : 0;
+  const attemptsLeft = maxAttempts > 0 ? Math.max(0, maxAttempts - usedAttempts) : Infinity;
 
   // Was er (op dit toestel) al eerder een inzending van deze leerling?
   const alreadySubmitted = useMemo(() => {
@@ -411,6 +420,11 @@ function WidgetBlockView({
     if (doneRef.current || !def.hasSubmissions) return;
     if (result.max === 0 && Object.keys(result.answers).length === 0) return;
     doneRef.current = true;
+    // poging meetellen, zodat maxAttempts ook via de cursus geldt
+    if (!bumpedRef.current) {
+      bumpedRef.current = true;
+      bumpAttemptCount(widget.id, name);
+    }
     const s: Submission = {
       id: uid(),
       widgetId: widget.id,
@@ -430,7 +444,9 @@ function WidgetBlockView({
   };
 
   const retry = () => {
+    if (expired || attemptsLeft <= 0) return;
     doneRef.current = false;
+    bumpedRef.current = false;
     startRef.current = Date.now();
     setSub(null);
     setAttempt((a) => a + 1);
@@ -473,7 +489,22 @@ function WidgetBlockView({
         </p>
       )}
       <div style={{ padding: '16px 18px' }}>
-        <def.Player key={attempt} widget={widget} studentName={name} preview={false} onComplete={onComplete} />
+        {expired ? (
+          <div className="callout warn" style={{ marginBottom: 0 }}>
+            <span aria-hidden>⏰</span>
+            <div>Deze oefening is afgesloten — de deadline is verstreken.</div>
+          </div>
+        ) : !sub && attemptsLeft <= 0 ? (
+          <div className="callout" style={{ marginBottom: 0 }}>
+            <span aria-hidden>✋</span>
+            <div>
+              Je gebruikte al je {maxAttempts} poging{maxAttempts === 1 ? '' : 'en'} voor deze oefening.
+              {alreadySubmitted && ' Je eerdere inzending is bewaard.'}
+            </div>
+          </div>
+        ) : (
+          <def.Player key={attempt} widget={widget} studentName={name} preview={false} onComplete={onComplete} />
+        )}
         {sub && (
           <div
             role="status"
@@ -496,7 +527,11 @@ function WidgetBlockView({
                 </div>
               )}
             </div>
-            <button className="btn btn-sm btn-ghost" onClick={retry}>↺ Opnieuw proberen</button>
+            {!expired && attemptsLeft > 0 && (
+              <button className="btn btn-sm btn-ghost" onClick={retry}>
+                ↺ Opnieuw proberen{maxAttempts > 0 && ` (nog ${attemptsLeft})`}
+              </button>
+            )}
           </div>
         )}
       </div>

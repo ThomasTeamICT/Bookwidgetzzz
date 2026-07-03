@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { Course } from '../lib/courseTypes';
+import type { Widget } from '../lib/types';
 import {
   adoptSharedCourse, createCourse, deleteCourse, ensureDemoCourse,
-  exportCourseJson, getCourseProgressAll, getCourses, importCourseJson, saveCourse,
+  exportCourseJson, getCourse, getCourseProgressAll, getCourses,
+  importCourseJson, saveCourse, sharedCourseDiffers,
 } from '../lib/courses';
 import { onStorageChange, getPrefs } from '../lib/storage';
 import { downloadFile, formatDateShort, makeCode, uid } from '../lib/utils';
@@ -19,6 +21,7 @@ export function CoursesPage() {
   const [aiOpen, setAiOpen] = useState(false);
   const [shareTarget, setShareTarget] = useState<Course | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Course | null>(null);
+  const [importConflict, setImportConflict] = useState<{ course: Course; widgets: Widget[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const reload = () => setCourses(getCourses());
@@ -45,7 +48,14 @@ export function CoursesPage() {
         toast('Dit is geen geldig cursusbestand', 'err');
         return;
       }
-      adoptSharedCourse(res.course, res.widgets);
+      // Bestaat er al een (andere) versie van deze cursus? Dan is een
+      // stille overschrijving of een stille no-op allebei fout: vraag het.
+      // Dit maakt ook "back-up terugzetten" betrouwbaar.
+      if (getCourse(res.course.id) && sharedCourseDiffers(res.course)) {
+        setImportConflict(res);
+        return;
+      }
+      adoptSharedCourse(res.course, res.widgets, { force: true });
       toast(`Cursus "${res.course.title}" geïmporteerd${res.widgets.length ? ` (met ${res.widgets.length} widget${res.widgets.length === 1 ? '' : 's'})` : ''}`, 'ok');
     } catch {
       toast('Importeren mislukt', 'err');
@@ -148,6 +158,18 @@ export function CoursesPage() {
             saveCourse(course);
             navigate(`/cursus/bewerk/${course.id}`);
           }}
+        />
+      )}
+      {importConflict && (
+        <ConfirmModal
+          title="Bestaande cursus vervangen?"
+          message={`Er staat al een versie van "${importConflict.course.title}" op dit toestel. Vervangen door de versie uit het bestand? De huidige versie ben je dan kwijt (exporteer ze eerst als je twijfelt); leesvoortgang blijft staan.`}
+          confirmLabel="Vervangen"
+          onConfirm={() => {
+            adoptSharedCourse(importConflict.course, importConflict.widgets, { force: true });
+            toast(`Cursus "${importConflict.course.title}" vervangen door de versie uit het bestand`, 'ok');
+          }}
+          onClose={() => setImportConflict(null)}
         />
       )}
       {shareTarget && <CourseShareModal course={shareTarget} onClose={() => setShareTarget(null)} />}

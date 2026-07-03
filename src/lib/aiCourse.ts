@@ -151,7 +151,12 @@ Geef terug: {"blocks":[blok,…]} — begin met een "goal"-callout, wissel leers
 
 export interface AICourseResult {
   course: Course;
-  quizzes: Widget[];
+  /**
+   * Eén positie per gevraagde quiz, uitgelijnd op de hoofdstukken: een
+   * ongeldige quiz wordt null (mét waarschuwing) zodat de overige quizzes
+   * niet naar het verkeerde hoofdstuk verschuiven.
+   */
+  quizzes: (Widget | null)[];
   warnings: string[];
 }
 
@@ -229,11 +234,13 @@ export function sanitizeAICourse(json: unknown, opts: { base?: Course } = {}): A
     };
   }
 
-  let quizzes: Widget[] = [];
+  let quizzes: (Widget | null)[] = [];
   if (Array.isArray(envelope.widgets) && envelope.widgets.length) {
-    const gen = sanitizeGeneratedWidgets({ widgets: envelope.widgets });
-    quizzes = gen.widgets.filter((w) => w.type === 'quiz');
-    warnings.push(...gen.warnings);
+    quizzes = (envelope.widgets as unknown[]).map((w, i) => {
+      const gen = sanitizeGeneratedWidgets({ widgets: [w] });
+      warnings.push(...gen.warnings.map((msg) => `Quiz ${i + 1}: ${msg}`));
+      return gen.widgets.find((x) => x.type === 'quiz') ?? null;
+    });
   }
   return { course, quizzes, warnings };
 }

@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import type { Course, CourseProgress } from '../lib/courseTypes';
 import { allSections, progressPercent } from '../lib/courseTypes';
+import type { DecodedCourse } from '../lib/courses';
 import {
   adoptSharedCourse, decodeCourseFromParam, encodeCourseProgress,
-  getCourseByCode, saveStudentProgress, startProgress, touchSection,
+  getCourse, getCourseByCode, getStudentProgress, mergeProgressRecords,
+  saveStudentProgress, sharedCourseDiffers, startProgress, touchSection,
 } from '../lib/courses';
 import { BlockRenderer } from '../components/course/BlockRenderer';
 import { CopyButton, EmptyState } from '../components/ui';
@@ -16,6 +18,9 @@ export function CourseOpenPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const [invalid, setInvalid] = useState(false);
+  // Link wil een BESTAANDE lokale cursus wijzigen → eerst expliciet vragen.
+  // (Iedereen met de link kan er één namaken; stil overschrijven is dus uit den boze.)
+  const [pending, setPending] = useState<DecodedCourse | null>(null);
 
   useEffect(() => {
     const d = params.get('d');
@@ -24,10 +29,35 @@ export function CourseOpenPage() {
       setInvalid(true);
       return;
     }
-    // Cursus + meegereisde widgets lokaal opslaan en doorsturen naar de lezer
-    adoptSharedCourse(decoded.course, decoded.widgets);
+    const existing = getCourse(decoded.course.id);
+    const wouldChange = existing
+      ? decoded.partial
+        ? decoded.course.chapters.some((ch) => {
+            const local = existing.chapters.find((x) => x.id === ch.id);
+            return !local || JSON.stringify(local) !== JSON.stringify(ch);
+          })
+        : sharedCourseDiffers(decoded.course)
+      : false;
+    if (existing && wouldChange) {
+      setPending(decoded);
+      return;
+    }
+    // Ook bij identieke inhoud adopteren: zo reizen ontbrekende widgets mee
+    // (bv. een lokaal verwijderde oefening wordt hersteld).
+    adoptSharedCourse(decoded.course, decoded.widgets, { partial: decoded.partial });
     navigate('/cursus/lees/' + decoded.course.code, { replace: true });
   }, [params, navigate]);
+
+  const accept = () => {
+    if (!pending) return;
+    adoptSharedCourse(pending.course, pending.widgets, { partial: pending.partial, force: true });
+    navigate('/cursus/lees/' + pending.course.code, { replace: true });
+  };
+  const keepLocal = () => {
+    if (!pending) return;
+    const existing = getCourse(pending.course.id);
+    navigate('/cursus/lees/' + (existing?.code ?? pending.course.code), { replace: true });
+  };
 
   return (
     <div className="player-shell" style={{ minHeight: '100vh' }}>
@@ -40,6 +70,20 @@ export function CourseOpenPage() {
             </p>
             <Link to="/" className="btn btn-primary">Naar de startpagina</Link>
           </EmptyState>
+        ) : pending ? (
+          <div className="card card-pad" style={{ maxWidth: 480, margin: '60px auto 0', textAlign: 'center' }}>
+            <div style={{ fontSize: '2.6rem' }} aria-hidden>🔄</div>
+            <h1 style={{ fontSize: '1.3rem' }}>Cursus bijwerken?</h1>
+            <p style={{ color: 'var(--text-soft)' }}>
+              Deze link bevat {pending.partial ? 'een deel van' : 'een andere versie van'} de cursus{' '}
+              <strong>“{pending.course.title}”</strong>, die al op dit toestel staat.
+              Je leesvoortgang blijft in beide gevallen bewaard.
+            </p>
+            <div style={{ display: 'grid', gap: 8 }}>
+              <button className="btn btn-primary" onClick={accept}>✔ Bijwerken en openen</button>
+              <button className="btn btn-ghost" onClick={keepLocal}>Huidige versie behouden en openen</button>
+            </div>
+          </div>
         ) : (
           <div style={{ textAlign: 'center', paddingTop: 80 }}>
             <div style={{ fontSize: '3rem' }} aria-hidden>📖</div>
@@ -131,6 +175,29 @@ function CourseReader({ course }: { course: Course }) {
   const lastSaveRef = useRef(Date.now());
   const narrow = useIsNarrow();
 
+  /**
+   * Bewaart de voortgang zonder verlies: eerst samenvoegen met wat er
+   * intussen in de opslag staat (tweede tabblad, geïmporteerde
+   * voortgangscode), en het samengevoegde record wordt de nieuwe waarheid.
+   */
+  const persist = () => {
+    const p = progressRef.current;
+    if (!p) return;
+    const stored = getStudentProgress(p.courseId, p.studentName);
+    const merged = stored ? mergeProgressRecords(stored, p) : p;
+    // de bedoeling van dít tabblad wint voor "waar was ik?" …
+    merged.lastSectionId = p.lastSectionId ?? merged.lastSectionId;
+    // … en voor de checklist van de sectie die hier open staat (anders zou
+    // een uitgevinkt item via de unie meteen weer aangevinkt raken)
+    const sid = sectionIdRef.current;
+    if (sid && p.sections[sid] && merged.sections[sid]) {
+      merged.sections[sid] = { ...merged.sections[sid], checks: p.sections[sid].checks };
+    }
+    progressRef.current = merged;
+    saveStudentProgress(merged);
+    lastSaveRef.current = Date.now();
+  };
+
   const begin = (studentName: string) => {
     const n = studentName.trim() || 'Anoniem';
     try { localStorage.setItem(nameKey, n); } catch { /* best effort */ }
@@ -145,8 +212,7 @@ function CourseReader({ course }: { course: Course }) {
       touchSection(p, startId);
       p.lastSectionId = startId;
     }
-    saveStudentProgress(p);
-    lastSaveRef.current = Date.now();
+    persist();
     setName(n);
     setSectionId(startId);
   };
@@ -162,7 +228,9 @@ function CourseReader({ course }: { course: Course }) {
   }, []);
 
   // Kijktijd bijhouden: elke 5 s optellen zolang het tabblad zichtbaar is,
-  // throttled bewaren (elke 15 s en bij sectiewissel/unmount).
+  // throttled bewaren (elke 15 s en bij sectiewissel/unmount/pagehide).
+  const persistRef = useRef(persist);
+  persistRef.current = persist;
   useEffect(() => {
     if (!sectionId) return;
     const iv = setInterval(() => {
@@ -170,28 +238,27 @@ function CourseReader({ course }: { course: Course }) {
       const sid = sectionIdRef.current;
       if (!p || !sid || document.visibilityState !== 'visible') return;
       touchSection(p, sid).secondsSpent += 5;
-      if (Date.now() - lastSaveRef.current >= 15000) {
-        lastSaveRef.current = Date.now();
-        saveStudentProgress(p);
-      }
+      if (Date.now() - lastSaveRef.current >= 15000) persistRef.current();
     }, 5000);
     return () => {
       clearInterval(iv);
-      const p = progressRef.current;
-      if (p) {
-        lastSaveRef.current = Date.now();
-        saveStudentProgress(p);
-      }
+      persistRef.current();
     };
   }, [sectionId]);
+
+  // Ook bij sluiten/verversen van het tabblad de laatste stand bewaren.
+  useEffect(() => {
+    const flush = () => persistRef.current();
+    window.addEventListener('pagehide', flush);
+    return () => window.removeEventListener('pagehide', flush);
+  }, []);
 
   const goTo = (id: string) => {
     const p = progressRef.current;
     if (!p) return;
     touchSection(p, id);
     p.lastSectionId = id;
-    saveStudentProgress(p);
-    lastSaveRef.current = Date.now();
+    persist();
     setSectionId(id);
     setNavOpen(false);
     window.scrollTo({ top: 0 });
@@ -205,8 +272,7 @@ function CourseReader({ course }: { course: Course }) {
     const cur = checks[blockId] ?? [];
     checks[blockId] = cur.includes(itemId) ? cur.filter((x) => x !== itemId) : [...cur, itemId];
     sp.checks = checks;
-    saveStudentProgress(p);
-    lastSaveRef.current = Date.now();
+    persist();
     bump();
   };
 
@@ -214,8 +280,7 @@ function CourseReader({ course }: { course: Course }) {
     const p = progressRef.current;
     if (!p || !sectionId) return;
     touchSection(p, sectionId).completedAt = Date.now();
-    saveStudentProgress(p);
-    lastSaveRef.current = Date.now();
+    persist();
     bump();
   };
 

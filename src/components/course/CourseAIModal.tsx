@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Widget } from '../../lib/types';
 import type { Course, CourseBlock } from '../../lib/courseTypes';
 import { allSections } from '../../lib/courseTypes';
@@ -23,7 +23,8 @@ const TITLES: Record<Mode, string> = {
 
 interface PreviewState {
   course: Course;
-  quizzes: Widget[];
+  /** Uitgelijnd op de hoofdstukken; null = quiz voor dat hoofdstuk viel af. */
+  quizzes: (Widget | null)[];
   blocks?: CourseBlock[];
   warnings: string[];
 }
@@ -55,6 +56,10 @@ export function CourseAIModal({
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const ctrlRef = useRef<AbortController | null>(null);
+
+  // Sluiten (Escape, backdrop, ✕) tijdens het genereren moet de aanvraag
+  // ook echt afbreken — anders loopt een 32k-token-stream onzichtbaar door.
+  useEffect(() => () => ctrlRef.current?.abort(), []);
 
   const section = useMemo(
     () => (course && sectionId ? allSections(course).map((x) => x.section).find((s) => s.id === sectionId) : undefined),
@@ -124,17 +129,17 @@ export function CourseAIModal({
       return;
     }
     // 'new' / 'rework': eerst quizzes bewaren en per hoofdstuk inbedden
+    // (positioneel: quiz i hoort bij hoofdstuk i; null = afgekeurde quiz)
     const result: Course = JSON.parse(JSON.stringify(preview.course));
-    if (preview.quizzes.length) {
-      preview.quizzes.forEach((quiz, i) => {
-        saveWidget(quiz);
-        const chapter = result.chapters[Math.min(i, result.chapters.length - 1)];
-        const lastSection = chapter?.sections[chapter.sections.length - 1];
-        if (lastSection) {
-          lastSection.blocks.push({ id: uid(), type: 'widget', widgetId: quiz.id, note: 'Oefenquiz bij dit hoofdstuk' });
-        }
-      });
-    }
+    preview.quizzes.forEach((quiz, i) => {
+      if (!quiz) return;
+      saveWidget(quiz);
+      const chapter = result.chapters[Math.min(i, result.chapters.length - 1)];
+      const lastSection = chapter?.sections[chapter.sections.length - 1];
+      if (lastSection) {
+        lastSection.blocks.push({ id: uid(), type: 'widget', widgetId: quiz.id, note: 'Oefenquiz bij dit hoofdstuk' });
+      }
+    });
     onResult(result);
     toast(mode === 'new' ? '✨ Cursus aangemaakt — kijk alles na' : '✨ Herwerking toegepast — kijk alles na', 'ok');
     onClose();
@@ -298,9 +303,13 @@ export function CourseAIModal({
                     </li>
                   ))}
                 </ol>
-                {preview.quizzes.length > 0 && (
+                {preview.quizzes.some(Boolean) && (
                   <p style={{ margin: '8px 0 0', fontSize: '0.9rem' }}>
-                    🧩 {preview.quizzes.length} oefenquiz(zen): {preview.quizzes.map((q) => `"${q.title}" (${(q.config as { questions: unknown[] }).questions.length} vragen)`).join(' · ')}
+                    🧩 {preview.quizzes.filter(Boolean).length} oefenquiz(zen):{' '}
+                    {preview.quizzes
+                      .filter((q): q is Widget => q !== null)
+                      .map((q) => `"${q.title}" (${(q.config as { questions: unknown[] }).questions.length} vragen)`)
+                      .join(' · ')}
                   </p>
                 )}
               </div>

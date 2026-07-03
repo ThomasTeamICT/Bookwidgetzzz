@@ -39,11 +39,17 @@ export function EditorPage() {
   }, [widget]);
 
   // flush bij unmount: wie binnen de debounce op "Terug" klikt, verliest anders
-  // de wijzigingen van de laatste 500 ms
+  // de wijzigingen van de laatste 500 ms — en bij F5/tabblad sluiten (pagehide),
+  // want dan draait de React-cleanup niet
   const widgetRef = useRef(widget);
   useEffect(() => { widgetRef.current = widget; }, [widget]);
-  useEffect(() => () => {
-    if (widgetRef.current) saveWidget(widgetRef.current);
+  useEffect(() => {
+    const flush = () => { if (widgetRef.current) saveWidget(widgetRef.current); };
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
   }, []);
 
   if (!widget) {

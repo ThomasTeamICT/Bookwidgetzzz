@@ -24,7 +24,9 @@ export function CourseShareModal({ course, onClose }: { course: Course; onClose:
     if (!portableUrl) { setQr(''); return; }
     QRCode.toDataURL(portableUrl, { width: 220, margin: 1 })
       .then((url) => { if (alive) setQr(url); })
-      .catch(() => { /* QR is optioneel; bij extreem lange links kan dit falen */ });
+      // Bij te lange links (QR-capaciteit ±2,9 kB) móét de oude QR weg,
+      // anders projecteert de leerkracht de verkeerde selectie.
+      .catch(() => { if (alive) setQr(''); });
     return () => { alive = false; };
   }, [portableUrl]);
 

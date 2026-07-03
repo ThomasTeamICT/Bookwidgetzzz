@@ -132,6 +132,21 @@ function strArr(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '').map((x) => x.trim()) : [];
 }
 
+/** Filtert opties en onthoudt welke oorspronkelijke index waar terechtkwam. */
+function mapOptions(raw: unknown): { options: string[]; map: Map<number, number> } {
+  const options: string[] = [];
+  const map = new Map<number, number>();
+  if (Array.isArray(raw)) {
+    raw.forEach((x, i) => {
+      if (typeof x === 'string' && x.trim() !== '') {
+        map.set(i, options.length);
+        options.push(x.trim());
+      }
+    });
+  }
+  return { options, map };
+}
+
 /** Zet één AI-vraag om naar een geldige Question, of null als het niet lukt. */
 export function sanitizeQuestion(raw: unknown): Question | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -156,16 +171,23 @@ export function sanitizeQuestion(raw: unknown): Question | null {
 
   switch (type) {
     case 'mc': {
-      const options = strArr(q.options);
+      // Opties filteren MET indextoewijzing: als een lege optie wegvalt,
+      // moet de juiste index mee verschuiven — en een index die naar een
+      // weggevallen of onbestaande optie wijst, keurt de hele vraag af
+      // (stilzwijgend een afleider juist rekenen is erger dan overslaan).
+      const { options, map } = mapOptions(q.options);
       if (options.length < 2) return null;
-      const ci = Math.round(num(q.correctIndex, 0));
-      return { ...base, type, options, correctIndex: Math.min(Math.max(ci, 0), options.length - 1) };
+      const ci = map.get(Math.round(num(q.correctIndex, NaN)));
+      if (ci === undefined) return null;
+      return { ...base, type, options, correctIndex: ci };
     }
     case 'multi': {
-      const options = strArr(q.options);
+      const { options, map } = mapOptions(q.options);
       if (options.length < 2) return null;
       const idx = Array.isArray(q.correctIndices)
-        ? q.correctIndices.map((i) => Math.round(num(i, -1))).filter((i) => i >= 0 && i < options.length)
+        ? q.correctIndices
+            .map((i) => map.get(Math.round(num(i, NaN))))
+            .filter((i): i is number => i !== undefined)
         : [];
       if (idx.length === 0) return null;
       return { ...base, type, options, correctIndices: [...new Set(idx)].sort((a, b) => a - b) };
@@ -254,9 +276,17 @@ function sanitizeGlossary(raw: unknown): { term: string; uitleg: string }[] | un
 
 // ── Sanering per widgettype ─────────────────────────────────────────────────
 
-/** Woorden voor puzzels: alleen letters, geen spaties, 2–15 tekens. */
+/**
+ * Woorden voor puzzels: geen spaties, geen diakritische tekens (de spelers
+ * hebben een A-Z-klavier: "café" zou onwinbaar zijn), max 15 tekens.
+ */
 function puzzleWord(w: string): string {
-  return w.trim().replace(/\s+/g, '').slice(0, 15);
+  return w
+    .trim()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, '')
+    .slice(0, 15);
 }
 
 type ConfigSanitizer = (cfg: Record<string, unknown>) => Record<string, unknown> | null;
@@ -323,7 +353,12 @@ const CONFIG_SANITIZERS: Partial<Record<WidgetTypeId, ConfigSanitizer>> = {
     const words = (Array.isArray(c.words) ? c.words : [])
       .map((w) => {
         const ww = w as Record<string, unknown>;
-        const word = str(typeof w === 'string' ? w : ww?.word).trim();
+        // Diakritische tekens strippen: het galgje-klavier kent alleen A-Z,
+        // dus "café" of "ideeën" zou een onwinbare ronde opleveren.
+        const word = str(typeof w === 'string' ? w : ww?.word)
+          .trim()
+          .normalize('NFD')
+          .replace(/[̀-ͯ]/g, '');
         return word ? { word, hint: str(ww?.hint).trim() } : null;
       })
       .filter((x): x is { word: string; hint: string } => x !== null);
