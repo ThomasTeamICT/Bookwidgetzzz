@@ -73,6 +73,40 @@ De client-side roadmap is hiermee afgewerkt. Wat didactisch nog waardevol is, vr
 een (lichte) server: live klasoverzicht over toestellen heen, cijferdoorstroom naar
 het LMS-puntenboek (LTI/Smartschool), en realtime samen ontwikkelen met collega's.
 
+## ✨ AI-ondersteuning: uitgangspunten
+
+De AI-laag (AI-studio, editor-assistent, cursusbouwer, feedbacksuggesties) volgt
+vijf harde regels:
+
+1. **De leerkracht blijft de auteur.** AI-uitvoer landt áltijd eerst in een
+   voorvertoning; niets wordt bewaard zonder expliciete goedkeuring. De vraag-linter
+   loopt ook over AI-gegenereerde vragen — dezelfde kwaliteitslat als voor handwerk.
+2. **AI ondersteunt didactiek, niet andersom.** De prompts eisen plausibele
+   afleiders, uitleg bij elk antwoord, hintladders, steuntaal en leerdoelkoppeling —
+   de generatie is doordrenkt van dezelfde principes als de rest van de app.
+   Bij cursusgeneratie vertrekt de AI van **leerplandoelen**, niet van "maak eens iets".
+3. **Nooit beoordelen.** AI stelt feedbackteksten *voor* (taakgericht: wat lukt,
+   wat nog niet, volgende stap) maar kent nooit punten toe. De leerkracht leest,
+   past aan en beslist. Zekerheidsdata en reflecties van leerlingen gaan nooit naar de AI.
+4. **Dataminimalisatie.** Geen leerlingnamen in prompts; feedbacksuggesties sturen
+   alleen het (anonieme) antwoord mee. De API-sleutel staat lokaal; elk gebruik is
+   zichtbaar in een tokenlogboek (kostentransparantie).
+5. **Eerlijk over de grens.** De privacypagina zegt expliciet wat er bij AI-gebruik
+   het toestel verlaat en naar wie. AI-functies zijn uit tot de leerkracht ze zelf activeert.
+
+## 📚 Cursusmodule: uitgangspunten
+
+- **Feed-up ingebouwd**: secties dragen leerdoelen; elke AI-gegenereerde sectie opent
+  met een doelen-kader. Keuzesecties ("verdieping") tellen niet mee voor "afgewerkt" —
+  differentiatie zonder aparte cursussen.
+- **Verwerking naast leerstof**: ingebedde widgets maken van lezen dóén; resultaten
+  lopen door de bestaande resultaten- en doelenanalyse.
+- **Voortgang als gespreksopener, geen bewijs**: leestijd wordt getoond als context
+  ("waar haakt de klas af?"), uitdrukkelijk niet als beoordelingsdata. De leerling
+  ziet exact dezelfde voortgang als de leerkracht — geen verborgen tracking.
+- **Delen in stukken**: per hoofdstuk deelbaar, zodat een cursus kan meegroeien met
+  de lessenreeks in plaats van alles ineens te dumpen.
+
 ### Vergt een (lichte) server — bewust op de lange baan
 - Live klasoverzicht over toestellen heen (Live Widgets-equivalent).
 - Cijferdoorstroom naar Smartschool/LMS-puntenboek (LTI).

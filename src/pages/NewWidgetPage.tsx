@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CATEGORIES, createWidget, WIDGET_TYPES } from '../widgets/registry';
 import { saveWidget } from '../lib/storage';
 import { extractPlaceholders, fillPlaceholders, TEMPLATES } from '../lib/templates';
@@ -74,6 +74,25 @@ export function NewWidgetPage() {
           <p className="sub">Kies het type dat bij je les past — je kan alles daarna nog aanpassen.</p>
         </div>
       </div>
+
+      <Link
+        to="/ai-studio"
+        className="card"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', marginBottom: 30,
+          textDecoration: 'none', border: '1px solid var(--brand)', background: 'var(--brand-soft)',
+        }}
+      >
+        <span style={{ fontSize: '1.9rem' }} aria-hidden>✨</span>
+        <span style={{ flex: 1 }}>
+          <h3 style={{ margin: 0 }}>Laat de AI het voorbereidende werk doen</h3>
+          <p style={{ margin: '2px 0 0', color: 'var(--text-soft)' }}>
+            Plak je cursustekst of leerplandoelen en krijg kant-en-klare widgets als voorzet — jij kijkt na en bewaart.
+          </p>
+        </span>
+        <span className="btn btn-ai" aria-hidden>Naar de AI-studio →</span>
+      </Link>
+
       <section style={{ marginBottom: 30 }} aria-labelledby="cat-templates">
         <h2 id="cat-templates" style={{ fontSize: '1.1rem', marginBottom: 4 }}>🎁 Start van een sjabloon</h2>
         <p className="hint" style={{ marginBottom: 12 }}>

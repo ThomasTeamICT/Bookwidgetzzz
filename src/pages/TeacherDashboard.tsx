@@ -110,6 +110,7 @@ export function TeacherDashboard() {
           <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>📥 Importeren</button>
           <input ref={fileRef} type="file" accept="application/json,.json" hidden
             onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f); e.target.value = ''; }} />
+          <Link to="/ai-studio" className="btn btn-ai" title="Widgets laten maken vanuit je bronmateriaal">✨ Maak met AI</Link>
           <Link to="/nieuw" className="btn btn-primary">+ Nieuwe widget</Link>
         </div>
       </div>

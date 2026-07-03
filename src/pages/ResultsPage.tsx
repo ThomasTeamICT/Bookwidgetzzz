@@ -8,6 +8,7 @@ import { ConfirmModal, EmptyState, Modal, ScoreRing, useToast } from '../compone
 import { gradeQuestion } from '../lib/grading';
 import { decodeSubmission } from '../lib/share';
 import { uid } from '../lib/utils';
+import { askAI, hasAIKey } from '../lib/ai';
 
 // widgets met een QuizConfig-achtige 'questions'-lijst → volledige beoordelings-UI
 const QUIZ_FAMILY = new Set(['quiz', 'worksheet', 'exitticket', 'splitworksheet']);
@@ -459,7 +460,18 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
       )}
 
       <div className="field" style={{ marginTop: 14 }}>
-        <label htmlFor="teacher-feedback">Feedback voor de leerling (optioneel)</label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <label htmlFor="teacher-feedback" style={{ flex: 1 }}>Feedback voor de leerling (optioneel)</label>
+          {isQuiz && hasAIKey() && (
+            <AIFeedbackSuggest
+              widget={widget}
+              questions={questions}
+              submission={submission}
+              scores={scores}
+              onSuggest={(text) => setFeedback((cur) => (cur.trim() ? `${cur.trimEnd()}\n${text}` : text))}
+            />
+          )}
+        </div>
         <textarea
           id="teacher-feedback" className="textarea" rows={3} value={feedback}
           placeholder="Tip: benoem wat al lukt, wat nog niet, en wat de volgende stap is — gericht op de taak."
@@ -467,6 +479,62 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
         />
       </div>
     </Modal>
+  );
+}
+
+/**
+ * Stelt met AI een taakgerichte feedbacktekst voor op basis van de antwoorden.
+ * Bewust zonder leerlingnaam in de prompt; de leerkracht past het voorstel aan.
+ */
+function AIFeedbackSuggest({
+  widget, questions, submission, scores, onSuggest,
+}: {
+  widget: Widget;
+  questions: Question[];
+  submission: Submission;
+  scores: Record<string, { earned: number; max: number; mode: string }>;
+  onSuggest: (text: string) => void;
+}) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+
+  const suggest = async () => {
+    setBusy(true);
+    try {
+      const rows = questions
+        .filter((q) => q.type !== 'info')
+        .map((q, i) => {
+          const sc = scores[q.id];
+          const answer = formatAnswer(q, (submission.answers as Record<string, unknown>)[q.id]).slice(0, 300);
+          const expected =
+            q.type === 'mc' ? q.options[q.correctIndex]
+            : q.type === 'short' ? q.accepted[0]
+            : q.type === 'long' ? q.modelAnswer ?? ''
+            : '';
+          return `${i + 1}. ${q.prompt.slice(0, 180)}${q.goal ? ` [doel: ${q.goal}]` : ''}\n   antwoord van de leerling: ${answer}${expected ? `\n   verwacht: ${String(expected).slice(0, 180)}` : ''}${sc ? `\n   score: ${sc.earned}/${sc.max}` : ''}`;
+        })
+        .join('\n');
+      const text = await askAI({
+        system:
+          'Je helpt een Vlaamse leerkracht feedback schrijven. Schrijf taakgerichte feedback: wat lukt al, wat nog niet, en één concrete volgende stap. Spreek de leerling aan met "je". Vriendelijk en eerlijk, nooit een oordeel over de persoon, geen cijfers herhalen. 2 à 4 zinnen, gewone tekst zonder opmaak.',
+        prompt: `Oefening: "${widget.title}". Antwoorden van de leerling:\n\n${rows}\n\nSchrijf nu de feedbacktekst.`,
+        task: 'feedbacksuggestie',
+        maxTokens: 400,
+      });
+      onSuggest(text.trim());
+      toast('✨ Voorstel klaar — pas gerust aan', 'ok');
+    } catch (e) {
+      toast((e as Error).message, 'err');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button className="btn btn-sm btn-ghost" onClick={suggest} disabled={busy}
+      title="AI stelt een taakgerichte feedbacktekst voor; jij past aan en beslist">
+      {busy ? <span className="ai-pulse" aria-hidden>✨</span> : '✨'} Stel feedback voor
+    </button>
   );
 }
 
@@ -923,12 +991,26 @@ function CockpitRow({
           <span className="hint"> / {question.points}</span>
         </label>
         <div style={{ flex: '1 1 260px' }}>
-          <textarea
-            className="textarea" rows={2}
-            placeholder="Feedback: wat lukt al, wat nog niet, volgende stap…"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
+          <div style={{ position: 'relative' }}>
+            <textarea
+              className="textarea" rows={2}
+              placeholder="Feedback: wat lukt al, wat nog niet, volgende stap…"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+            />
+            {hasAIKey() && (() => {
+              const lv: LongAnswerValue = typeof answer === 'string' ? { tekst: answer } : ((answer as LongAnswerValue) ?? {});
+              if (!lv.tekst?.trim()) return null;
+              return (
+                <CockpitAISuggest
+                  question={question}
+                  rubric={rubric}
+                  studentText={lv.tekst}
+                  onSuggest={(t) => setComment((c) => (c.trim() ? `${c.trimEnd()} ${t}` : t))}
+                />
+              );
+            })()}
+          </div>
           {rubric.length > 0 && (
             <p className="hint" style={{ margin: '4px 0 0' }}>
               Rubric: {rubric.map((r) => `${r.criterion} (${r.points})`).join(' · ')}
@@ -954,5 +1036,51 @@ function CockpitRow({
         </button>
       </div>
     </div>
+  );
+}
+
+/** AI-voorstel voor taakgerichte feedback op één open antwoord (nakijkcockpit). */
+function CockpitAISuggest({
+  question, rubric, studentText, onSuggest,
+}: {
+  question: Question;
+  rubric: { criterion: string; points: number }[];
+  studentText: string;
+  onSuggest: (text: string) => void;
+}) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+
+  const suggest = async () => {
+    setBusy(true);
+    try {
+      const model = question.type === 'long' ? question.modelAnswer : undefined;
+      const text = await askAI({
+        system:
+          'Je helpt een Vlaamse leerkracht feedback schrijven op één open antwoord. Taakgericht: wat zit al goed, wat ontbreekt of klopt niet, en één concrete tip. Spreek de leerling aan met "je". 1 à 3 zinnen, gewone tekst zonder opmaak, geen punten of cijfers noemen.',
+        prompt: `Vraag: ${question.prompt.slice(0, 300)}\n${model ? `Modelantwoord (alleen voor jou): ${model.slice(0, 300)}\n` : ''}${rubric.length ? `Criteria: ${rubric.map((r) => r.criterion).join(' · ')}\n` : ''}\nAntwoord van de leerling:\n${studentText.slice(0, 900)}\n\nSchrijf nu de feedbacktekst.`,
+        task: 'feedbacksuggestie',
+        maxTokens: 250,
+      });
+      onSuggest(text.trim());
+      toast('✨ Voorstel ingevoegd — pas gerust aan', 'ok');
+    } catch (e) {
+      toast((e as Error).message, 'err');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button
+      className="btn btn-sm btn-quiet"
+      style={{ position: 'absolute', right: 6, bottom: 6 }}
+      onClick={suggest}
+      disabled={busy}
+      title="AI stelt feedback voor op dit antwoord; jij past aan en beslist"
+      aria-label="AI-feedbackvoorstel voor dit antwoord"
+    >
+      {busy ? <span className="ai-pulse" aria-hidden>✨</span> : '✨'}
+    </button>
   );
 }

@@ -14,6 +14,13 @@ import { ResultsPage } from './pages/ResultsPage';
 import { ResultsOverviewPage } from './pages/ResultsOverviewPage';
 import { PrintPage } from './pages/PrintPage';
 import { PrivacyPage } from './pages/PrivacyPage';
+import { AIStudioPage } from './pages/AIStudioPage';
+import { AISettingsPage } from './pages/AISettingsPage';
+import { CoursesPage } from './pages/CoursesPage';
+import { CourseEditorPage } from './pages/CourseEditorPage';
+import { CourseViewerPage, CourseOpenPage } from './pages/CourseViewerPage';
+import { CourseTrackPage } from './pages/CourseTrackPage';
+import { CoursePrintPage } from './pages/CoursePrintPage';
 import { seedIfEmpty } from './lib/seed';
 
 const router = createHashRouter([
@@ -25,6 +32,10 @@ const router = createHashRouter([
       { path: '/nieuw', element: <NewWidgetPage /> },
       { path: '/resultaten', element: <ResultsOverviewPage /> },
       { path: '/resultaten/:id', element: <ResultsPage /> },
+      { path: '/cursussen', element: <CoursesPage /> },
+      { path: '/cursus/volg/:id', element: <CourseTrackPage /> },
+      { path: '/ai-studio', element: <AIStudioPage /> },
+      { path: '/ai-instellingen', element: <AISettingsPage /> },
       { path: '/privacy', element: <PrivacyPage /> },
     ],
   },
@@ -35,6 +46,11 @@ const router = createHashRouter([
   { path: '/open', element: <OpenSharedPage /> },
   { path: '/meedoen', element: <JoinPage /> },
   { path: '/voortgang', element: <ProgressPage /> },
+  // cursussen: leerlingweergave en bewerken zonder leerkracht-navigatie
+  { path: '/cursus/bewerk/:id', element: <CourseEditorPage /> },
+  { path: '/cursus/lees/:code', element: <CourseViewerPage /> },
+  { path: '/cursus/open', element: <CourseOpenPage /> },
+  { path: '/cursus/print/:id', element: <CoursePrintPage /> },
   { path: '*', element: <JoinPage /> },
 ]);
 

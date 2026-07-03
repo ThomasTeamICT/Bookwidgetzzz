@@ -1,8 +1,39 @@
 # 🧩 WidgetFabriek
 
-Een volledig functionele webapplicatie om **interactieve oefeningen, toetsen en spelletjes** voor je klas te maken, te delen en op te volgen — geïnspireerd op het concept van digitale les-widgets. Alles draait 100% in de browser: geen server, geen account, geen installatie.
+Een volledig functionele webapplicatie om **interactieve oefeningen, toetsen, spelletjes én digitale cursussen** voor je klas te maken, te delen en op te volgen — geïnspireerd op het concept van digitale les-widgets. Alles draait 100% in de browser: geen server, geen account, geen installatie.
 
 ## ✨ Functies
+
+### ✨ AI-assistent: van bronmateriaal naar lesmateriaal
+Hét verkoopsargument: de leerkracht plakt gangbaar bronmateriaal (cursustekst, hoofdstuk,
+artikel) of leerplandoelen en de AI doet het voorbereidende werk — met minimale inspanning
+en maximale opvolgbaarheid.
+- **AI-studio** (`#/ai-studio`): bron plakken of .txt/.md laden → widgettypes kiezen (20
+  genereerbare types) → voorvertoning met vraag-linter → nakijken → in één keer bewaren in
+  een map. Met doelgroep, richtaantal, leerdoelkoppeling en **differentiatie** (hints,
+  steuntaal, niveaus) als opties.
+- **AI in de editor**: vragen bijmaken, hints/uitleg/steuntaal aanvullen, glossarium
+  destilleren, zwakke afleiders versterken, items bijmaken bij 20 widgettypes.
+- **AI-cursusbouwer**: een volledige cursus genereren **vanuit leerplandoelen** (of een
+  bestaande cursus herwerken / een sectie vullen), optioneel met een oefenquiz per hoofdstuk.
+- **Feedbacksuggesties** bij het nakijken: taakgericht voorstel (wat lukt, wat nog niet,
+  volgende stap) — zonder leerlingnaam in de prompt; de leerkracht past aan en beslist.
+- **Eigen sleutel, eigen regie**: werkt met een API-sleutel van Anthropic (Claude), OpenAI
+  of elke OpenAI-compatibele aanbieder. Sleutel blijft op het toestel; elk gebruik staat in
+  een tokenlogboek (kostentransparantie). AI-uitvoer landt áltijd eerst in een voorvertoning.
+
+### 📚 Cursusmodule: digitale cursussen (BrightBook-achtig, en verder)
+- **Authoring**: hoofdstukken → secties → 16 bloktypes (kop, tekst met markdown,
+  afbeelding, video, audio, extern kader, kadertjes, citaat, tabel, kolommen, uitklapper,
+  begrippenlijst, afvinklijst, bijlage, scheiding, **ingebedde widget**).
+- **Ingebedde oefeningen**: elke widget speelt inline in de cursus; inzendingen lopen
+  gewoon door de resultaten- en leerdoelenanalyse.
+- **Leerdoelen per sectie** en keuzesecties (verdieping, telt niet mee voor "afgewerkt").
+- **Delen per hoofdstuk** via draagbare link (ingebedde widgets reizen mee), klascode,
+  QR, of cursusbestand voor collega's. Printbare versie inbegrepen.
+- **Voortgang volgen**: matrix leerlingen × secties (gelezen/geopend), kijktijd als
+  context, per-sectieoverzicht ("waar haakt de klas af?"), widgetresultaten, CSV-export
+  en **voortgangscodes** voor thuiswerk — transparant: de leerling ziet wat jij ziet.
 
 ### 38 widgettypes, in 5 categorieën
 
@@ -65,21 +96,27 @@ De app gebruikt een **hash-router** en een relatieve basis-URL, dus de `dist/`-m
 
 ```
 src/
-  lib/            types, localStorage-laag, deellinks (lz-string), beoordeling, seed
-  components/     ontwerpsysteem-componenten (modals, toasts, velden, score-ring)
+  lib/            types, localStorage-laag, deellinks (lz-string), beoordeling, seed,
+                  ai (providerlaag + streaming), aiWidgetGen (schema's + sanering),
+                  aiCourse (cursusgeneratie), courseTypes + courses (cursusmodel/opslag/delen),
+                  markdown (veilige mini-markdown)
+  components/     ontwerpsysteem-componenten (modals, toasts, velden, score-ring),
+                  aiCommon, AIEditorPanel, course/ (BlockRenderer, deel- en AI-modals)
   widgets/        registry + per widgettype één module met Editor & Player
-  pages/          landing, dashboard, nieuw, editor, speler, meedoen, resultaten
+  pages/          landing, dashboard, nieuw, editor, speler, meedoen, resultaten,
+                  AI-studio, AI-instellingen, cursussen (overzicht/editor/viewer/volgen/print)
   styles/         global.css — volledig eigen ontwerpsysteem met CSS-variabelen
 ```
 
 Elk widgettype registreert zich in `src/widgets/registry.tsx` met metadata, standaardconfiguratie, een **Editor**-component (leerkracht) en een **Player**-component (leerling). Een nieuw widgettype toevoegen = één module schrijven + één registratie.
 
 ### Gegevensopslag
-Alles staat in `localStorage` (`wf.*`-sleutels): widgets, mappen, inzendingen, pogingen en voorkeuren. Afbeeldingen worden bij het uploaden verkleind en als data-URL opgeslagen. Bij het eerste bezoek worden 8 voorbeeldwidgets geplaatst zodat je meteen kan verkennen.
+Alles staat in `localStorage` (`wf.*`-sleutels): widgets, mappen, inzendingen, pogingen, cursussen, leesvoortgang, AI-instellingen en voorkeuren. Afbeeldingen worden bij het uploaden verkleind en als data-URL opgeslagen. Bij het eerste bezoek worden voorbeeldwidgets en een voorbeeldcursus geplaatst zodat je meteen kan verkennen.
 
 ### Beperkingen (bewust, door de serverloze opzet)
-- Inzendingen komen alleen bij de leerkracht terecht als leerling en leerkracht **dezelfde browseropslag** delen (klascode-scenario) — bij de draagbare link blijven resultaten op het toestel van de leerling.
+- Inzendingen en leesvoortgang komen alleen bij de leerkracht terecht als leerling en leerkracht **dezelfde browseropslag** delen (klascode-scenario) — bij de draagbare link blijven resultaten op het toestel van de leerling. Daarvoor zijn er **resultaatcodes** en **voortgangscodes**.
 - "Live" meekijken tijdens het maken is er niet; resultaten verschijnen na het indienen.
+- De AI-functies vragen een internetverbinding en een eigen API-sleutel; zonder sleutel blijft de app volledig offline werken.
 
 ## ✅ Kwaliteitscontrole
 - `npm run build` — TypeScript strict + Vite-build zonder waarschuwingen

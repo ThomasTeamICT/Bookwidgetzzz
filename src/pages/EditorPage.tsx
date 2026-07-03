@@ -5,6 +5,8 @@ import { getTypeDef } from '../widgets/registry';
 import type { Widget } from '../lib/types';
 import { CheckRow, Field, Modal, useToast } from '../components/ui';
 import { ShareModal } from '../components/ShareModal';
+import { AIEditorPanel } from '../components/AIEditorPanel';
+import { AI_GEN_TYPES } from '../lib/aiWidgetGen';
 import { saveCustomTemplate } from '../lib/customTemplates';
 import { lintQuiz } from '../lib/linter';
 import type { QuizConfig } from '../lib/types';
@@ -19,6 +21,7 @@ export function EditorPage() {
   const [previewMode, setPreviewMode] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
   const [shareOpen, setShareOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const saveTimer = useRef<number | null>(null);
@@ -82,6 +85,15 @@ export function EditorPage() {
         )}
         {['quiz', 'worksheet', 'exitticket'].includes(widget.type) && (
           <Link to={`/print/${widget.id}`} className="btn btn-sm btn-ghost" title="Afdrukken of als PDF bewaren">🖨 Afdrukken</Link>
+        )}
+        {AI_GEN_TYPES.includes(widget.type) && (
+          <button
+            className="btn btn-sm btn-ai"
+            onClick={() => setAiOpen(true)}
+            title="Vragen bijmaken, hints aanvullen, afleiders versterken — met AI"
+          >
+            ✨ AI-assistent
+          </button>
         )}
         <button
           className="btn btn-sm btn-ghost"
@@ -170,6 +182,16 @@ export function EditorPage() {
       )}
 
       {shareOpen && <ShareModal widget={widget} onClose={() => setShareOpen(false)} />}
+      {aiOpen && (
+        <AIEditorPanel
+          widget={widget}
+          onClose={() => setAiOpen(false)}
+          onApply={(config: unknown, note: string) => {
+            setWidget({ ...widget, config });
+            toast(`✨ ${note}`, 'ok');
+          }}
+        />
+      )}
       {templateOpen && <SaveTemplateModal widget={widget} onClose={() => setTemplateOpen(false)} />}
     </div>
   );

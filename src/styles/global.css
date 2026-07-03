@@ -705,3 +705,90 @@ table.data tbody tr:hover { background: var(--bg-sunken); }
   .cross-cell { width: 28px; height: 28px; }
   .ws-cell { width: 27px; height: 27px; font-size: 0.85rem; }
 }
+
+/* ── AI-onderdelen ──────────────────────────────────────────────────────── */
+
+.ai-pulse {
+  display: inline-block;
+  animation: aiPulse 1.4s ease-in-out infinite;
+}
+@keyframes aiPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.6; }
+}
+.btn-ai {
+  background: linear-gradient(120deg, var(--brand), #9333ea);
+  color: #fff;
+  border: none;
+}
+.btn-ai:hover { filter: brightness(1.08); }
+
+/* ── Cursusinhoud (gerenderde markdown en blokken) ──────────────────────── */
+
+.md-body { line-height: 1.75; }
+.md-body p { margin: 0 0 0.85em; }
+.md-body p:last-child { margin-bottom: 0; }
+.md-body h3, .md-body h4 { margin: 1.1em 0 0.45em; }
+.md-body ul, .md-body ol { margin: 0 0 0.85em; padding-left: 1.4em; }
+.md-body li { margin: 0.25em 0; }
+.md-body blockquote {
+  margin: 0 0 0.85em;
+  padding: 8px 14px;
+  border-left: 4px solid var(--brand);
+  background: var(--bg-sunken);
+  border-radius: 0 var(--radius-s) var(--radius-s) 0;
+}
+.md-body code {
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 5px;
+  font-size: 0.9em;
+}
+.md-body a { color: var(--brand); }
+
+.course-block { margin: 0 0 18px; }
+.course-block figure { margin: 0; }
+.course-block figcaption {
+  color: var(--text-soft);
+  font-size: 0.85rem;
+  margin-top: 6px;
+  text-align: center;
+}
+.course-block .video-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-m);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #000;
+}
+.course-block .video-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.course-block details {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  background: var(--bg-raised);
+}
+.course-block details summary { cursor: pointer; font-weight: 600; }
+.course-block details[open] summary { margin-bottom: 8px; }
+.course-block table { border-collapse: collapse; width: 100%; }
+.course-block th, .course-block td {
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  text-align: left;
+}
+.course-block th { background: var(--bg-sunken); }
+
+@media print {
+  .course-block details { break-inside: avoid; }
+  .course-block details summary { list-style: none; }
+}

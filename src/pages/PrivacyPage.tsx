@@ -17,8 +17,9 @@ export function PrivacyPage() {
     localStorage.removeItem('wf.submissions.v1');
     localStorage.removeItem('wf.attempts.v1');
     localStorage.removeItem('wf.live.v1');
+    localStorage.removeItem('wf.courseprogress.v1');
     Object.keys(localStorage)
-      .filter((k) => k.startsWith('wf.autosave.'))
+      .filter((k) => k.startsWith('wf.autosave.') || k.startsWith('wf.coursename.'))
       .forEach((k) => localStorage.removeItem(k));
     // storage-laag opnieuw laten emitten
     localStorage.setItem('wf.submissions.v1', '[]');
@@ -51,15 +52,25 @@ export function PrivacyPage() {
           <strong>Alles staat uitsluitend in de browser van dit toestel</strong> (localStorage).
           Er is geen server, geen account en er wordt <strong>niets naar het internet verstuurd</strong>.
           Deellinks bevatten de oefening zelf (vragen en antwoorden), nooit leerlingresultaten —
-          behalve wanneer een leerling bewust zijn <em>resultaatcode</em> doorstuurt.
+          behalve wanneer een leerling bewust zijn <em>resultaatcode</em> of <em>voortgangscode</em> doorstuurt.
         </p>
         <h3>Wat wordt bewaard?</h3>
         <ul style={{ paddingLeft: 20 }}>
           <li><strong>Widgets</strong> ({widgets.length}): jouw oefeningen, inclusief afbeeldingen.</li>
+          <li><strong>Cursussen &amp; leesvoortgang</strong>: je cursusinhoud en, per leerling(naam), welke secties gelezen zijn en hoelang.</li>
           <li><strong>Inzendingen</strong> ({subs.length}, van {names.size} {names.size === 1 ? 'naam' : 'verschillende namen'}): naam, antwoorden, score, tijdstip en duur.</li>
           <li><strong>Tussentijds werk</strong>: automatisch opgeslagen antwoorden zodat leerlingen kunnen hervatten.</li>
           <li><strong>Voorkeuren</strong>: thema en weergave-instellingen.</li>
         </ul>
+        <h3>En de AI-assistent?</h3>
+        <p>
+          De AI-functies zijn <strong>uit</strong> tot jij zelf een API-sleutel instelt. Gebruik je ze,
+          dan vertrekt <strong>alleen wat jij intikt of plakt</strong> (bronmateriaal, leerplandoelen,
+          vragen en — bij een feedbackvoorstel — het antwoord van een leerling <em>zonder naam</em>)
+          rechtstreeks van je browser naar de door jou gekozen AI-aanbieder, onder diens voorwaarden.
+          Stuur nooit namen of gevoelige leerlinggegevens mee. Je sleutel en het gebruikslogboek staan
+          alleen op dit toestel — beheer ze bij de <a href="#/ai-instellingen">AI-instellingen</a>.
+        </p>
         <h3>Tips voor dataminimalisatie</h3>
         <ul style={{ paddingLeft: 20 }}>
           <li>Een <strong>voornaam of klasnummer volstaat</strong> — vraag geen volledige namen als het niet hoeft.</li>

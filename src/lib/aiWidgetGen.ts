@@ -67,6 +67,11 @@ ${QUESTION_DOC}`,
   spinner: `"spinner" (rad) — config: {"items":["naam of opdracht",…]}`,
 };
 
+/** Schema-uitleg van de quiz (voor hergebruik in bv. de cursusgeneratie). */
+export function quizSchemaText(): string {
+  return SCHEMA_DOCS.quiz!;
+}
+
 // ── Promptopbouw ────────────────────────────────────────────────────────────
 
 export interface WidgetGenRequest {

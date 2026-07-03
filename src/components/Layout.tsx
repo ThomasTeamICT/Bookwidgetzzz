@@ -19,6 +19,8 @@ export function Layout() {
         <nav aria-label="Hoofdnavigatie">
           <NavLink to="/widgets">Mijn widgets</NavLink>
           <NavLink to="/nieuw">Nieuwe widget</NavLink>
+          <NavLink to="/cursussen">Cursussen</NavLink>
+          <NavLink to="/ai-studio" title="Widgets maken met AI vanuit je bronmateriaal">✨ AI-studio</NavLink>
           <NavLink to="/resultaten">Resultaten</NavLink>
           <NavLink to="/privacy" title="Privacy en gegevensbeheer">Privacy</NavLink>
         </nav>
