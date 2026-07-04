@@ -28,9 +28,14 @@ en maximale opvolgbaarheid.
   begrippenlijst, afvinklijst, bijlage, scheiding, **ingebedde widget**).
 - **Ingebedde oefeningen**: elke widget speelt inline in de cursus; inzendingen lopen
   gewoon door de resultaten- en leerdoelenanalyse.
-- **Leerdoelen per sectie** en keuzesecties (verdieping, telt niet mee voor "afgewerkt").
-- **Delen per hoofdstuk** via draagbare link (ingebedde widgets reizen mee), klascode,
-  QR, of cursusbestand voor collega's. Printbare versie inbegrepen.
+- **Leerdoelen per sectie** en keuzesecties (verdieping, telt niet mee voor "afgewerkt"),
+  met een **doelendekking-matrix** in de editor (welke leerplandoelen zijn gedekt, welke
+  secties dragen nog geen doel).
+- **Delen per hoofdstuk** via draagbare link (ingebedde widgets reizen mee; hoofdstukken
+  voegen bij de leerling samen), klascode, QR, **insluitcode voor Smartschool/Moodle**,
+  of cursusbestand voor collega's. Printbare versie inbegrepen.
+- **Voor de leerling**: zoeken in de cursus, privénotities per sectie (lokaal,
+  exporteerbaar, nooit in de voortgangscode) en het toegankelijkheidsmenu.
 - **Voortgang volgen**: matrix leerlingen × secties (gelezen/geopend), kijktijd als
   context, per-sectieoverzicht ("waar haakt de klas af?"), widgetresultaten, CSV-export
   en **voortgangscodes** voor thuiswerk — transparant: de leerling ziet wat jij ziet.
