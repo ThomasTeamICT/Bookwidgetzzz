@@ -33,6 +33,11 @@ export function CourseShareModal({ course, onClose }: { course: Course; onClose:
   const toggle = (id: string) =>
     setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
+  // Volgt de hoofdstukselectie live via portableUrl.
+  const embedCode = portableUrl
+    ? `<iframe src="${portableUrl}" width="100%" height="720" style="border:0;border-radius:12px" allowfullscreen title="${course.title.replace(/"/g, '&quot;')}"></iframe>`
+    : '';
+
   return (
     <Modal title={`“${course.title}” delen`} onClose={onClose} wide>
       <h3 style={{ marginTop: 0 }}>Wat deel je?</h3>
@@ -114,6 +119,36 @@ export function CourseShareModal({ course, onClose }: { course: Course; onClose:
         <CopyButton text={course.code} label="Code kopiëren" />
         <CopyButton text={readUrl} label="Directe link kopiëren" />
       </div>
+
+      {selected.length > 0 && (
+        <>
+          <hr className="divider" />
+
+          <div className="callout">
+            <span aria-hidden>🏫</span>
+            <div>
+              <strong>Insluiten in je leeromgeving (Smartschool, Moodle, …):</strong> plak deze code
+              in een pagina die iframes toelaat. De cursus opent dan rechtstreeks in de leeromgeving.
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', margin: '10px 0 6px' }}>
+            <textarea
+              className="textarea"
+              rows={3}
+              readOnly
+              value={embedCode}
+              aria-label="Insluitcode voor de leeromgeving"
+              onFocus={(e) => e.target.select()}
+              style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
+            />
+            <CopyButton text={embedCode} label="Kopiëren" />
+          </div>
+          <p className="hint" style={{ margin: '0 0 14px' }}>
+            Werkt overal waar een gewone link werkt; bij een héél lange link (grote afbeeldingen)
+            kan de leeromgeving weigeren — deel dan per hoofdstuk.
+          </p>
+        </>
+      )}
 
       <hr className="divider" />
 

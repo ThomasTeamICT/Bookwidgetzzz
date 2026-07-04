@@ -13,6 +13,7 @@ import { uid } from '../lib/utils';
 import { CheckRow, ConfirmModal, EmptyState, Field, Modal, useToast } from '../components/ui';
 import { BLOCK_META, BlockEditor, PALETTE_ORDER, duplicateBlock } from '../components/course/blockEditors';
 import { CourseAIModal } from '../components/course/CourseAIModal';
+import { GoalCoverage } from '../components/course/GoalCoverage';
 
 // ── Immutabele hulpjes ──────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ export function CourseEditorPage() {
   );
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [goalsOpen, setGoalsOpen] = useState(false);
   const [aiModal, setAiModal] = useState<AIModalState>(null);
   const [paletteAt, setPaletteAt] = useState<number | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
@@ -196,6 +198,13 @@ export function CourseEditorPage() {
         <button className="btn btn-sm btn-ai" onClick={() => setAiModal({ mode: 'rework' })} title="Laat AI de hele cursus herwerken of uitbreiden">
           ✨ Herwerk met AI
         </button>
+        <button
+          className="btn btn-sm btn-ghost"
+          onClick={() => setGoalsOpen(true)}
+          title="Welke leerplandoelen zijn gedekt, en welke secties dragen nog geen doel?"
+        >
+          🎯 Doelendekking
+        </button>
         <Link to={`/cursus/volg/${course.id}`} className="btn btn-sm btn-ghost" title="Voortgang van je leerlingen">
           📊 Voortgang
         </Link>
@@ -249,6 +258,12 @@ export function CourseEditorPage() {
 
       {settingsOpen && (
         <CourseSettingsModal course={course} onChange={setCourse} onClose={() => setSettingsOpen(false)} />
+      )}
+
+      {goalsOpen && (
+        <Modal title="🎯 Doelendekking" onClose={() => setGoalsOpen(false)} wide>
+          <GoalCoverage course={course} />
+        </Modal>
       )}
 
       {pendingDelete && (

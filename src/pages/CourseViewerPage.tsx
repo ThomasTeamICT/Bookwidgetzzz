@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import type { Course, CourseProgress } from '../lib/courseTypes';
+import type { Course, CourseProgress, CourseSection } from '../lib/courseTypes';
 import { allSections, progressPercent } from '../lib/courseTypes';
 import type { DecodedCourse } from '../lib/courses';
 import {
@@ -8,6 +8,7 @@ import {
   getCourse, getCourseByCode, getStudentProgress, mergeProgressRecords,
   saveStudentProgress, sharedCourseDiffers, startProgress, touchSection,
 } from '../lib/courses';
+import { downloadFile, formatDate } from '../lib/utils';
 import { BlockRenderer } from '../components/course/BlockRenderer';
 import { CopyButton, EmptyState } from '../components/ui';
 import { A11yMenu, loadA11y } from '../components/A11yMenu';
@@ -144,6 +145,52 @@ function CourseNotFound({ code }: { code?: string }) {
 
 const NAME_KEY_PREFIX = 'wf.coursename.';
 
+// ── Leerlingnotities (privé, alleen op dit toestel; NIET in de voortgangscode)
+
+const NOTES_KEY_PREFIX = 'wf.coursenotes.';
+
+/** Opslagvorm: leerlingnaam (kleine letters) → sectie-id → notitietekst. */
+type CourseNotesStore = Record<string, Record<string, string>>;
+
+function readCourseNotes(courseId: string): CourseNotesStore {
+  try {
+    const raw = localStorage.getItem(NOTES_KEY_PREFIX + courseId);
+    const parsed: unknown = raw ? JSON.parse(raw) : {};
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as CourseNotesStore;
+    }
+  } catch { /* beschadigde of onbeschikbare opslag → leeg beginnen */ }
+  return {};
+}
+
+function writeCourseNotes(courseId: string, store: CourseNotesStore) {
+  try {
+    localStorage.setItem(NOTES_KEY_PREFIX + courseId, JSON.stringify(store));
+  } catch (e) {
+    console.error('Notities bewaren mislukt (localStorage vol?)', e);
+  }
+}
+
+/** Alle doorzoekbare tekst van een sectie (titel + blokinhoud), in kleine letters. */
+function sectionText(section: CourseSection): string {
+  const parts: string[] = [section.title];
+  for (const b of section.blocks) {
+    switch (b.type) {
+      case 'heading': parts.push(b.text); break;
+      case 'text': parts.push(b.markdown); break;
+      case 'callout': parts.push(b.title ?? '', b.text); break;
+      case 'quote': parts.push(b.text); break;
+      case 'accordion': for (const it of b.items) parts.push(it.title, it.text); break;
+      case 'columns': parts.push(b.left, b.right); break;
+      case 'table': for (const row of b.rows) parts.push(...row); break;
+      case 'terms': for (const it of b.items) parts.push(it.term, it.uitleg); break;
+      case 'checklist': for (const it of b.items) parts.push(it.text); break;
+      default: break; // media/divider/widget: geen doorzoekbare tekst
+    }
+  }
+  return parts.join('\n').toLocaleLowerCase('nl');
+}
+
 function useIsNarrow(px = 920): boolean {
   const [narrow, setNarrow] = useState(
     () => typeof window !== 'undefined' && window.matchMedia(`(max-width: ${px}px)`).matches
@@ -174,6 +221,109 @@ function CourseReader({ course }: { course: Course }) {
   sectionIdRef.current = sectionId;
   const lastSaveRef = useRef(Date.now());
   const narrow = useIsNarrow();
+
+  // ── Mijn notities: per leerlingnaam, per sectie ──────────────────────────
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [noteSaved, setNoteSaved] = useState(false);
+  const notesRef = useRef<Record<string, string>>({});
+  const notesKeyRef = useRef(''); // leerlingnaam in kleine letters
+  const noteDirtyRef = useRef(false);
+  const noteTimerRef = useRef<number | null>(null);
+  const savedHintTimerRef = useRef<number | null>(null);
+
+  /** Schrijft openstaande notitiewijzigingen meteen naar localStorage. */
+  const flushNotes = () => {
+    if (noteTimerRef.current !== null) {
+      window.clearTimeout(noteTimerRef.current);
+      noteTimerRef.current = null;
+    }
+    if (!noteDirtyRef.current) return;
+    noteDirtyRef.current = false;
+    const key = notesKeyRef.current;
+    if (!key) return;
+    const store = readCourseNotes(course.id);
+    const mine: Record<string, string> = {};
+    for (const [sid, txt] of Object.entries(notesRef.current)) {
+      if (typeof txt === 'string' && txt.trim() !== '') mine[sid] = txt;
+    }
+    if (Object.keys(mine).length > 0) store[key] = mine;
+    else delete store[key];
+    writeCourseNotes(course.id, store);
+  };
+  const flushNotesRef = useRef(flushNotes);
+  flushNotesRef.current = flushNotes;
+
+  // Notities (her)laden zodra de naam bekend is; andere naam = andere notities.
+  useEffect(() => {
+    flushNotesRef.current(); // eerst openstaande notities van de vorige naam bewaren
+    const key = name.trim().toLocaleLowerCase('nl');
+    notesKeyRef.current = key;
+    const stored = key ? readCourseNotes(course.id)[key] : undefined;
+    const clean: Record<string, string> = {};
+    if (stored && typeof stored === 'object' && !Array.isArray(stored)) {
+      for (const [sid, txt] of Object.entries(stored)) {
+        if (typeof txt === 'string' && txt !== '') clean[sid] = txt;
+      }
+    }
+    notesRef.current = clean;
+    setNotes(clean);
+  }, [name, course.id]);
+
+  // "✓ bewaard"-hintje netjes opruimen bij unmount.
+  useEffect(() => () => {
+    if (savedHintTimerRef.current !== null) window.clearTimeout(savedHintTimerRef.current);
+  }, []);
+
+  const changeNote = (sid: string, text: string) => {
+    const next = { ...notesRef.current, [sid]: text };
+    notesRef.current = next;
+    setNotes(next);
+    noteDirtyRef.current = true;
+    // Debounce: pas 600 ms na de laatste toetsaanslag bewaren.
+    if (noteTimerRef.current !== null) window.clearTimeout(noteTimerRef.current);
+    noteTimerRef.current = window.setTimeout(() => {
+      noteTimerRef.current = null;
+      flushNotesRef.current();
+      setNoteSaved(true);
+      if (savedHintTimerRef.current !== null) window.clearTimeout(savedHintTimerRef.current);
+      savedHintTimerRef.current = window.setTimeout(() => setNoteSaved(false), 1500);
+    }, 600);
+  };
+
+  const exportNotes = () => {
+    flushNotesRef.current();
+    const lines: string[] = [
+      `Mijn notities — ${course.title}`,
+      `Leerling: ${name} · ${formatDate(Date.now())}`,
+      '',
+    ];
+    for (const { chapter, section } of flat) {
+      const txt = (notesRef.current[section.id] ?? '').trim();
+      if (!txt) continue;
+      lines.push(`${chapter.title} › ${section.title}`);
+      lines.push(txt);
+      lines.push('');
+    }
+    downloadFile(`mijn-notities-${course.code}.txt`, lines.join('\n'), 'text/plain');
+  };
+
+  // ── Zoeken in de inhoudstafel ─────────────────────────────────────────────
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLocaleLowerCase('nl');
+  const sectionTexts = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const { section } of flat) m.set(section.id, sectionText(section));
+    return m;
+  }, [flat]);
+  // null = niet aan het filteren (minder dan 2 tekens)
+  const matchIds = useMemo(() => {
+    if (q.length < 2) return null;
+    const found = new Set<string>();
+    for (const { section } of flat) {
+      if ((sectionTexts.get(section.id) ?? '').includes(q)) found.add(section.id);
+    }
+    return found;
+  }, [q, flat, sectionTexts]);
 
   /**
    * Bewaart de voortgang zonder verlies: eerst samenvoegen met wat er
@@ -243,12 +393,17 @@ function CourseReader({ course }: { course: Course }) {
     return () => {
       clearInterval(iv);
       persistRef.current();
+      // Sectiewissel/unmount: ook openstaande notities meteen wegschrijven.
+      flushNotesRef.current();
     };
   }, [sectionId]);
 
   // Ook bij sluiten/verversen van het tabblad de laatste stand bewaren.
   useEffect(() => {
-    const flush = () => persistRef.current();
+    const flush = () => {
+      persistRef.current();
+      flushNotesRef.current();
+    };
     window.addEventListener('pagehide', flush);
     return () => window.removeEventListener('pagehide', flush);
   }, []);
@@ -340,6 +495,7 @@ function CourseReader({ course }: { course: Course }) {
   const isLast = idx === flat.length - 1;
   const pctDone = progressPercent(course, progress);
   const progressCode = encodeCourseProgress(progress);
+  const noteCount = flat.filter(({ section }) => (notes[section.id] ?? '').trim() !== '').length;
 
   const sidebar = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 16, height: '100%' }}>
@@ -365,8 +521,32 @@ function CourseReader({ course }: { course: Course }) {
         )}
       </div>
 
+      <div style={{ flex: 'none' }}>
+        <input
+          type="search"
+          className="input input-sm"
+          aria-label="Zoeken in de cursus"
+          placeholder="🔍 Zoek in de cursus…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          style={{ width: '100%' }}
+        />
+        <p className="hint" aria-live="polite" style={{ margin: matchIds ? '4px 0 0' : 0 }}>
+          {matchIds
+            ? matchIds.size === 0
+              ? 'Niets gevonden.'
+              : `${matchIds.size} ${matchIds.size === 1 ? 'resultaat' : 'resultaten'}`
+            : ''}
+        </p>
+      </div>
+
       <nav aria-label="Inhoudstafel" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-        {course.chapters.map((ch) => (
+        {course.chapters.map((ch) => {
+          const visibleSections = matchIds
+            ? ch.sections.filter((s) => matchIds.has(s.id))
+            : ch.sections;
+          if (matchIds && visibleSections.length === 0) return null;
+          return (
           <div key={ch.id} style={{ marginBottom: 14 }}>
             <p
               style={{
@@ -376,17 +556,18 @@ function CourseReader({ course }: { course: Course }) {
             >
               {ch.emoji && <span aria-hidden>{ch.emoji} </span>}{ch.title}
             </p>
-            {ch.sections.map((s) => {
+            {visibleSections.map((s) => {
               const sp = progress.sections[s.id];
               const status = sp?.completedAt ? 'afgewerkt' : sp ? 'geopend' : 'nog niet gelezen';
               const icon = sp?.completedAt ? '✅' : sp ? '◐' : '○';
               const active = s.id === sectionId;
+              const hasNote = (notes[s.id] ?? '').trim() !== '';
               return (
                 <button
                   key={s.id}
                   onClick={() => goTo(s.id)}
                   aria-current={active ? 'true' : undefined}
-                  aria-label={`${s.title} — ${status}`}
+                  aria-label={`${s.title} — ${status}${hasNote ? ' — heeft notitie' : ''}`}
                   style={{
                     display: 'flex', gap: 8, alignItems: 'flex-start', width: '100%',
                     textAlign: 'left', padding: '7px 10px', marginBottom: 2,
@@ -400,6 +581,9 @@ function CourseReader({ course }: { course: Course }) {
                   <span aria-hidden style={{ flex: 'none' }}>{icon}</span>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     {s.title}
+                    {hasNote && (
+                      <span role="img" aria-label="heeft notitie" style={{ marginLeft: 5, fontSize: '0.82rem' }}>🗒️</span>
+                    )}
                     {s.optional && (
                       <span style={{ color: 'var(--text-faint)', fontSize: '0.82rem' }}> · keuze</span>
                     )}
@@ -408,7 +592,8 @@ function CourseReader({ course }: { course: Course }) {
               );
             })}
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -421,6 +606,11 @@ function CourseReader({ course }: { course: Course }) {
         </p>
         <CopyButton text={progressCode} label="Code kopiëren" />
       </div>
+      {noteCount > 0 && (
+        <button className="btn btn-ghost btn-sm" style={{ flex: 'none' }} onClick={exportNotes}>
+          🗒️ Mijn notities exporteren
+        </button>
+      )}
     </div>
   );
 
@@ -532,6 +722,32 @@ function CourseReader({ course }: { course: Course }) {
                   {cur.section.blocks.length === 0 && (
                     <p className="hint">Deze sectie is nog leeg.</p>
                   )}
+                </div>
+
+                {/* Mijn notities: privé kladblok bij deze sectie */}
+                <div className="card" style={{ marginTop: 26, padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                    <strong>🗒️ Mijn notities</strong>
+                    <span
+                      className="hint"
+                      role="status"
+                      style={{ color: 'var(--ok)', visibility: noteSaved ? 'visible' : 'hidden' }}
+                    >
+                      ✓ bewaard
+                    </span>
+                  </div>
+                  <textarea
+                    className="textarea"
+                    rows={3}
+                    value={notes[cur.section.id] ?? ''}
+                    placeholder="Schrijf hier wat je wil onthouden van deze pagina…"
+                    aria-label="Mijn notities bij deze sectie"
+                    onChange={(e) => changeNote(cur.section.id, e.target.value)}
+                    style={{ width: '100%', marginTop: 8 }}
+                  />
+                  <p className="hint" style={{ margin: '6px 0 0' }}>
+                    Alleen voor jou — je notities blijven op dit toestel en zitten níét in je voortgangscode.
+                  </p>
                 </div>
 
                 {/* Sectie afronden + navigatie */}

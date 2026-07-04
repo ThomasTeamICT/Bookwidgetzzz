@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getWidgetByCode } from '../lib/storage';
+import { getCourseByCode } from '../lib/courses';
 
 export function JoinPage() {
   const [code, setCode] = useState('');
@@ -13,12 +14,16 @@ export function JoinPage() {
       setError('Vul de volledige code in (6 tekens).');
       return;
     }
-    const w = getWidgetByCode(c);
-    if (!w) {
-      setError(`Geen widget gevonden met code ${c} op dit toestel. Werk je thuis? Vraag dan de draagbare link aan je leerkracht.`);
+    // Eén codeveld voor alles: eerst widgets proberen, dan cursussen.
+    if (getWidgetByCode(c)) {
+      navigate(`/speel/${c}`);
       return;
     }
-    navigate(`/speel/${c}`);
+    if (getCourseByCode(c)) {
+      navigate(`/cursus/lees/${c}`);
+      return;
+    }
+    setError(`Geen opdracht of cursus gevonden met code ${c} op dit toestel. Werk je thuis? Vraag dan de draagbare link aan je leerkracht.`);
   };
 
   return (
