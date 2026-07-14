@@ -92,7 +92,7 @@ export function EditorPage() {
         {['quiz', 'worksheet', 'exitticket'].includes(widget.type) && (
           <Link to={`/print/${widget.id}`} className="btn btn-sm btn-ghost" title="Afdrukken of als PDF bewaren">🖨 Afdrukken</Link>
         )}
-        {AI_GEN_TYPES.includes(widget.type) && (
+        {(AI_GEN_TYPES.includes(widget.type) || widget.type === 'videoquiz') && (
           <button
             className="btn btn-sm btn-ai"
             onClick={() => setAiOpen(true)}

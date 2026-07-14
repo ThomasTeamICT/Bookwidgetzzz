@@ -22,6 +22,7 @@ export function Layout() {
           <NavLink to="/cursussen">Cursussen</NavLink>
           <NavLink to="/ai-studio" title="Widgets maken met AI vanuit je bronmateriaal">✨ AI-studio</NavLink>
           <NavLink to="/resultaten">Resultaten</NavLink>
+          <NavLink to="/hulp" title="Aan de slag en veelgestelde vragen">Hulp</NavLink>
           <NavLink to="/privacy" title="Privacy en gegevensbeheer">Privacy</NavLink>
         </nav>
         <div className="topbar-spacer" />

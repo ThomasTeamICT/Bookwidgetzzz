@@ -13,7 +13,9 @@ en maximale opvolgbaarheid.
   een map. Met doelgroep, richtaantal, leerdoelkoppeling en **differentiatie** (hints,
   steuntaal, niveaus) als opties.
 - **AI in de editor**: vragen bijmaken, hints/uitleg/steuntaal aanvullen, glossarium
-  destilleren, zwakke afleiders versterken, items bijmaken bij 20 widgettypes.
+  destilleren, zwakke afleiders versterken, items bijmaken bij 20 widgettypes — en bij de
+  **video-quiz**: plak het transcript (bv. van YouTube) en krijg kijkvragen op de juiste
+  tijdstippen.
 - **AI-cursusbouwer**: een volledige cursus genereren **vanuit leerplandoelen** (of een
   bestaande cursus herwerken / een sectie vullen), optioneel met een oefenquiz per hoofdstuk.
 - **Feedbacksuggesties** bij het nakijken: taakgericht voorstel (wat lukt, wat nog niet,
@@ -68,6 +70,10 @@ Meerkeuze · meerdere antwoorden · juist/onjuist · kort antwoord · open vraag
 - Voortgangsbalk, aftellende timer, automatisch indienen als de tijd om is
 - Directe feedback met juiste antwoorden en uitleg; **oefen-je-fouten**-ronde; kalibratiefeedback bij zekerheidsgraad
 - **Toegankelijkheidsmenu**: tekstgrootte, ruimere letterafstand en rustmodus (minder beweging) — per toestel onthouden
+
+### Hulp & onboarding
+Een ingebouwde **"Aan de slag"-pagina** (menu → Hulp) met de drie kernflows en veelgestelde
+vragen (gegevens, AI-kosten, thuiswerk-codes, delen met collega's, LMS-insluiting, back-ups).
 
 ### UX & toegankelijkheid
 - Modern, rustig ontwerp met **licht/donker/automatisch thema**

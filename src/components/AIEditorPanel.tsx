@@ -10,12 +10,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type {
-  GapQuestion, MCQuestion, MultiQuestion, Question, Widget, WidgetTypeId,
+  GapQuestion, MCQuestion, MultiQuestion, Question, VideoCheckpoint, Widget, WidgetTypeId,
 } from '../lib/types';
 import { AIError, askAI, extractJson } from '../lib/ai';
 import {
-  AI_GEN_TYPES, buildWidgetGenPrompt, sanitizeGeneratedWidgets, sanitizeQuestions,
+  AI_GEN_TYPES, buildWidgetGenPrompt, quizSchemaText, sanitizeGeneratedWidgets,
+  sanitizeQuestion, sanitizeQuestions,
 } from '../lib/aiWidgetGen';
+import { uid } from '../lib/utils';
 import { getTypeDef } from '../widgets/registry';
 import { Field, EmptyState, Modal, useToast } from './ui';
 import { AIErrorBox, AIGate, AIReviewNote, AIWorkingBox } from './aiCommon';
@@ -141,6 +143,27 @@ const ITEM_DEFS: Partial<Record<WidgetTypeId, ItemDef>> = {
   },
 };
 
+/** "1:23", "01:02:03", "83" of 83 → seconden; null als het geen tijdstip is. */
+function parseTimestamp(v: unknown): number | null {
+  if (typeof v === 'number' && Number.isFinite(v) && v >= 0) return Math.round(v);
+  if (typeof v !== 'string') return null;
+  const t = v.trim();
+  if (/^\d+([.,]\d+)?$/.test(t)) return Math.round(parseFloat(t.replace(',', '.')));
+  const m = t.match(/^(?:(\d+):)?(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = m[1] ? parseInt(m[1], 10) : 0;
+  return h * 3600 + parseInt(m[2], 10) * 60 + parseInt(m[3], 10);
+}
+
+function formatTime(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    : `${m}:${String(s).padStart(2, '0')}`;
+}
+
 /** Haalt een lijst ruwe vragen uit modeluitvoer: {"questions":[…]}, een kale array of de widget-envelop. */
 function pluckRawQuestions(json: unknown): unknown[] {
   if (Array.isArray(json)) return json;
@@ -248,7 +271,8 @@ export function AIEditorPanel({ widget, onClose, onApply }: {
   const toast = useToast();
   const typeDef = getTypeDef(widget.type);
   const isQuizFam = QUIZ_FAMILY.includes(widget.type);
-  const supported = isQuizFam || AI_GEN_TYPES.includes(widget.type);
+  const isVideoQuiz = widget.type === 'videoquiz';
+  const supported = isQuizFam || isVideoQuiz || AI_GEN_TYPES.includes(widget.type);
   const itemDef = ITEM_DEFS[widget.type];
 
   // Lokale kopie van de config: blijft ook juist als de aanroeper niet meteen herrendert.
@@ -256,7 +280,7 @@ export function AIEditorPanel({ widget, onClose, onApply }: {
   const questions: Question[] = Array.isArray(cfg.questions) ? (cfg.questions as Question[]) : [];
   const mcqs = questions.filter((q): q is MCQuestion | MultiQuestion => q.type === 'mc' || q.type === 'multi');
 
-  const [mode, setMode] = useState<'menu' | 'form-questions' | 'form-items'>('menu');
+  const [mode, setMode] = useState<'menu' | 'form-questions' | 'form-items' | 'form-video'>('menu');
   const [busy, setBusy] = useState(false);
   const [stream, setStream] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -704,6 +728,77 @@ ${payload}`;
     });
   }
 
+  // ── Actie: video-quiz — vragen uit een transcript op tijdstippen ──────────
+
+  function runVideoQuiz() {
+    const n = clampCount(count);
+    if (!source.trim()) {
+      setError('Plak eerst het transcript van de video (YouTube: … onder de video → "Transcript tonen" → alles kopiëren).');
+      return;
+    }
+    const existing: VideoCheckpoint[] = Array.isArray(cfg.checkpoints) ? (cfg.checkpoints as VideoCheckpoint[]) : [];
+    const system = `Je bent een ervaren Vlaamse leerkracht die kijkvragen maakt bij een lesvideo (video pauzeert op het gekozen tijdstip en toont dan de vraag).
+Kwaliteitsregels:
+- Elke vraag komt NA het fragment waarin het antwoord te horen/zien was — nooit vooruitblikken.
+- Verspreid de vragen over de hele video; gebruik de tijdstempels uit het transcript.
+- Toets begrip van wat net gezegd werd, geef plausibele afleiders en een korte "explanation".
+- Baseer je UITSLUITEND op het transcript; verzin niets bij.
+Antwoord met ALLEEN geldige JSON (geen uitleg, geen markdown).`;
+    const prompt = `Maak precies ${n} kijkvragen bij deze video.
+${focus.trim() ? `Focus: ${focus.trim()}\n` : ''}${existing.length ? `Er zijn al vragen op deze tijdstippen — vermijd die momenten en die inhoud: ${existing.map((c) => formatTime(c.timeSec)).join(', ')}\n` : ''}
+Formaat: {"checkpoints":[{"time":"M:SS","question":{…}}]} — "time" is het moment waarop de video pauzeert.
+Het vraagschema ("question") is dat van de quiz:
+${quizSchemaText()}
+
+=== TRANSCRIPT ===
+${source.trim()}
+=== EINDE TRANSCRIPT ===`;
+    runAI('videovragen uit transcript', system, prompt, (full) => {
+      const json = asRec(extractJson(full));
+      const arr = Array.isArray(json.checkpoints) ? json.checkpoints : Array.isArray(json) ? (json as unknown[]) : [];
+      const seen = new Set(existing.map((c) => `${c.timeSec}::${norm(c.question?.prompt ?? '')}`));
+      const fresh: VideoCheckpoint[] = [];
+      for (const it of arr) {
+        const r = asRec(it);
+        const timeSec = parseTimestamp(r.time ?? r.timeSec);
+        const question = sanitizeQuestion(r.question);
+        if (timeSec === null || !question || question.type === 'info') continue;
+        const key = `${timeSec}::${norm(question.prompt)}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        fresh.push({ id: uid(), timeSec, question });
+      }
+      if (fresh.length === 0) {
+        throw new AIError('De AI leverde geen bruikbare kijkvragen op. Bevat het transcript tijdstempels (bv. 0:45)? Probeer het opnieuw.');
+      }
+      const merged = [...existing, ...fresh].sort((a, b) => a.timeSec - b.timeSec);
+      const warnings: string[] = [];
+      if (!str(cfg.videoUrl).trim()) {
+        warnings.push('Vergeet niet de video-URL in te vullen bij de inhoud van deze widget.');
+      }
+      return {
+        config: { ...cfg, checkpoints: merged },
+        summary: `+${fresh.length} kijkvra${fresh.length === 1 ? 'ag' : 'gen'}`,
+        details: (
+          <>
+            {fresh.map((c) => (
+              <PreviewCard key={c.id}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
+                  <span className="badge badge-brand" style={{ fontFamily: 'monospace' }}>⏱ {formatTime(c.timeSec)}</span>
+                  <span className="hint" style={{ border: '1px solid var(--line)', borderRadius: 6, padding: '0 6px' }}>
+                    {Q_LABEL[c.question.type] ?? c.question.type}
+                  </span>
+                  <strong style={{ fontWeight: 600 }}>{c.question.prompt}</strong>
+                </div>
+              </PreviewCard>
+            ))}
+          </>
+        ),
+        warnings,
+      };
+    });
+  }
+
   // ── Weergave ────────────────────────────────────────────────────────────────
 
   const footer = (
@@ -755,6 +850,42 @@ ${payload}`;
             Verwerpen
           </button>
           <button className="btn btn-primary" onClick={applyPreview}>✔ Toepassen</button>
+        </div>
+      </div>
+    );
+  } else if (mode === 'form-video') {
+    body = (
+      <div style={{ display: 'grid', gap: 4 }}>
+        <div>
+          <button className="btn btn-sm btn-quiet" onClick={() => setMode('menu')}>← Terug</button>
+        </div>
+        <h3 style={{ margin: '4px 0 10px' }}>⏱️ Kijkvragen uit een transcript</h3>
+        <Field
+          label="Transcript van de video"
+          hint='YouTube: klik onder de video op "… meer" → "Transcript tonen" en kopieer alles (met de tijdstempels).'
+        >
+          <textarea
+            className="textarea" rows={8} value={source}
+            onChange={(e) => setSource(e.target.value)}
+            placeholder={'0:00 Welkom bij deze les over de waterkringloop.\n0:24 Water verdampt onder invloed van de zon…'}
+          />
+        </Field>
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+          <Field label="Aantal vragen">
+            <input
+              className="input input-sm" type="number" min={1} max={20} value={count}
+              onChange={(e) => { const v = parseInt(e.target.value, 10); setCount(Number.isFinite(v) ? v : 0); }}
+              style={{ maxWidth: 120 }}
+            />
+          </Field>
+          <Field label="Focus (optioneel)">
+            <input className="input" value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="bv. alleen de begrippen" />
+          </Field>
+        </div>
+        <div>
+          <button className="btn btn-primary" disabled={!source.trim()} onClick={runVideoQuiz}>
+            ✨ Voorstel maken
+          </button>
         </div>
       </div>
     );
@@ -839,6 +970,13 @@ ${payload}`;
               disabledHint="Geen meerkeuzevragen in deze widget."
             />
           </>
+        ) : isVideoQuiz ? (
+          <ActionCard
+            icon="⏱️"
+            title="Kijkvragen uit een transcript"
+            desc="Plak het transcript van de video (bv. van YouTube) en krijg vragen op de juiste tijdstippen."
+            onClick={() => setMode('form-video')}
+          />
         ) : (
           <ActionCard
             icon="➕"
