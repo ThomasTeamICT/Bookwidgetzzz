@@ -6,7 +6,8 @@ import type {
   Course, CourseBlock, CourseBlockType, CourseChapter, CourseProgress,
   CourseSection, SectionProgress,
 } from './courseTypes';
-import { referencedWidgetIds } from './courseTypes';
+import { referencedPdfIds, referencedWidgetIds } from './courseTypes';
+import { deletePdf } from './pdfStore';
 import { makeCode, uid } from './utils';
 import { getWidget, getWidgets, notifyChange, saveWidget } from './storage';
 import { defaultSettings, getTypeDef, WIDGET_TYPES } from '../widgets/registry';
@@ -53,6 +54,7 @@ export function saveCourse(course: Course) {
   write(COURSES_KEY, all);
 }
 export function deleteCourse(id: string) {
+  const course = getCourse(id);
   write(COURSES_KEY, getCourses().filter((c) => c.id !== id));
   write(PROGRESS_KEY, readAllProgress().filter((p) => p.courseId !== id));
   // Privé leerlingnotities bij deze cursus mee opruimen (zie CourseViewerPage).
@@ -60,6 +62,34 @@ export function deleteCourse(id: string) {
     localStorage.removeItem('wf.coursenotes.' + id);
   } catch {
     // genegeerd: notities opruimen mag verwijderen nooit blokkeren
+  }
+  if (course) cleanupCoursePdfs(course);
+}
+
+/**
+ * Geüploade pdf's van een verwijderde cursus uit IndexedDB opruimen — maar
+ * alléén als geen enkele andere cursus of widget hetzelfde pdfId gebruikt
+ * (dupliceren kopieert de verwijzing, dus een id kan gedeeld zijn).
+ */
+function cleanupCoursePdfs(course: Course) {
+  const candidates = referencedPdfIds(course);
+  if (!candidates.length) return;
+  const inUse = new Set<string>();
+  // De verwijderde cursus is al weggeschreven, dus dit zijn de overblijvers.
+  for (const c of getCourses()) {
+    for (const pid of referencedPdfIds(c)) inUse.add(pid);
+  }
+  // Widgets kunnen ook een pdf als bron hebben (bv. splitwidgets: source.pdfId).
+  for (const w of getWidgets()) {
+    const src = (w.config as unknown as { source?: unknown }).source;
+    if (src && typeof src === 'object') {
+      const pid = (src as Record<string, unknown>).pdfId;
+      if (typeof pid === 'string' && pid) inUse.add(pid);
+    }
+  }
+  for (const pid of candidates) {
+    // fire-and-forget: opruimen mag het verwijderen nooit blokkeren
+    if (!inUse.has(pid)) void deletePdf(pid);
   }
 }
 
@@ -88,6 +118,7 @@ export function makeBlock(type: CourseBlockType): CourseBlock {
     case 'image': return { id, type, url: '', size: 'normal' };
     case 'video': return { id, type, url: '' };
     case 'audio': return { id, type, url: '' };
+    case 'pdf': return { id, type, height: 560 };
     case 'embed': return { id, type, url: '', height: 420 };
     case 'callout': return { id, type, kind: 'info', text: '' };
     case 'quote': return { id, type, text: '' };
@@ -413,7 +444,7 @@ export function importCourseJson(json: string): { course: Course; widgets: Widge
 }
 
 const BLOCK_TYPES: CourseBlockType[] = [
-  'heading', 'text', 'image', 'video', 'audio', 'embed', 'callout', 'quote',
+  'heading', 'text', 'image', 'video', 'audio', 'pdf', 'embed', 'callout', 'quote',
   'divider', 'attachment', 'accordion', 'columns', 'table', 'terms', 'checklist', 'widget',
 ];
 
@@ -438,6 +469,18 @@ function sanitizeBlock(raw: unknown): CourseBlock | null {
       return { id, type, url: s(b.url), caption: s(b.caption) || undefined };
     case 'audio':
       return { id, type, url: s(b.url), caption: s(b.caption) || undefined };
+    case 'pdf': {
+      const pdfId = s(b.pdfId) || undefined;
+      const url = s(b.url) || undefined;
+      // Zonder upload én zonder URL valt er niets te tonen — blok weglaten.
+      if (!pdfId && !url) return null;
+      return {
+        id, type, pdfId, url,
+        name: s(b.name) || undefined,
+        caption: s(b.caption) || undefined,
+        height: typeof b.height === 'number' && b.height > 80 ? Math.min(b.height, 1200) : undefined,
+      };
+    }
     case 'embed':
       return { id, type, url: s(b.url), height: typeof b.height === 'number' && b.height > 80 ? Math.min(b.height, 1200) : 420, title: s(b.title) || undefined };
     case 'callout':

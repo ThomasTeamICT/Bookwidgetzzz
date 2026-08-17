@@ -1,8 +1,8 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   AccordionBlock, AttachmentBlock, AudioBlock, CalloutBlock, ChecklistBlock,
-  ColumnsBlock, CourseBlock, EmbedBlock, HeadingBlock, ImageBlock, QuoteBlock,
-  TableBlock, TermsBlock, TextBlock, VideoBlock, WidgetBlock,
+  ColumnsBlock, CourseBlock, EmbedBlock, HeadingBlock, ImageBlock, PdfBlock,
+  QuoteBlock, TableBlock, TermsBlock, TextBlock, VideoBlock, WidgetBlock,
 } from '../../lib/courseTypes';
 import { renderMarkdown } from '../../lib/markdown';
 import { bumpAttemptCount, getAttemptCount, getSubmissions, getWidget, saveSubmission } from '../../lib/storage';
@@ -10,6 +10,8 @@ import { getTypeDef, type WidgetTypeDef } from '../../widgets/registry';
 import type { PlayerResult } from '../../widgets/shared';
 import type { Submission } from '../../lib/types';
 import { pct, uid } from '../../lib/utils';
+import { PdfViewer, pickAndStorePdf } from '../pdf/PdfViewer';
+import { deletePdf, getPdf, savePdf } from '../../lib/pdfStore';
 
 // ── Gedeelde weergave van cursusblokken ─────────────────────────────────────
 //
@@ -46,6 +48,7 @@ function renderBlock(block: CourseBlock, interactive: boolean, props: BlockRende
     case 'image': return <ImageView block={block} />;
     case 'video': return <VideoView block={block} interactive={interactive} />;
     case 'audio': return <AudioView block={block} interactive={interactive} />;
+    case 'pdf': return <PdfBlockView block={block} interactive={interactive} />;
     case 'embed': return <EmbedView block={block} interactive={interactive} />;
     case 'callout': return <CalloutView block={block} />;
     case 'quote': return <QuoteView block={block} />;
@@ -155,6 +158,135 @@ function AudioView({ block, interactive }: { block: AudioBlock; interactive: boo
       <audio controls src={block.url} style={{ width: '100%' }} aria-label={block.caption || 'Audiofragment'} />
       {block.caption && <figcaption>{block.caption}</figcaption>}
     </figure>
+  );
+}
+
+// ── Pdf-blok: geüploade pdf (IndexedDB) of externe URL, inline leesbaar ─────
+
+type PdfState =
+  | { kind: 'laden' }
+  | { kind: 'blob'; blob: Blob; name: string }
+  | { kind: 'weg' };
+
+function PdfBlockView({ block, interactive }: { block: PdfBlock; interactive: boolean }) {
+  const [state, setState] = useState<PdfState>({ kind: 'laden' });
+  useEffect(() => {
+    if (!block.pdfId) return;
+    let alive = true;
+    setState({ kind: 'laden' });
+    getPdf(block.pdfId).then((rec) => {
+      if (!alive) return;
+      setState(rec ? { kind: 'blob', blob: rec.blob, name: rec.name } : { kind: 'weg' });
+    });
+    return () => { alive = false; };
+  }, [block.pdfId]);
+
+  if (!block.pdfId && !block.url) {
+    return <p className="hint" style={{ margin: 0 }}>📄 (geen pdf gekozen)</p>;
+  }
+
+  const displayName = block.name || (state.kind === 'blob' ? state.name : '') || 'Pdf-document';
+
+  if (!interactive) {
+    return (
+      <div className="card" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
+        <span aria-hidden style={{ fontSize: '1.4rem' }}>📄</span>
+        <div style={{ minWidth: 0 }}>
+          <strong>Pdf: {displayName}</strong>
+          {block.caption && <div className="hint">{block.caption}</div>}
+          {block.url && <div className="hint" style={{ wordBreak: 'break-all' }}>{block.url}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  // Bron bepalen: de geüploade blob eerst; anders de URL.
+  let src: Blob | string | null = null;
+  if (block.pdfId) {
+    if (state.kind === 'laden') {
+      return <div className="hint" role="status" style={{ margin: 0 }}>📄 Pdf laden…</div>;
+    }
+    if (state.kind === 'blob') src = state.blob;
+    else if (block.url) src = block.url; // upload ontbreekt, maar er is een URL-reserve
+  } else if (block.url) {
+    src = block.url;
+  }
+
+  if (!src) {
+    return <MissingPdfCard block={block} onRestored={(blob, name) => setState({ kind: 'blob', blob, name })} />;
+  }
+
+  return (
+    <figure style={{ margin: 0 }}>
+      <PdfViewer src={src} title={block.name || block.caption || 'Pdf-document'} height={block.height ?? 560} />
+      {block.caption && <figcaption>{block.caption}</figcaption>}
+    </figure>
+  );
+}
+
+/**
+ * De pdf werd op een ander toestel geüpload en staat hier niet: nette kaart
+ * met een bestandskiezer die het bestand onder HETZELFDE pdfId terugzet
+ * (savePdf overschrijft op id), zodat het blok daarna gewoon rendert.
+ */
+function MissingPdfCard({ block, onRestored }: { block: PdfBlock; onRestored: (blob: Blob, name: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f || !block.pdfId) return;
+    setBusy(true);
+    setErr(null);
+    // pickAndStorePdf valideert (type/grootte) en bewaart onder een vers id …
+    const res = await pickAndStorePdf(f);
+    if ('error' in res) {
+      setBusy(false);
+      setErr(res.error);
+      return;
+    }
+    // … daarna onder het pdfId van het blok zetten, zodat ook kopieën van dit
+    // blok (gedeeld id) meteen weer werken; het verse id ruimen we op.
+    try {
+      await savePdf(block.pdfId, res.name, f);
+    } catch {
+      setBusy(false);
+      setErr('Bewaren mislukt — is de opslag van dit toestel vol?');
+      return;
+    }
+    void deletePdf(res.pdfId);
+    setBusy(false);
+    onRestored(f, res.name);
+  };
+
+  return (
+    <div className="card" style={{ padding: '14px 18px' }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span aria-hidden style={{ fontSize: '1.5rem' }}>📄</span>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <strong>{block.name || 'Pdf-document'}</strong>
+          <div className="hint">
+            Deze pdf staat niet op dit toestel. Vraag het bestand aan je leerkracht en kies het
+            hieronder — daarna kan je hem gewoon lezen.
+          </div>
+        </div>
+        <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => inputRef.current?.click()}>
+          {busy ? 'Bezig…' : '📄 Pdf-bestand kiezen…'}
+        </button>
+      </div>
+      {err && <p className="hint" style={{ color: 'var(--err)', margin: '8px 0 0' }}>⚠ {err}</p>}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        hidden
+        onChange={onFile}
+        aria-label={`Pdf-bestand kiezen voor ${block.name || 'dit blok'}`}
+      />
+      {block.caption && <p style={{ margin: '8px 0 0', fontSize: '0.92rem', color: 'var(--text-soft)' }}>{block.caption}</p>}
+    </div>
   );
 }
 

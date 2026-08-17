@@ -160,7 +160,7 @@ export const WIDGET_TYPES: WidgetTypeDef[] = [
     Player: lazyWidget(() => import('./arithmetic').then((m) => ({ default: m.ArithmeticPlayer }))),
   },
   {
-    id: 'splitworksheet', name: 'Gesplitst werkblad', tagline: 'Bron (tekst, beeld of video) naast de vragen', icon: '📑',
+    id: 'splitworksheet', name: 'Gesplitst werkblad', tagline: 'Bron (tekst, beeld, video of pdf mét markeerstiften) naast de vragen', icon: '📑',
     color: '#0e7490', category: 'test', hasSubmissions: true, hasScore: true, wide: true,
     defaultConfig: () => ({ source: { kind: 'text', text: '', title: '' }, questions: [] }),
     Editor: lazyWidget(() => import('./splitworksheet').then((m) => ({ default: m.SplitWorksheetEditor }))),

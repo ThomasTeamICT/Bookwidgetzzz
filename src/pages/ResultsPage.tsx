@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { deleteSubmission, getLiveEntries, getSubmissions, getWidget, onStorageChange, saveSubmission } from '../lib/storage';
 import { getTypeDef } from '../widgets/registry';
-import type { LongAnswerValue, Question, QuizConfig, Submission, Widget } from '../lib/types';
+import type { LongAnswerValue, Question, QuizConfig, SplitWorksheetConfig, Submission, Widget } from '../lib/types';
+import type { PdfHighlight } from '../components/pdf/PdfViewer';
 import { csvCell, downloadFile, formatDate, formatDuration, pct } from '../lib/utils';
 import { ConfirmModal, EmptyState, Modal, ScoreRing, useToast } from '../components/ui';
 import { gradeQuestion } from '../lib/grading';
@@ -315,6 +316,34 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
           <img src={drawing} alt={`Tekening van ${submission.studentName}`} style={{ maxWidth: '100%', borderRadius: 10, border: '1px solid var(--line)' }} />
         </div>
       )}
+
+      {(() => {
+        // markeringen in een pdf-bron (gesplitst werkblad met markeerstiften)
+        const hls = submission.answers['_sourceHighlights'];
+        if (!Array.isArray(hls) || hls.length === 0) return null;
+        const palette = (widget.config as Partial<SplitWorksheetConfig>)?.source?.highlightPalette ?? [];
+        const labelFor = (color: string) => palette.find((p) => p.color === color)?.label?.trim();
+        return (
+          <div style={{ marginBottom: 14 }}>
+            <h3>🖍 Markeringen in de bron</h3>
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              {(hls as PdfHighlight[]).map((h) => (
+                <li key={h.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 6 }}>
+                  <span
+                    aria-hidden
+                    style={{ width: 14, height: 14, borderRadius: 4, background: h.color, border: '1px solid var(--line)', flex: 'none', marginTop: 3 }}
+                  />
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    {labelFor(h.color) && <strong>{labelFor(h.color)}: </strong>}
+                    <span style={{ fontStyle: 'italic' }}>“{h.text || '(geen tekst)'}”</span>
+                    <span className="hint"> — p. {h.page}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })()}
 
       {isQuiz ? (
         <div>

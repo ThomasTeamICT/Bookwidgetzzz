@@ -8,12 +8,14 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   AccordionBlock, AttachmentBlock, AudioBlock, CalloutBlock, ChecklistBlock,
   ColumnsBlock, CourseBlock, CourseBlockType, EmbedBlock, HeadingBlock,
-  ImageBlock, QuoteBlock, TableBlock, TermsBlock, TextBlock, VideoBlock,
-  WidgetBlock,
+  ImageBlock, PdfBlock, QuoteBlock, TableBlock, TermsBlock, TextBlock,
+  VideoBlock, WidgetBlock,
 } from '../../lib/courseTypes';
 import { getWidgets, onStorageChange } from '../../lib/storage';
 import { getTypeDef } from '../../widgets/registry';
 import { fileToDataUrl, uid } from '../../lib/utils';
+import { pickAndStorePdf } from '../pdf/PdfViewer';
+import { deletePdf, formatBytes, getPdf } from '../../lib/pdfStore';
 import { CheckRow, Field, ImagePicker, useToast } from '../ui';
 import { renderMarkdown } from '../../lib/markdown';
 
@@ -25,6 +27,7 @@ export const BLOCK_META: Record<CourseBlockType, { icon: string; name: string; b
   image: { icon: '🖼️', name: 'Afbeelding', blurb: 'Afbeelding met bijschrift, in drie groottes.' },
   video: { icon: '🎬', name: 'Video', blurb: 'YouTube- of Vimeo-video, afspeelbaar in de cursus.' },
   audio: { icon: '🔊', name: 'Audio', blurb: 'Audiofragment dat je zelf oplaadt (bv. uitspraak of instructie).' },
+  pdf: { icon: '📄', name: 'Pdf-document', blurb: 'Toon een pdf rechtstreeks in de cursus — leerlingen bladeren, zoomen en openen hem desnoods in een nieuw tabblad.' },
   embed: { icon: '🌐', name: 'Insluiting', blurb: 'Externe webpagina in een kader: GeoGebra, kaarten, …' },
   callout: { icon: '💡', name: 'Kadertje', blurb: 'Opvallend kader: info, tip, let op of leerdoelen.' },
   quote: { icon: '💬', name: 'Citaat', blurb: 'Citaat met bronvermelding.' },
@@ -40,7 +43,7 @@ export const BLOCK_META: Record<CourseBlockType, { icon: string; name: string; b
 
 /** Volgorde voor het blokkenpalet. */
 export const PALETTE_ORDER: CourseBlockType[] = [
-  'text', 'heading', 'image', 'video', 'audio', 'callout', 'quote', 'widget',
+  'text', 'heading', 'image', 'video', 'audio', 'pdf', 'callout', 'quote', 'widget',
   'checklist', 'terms', 'accordion', 'columns', 'table', 'embed', 'attachment', 'divider',
 ];
 
@@ -55,6 +58,8 @@ export function duplicateBlock(block: CourseBlock): CourseBlock {
     case 'checklist':
       return { ...copy, items: copy.items.map((it) => ({ ...it, id: uid() })) };
     default:
+      // 'pdf' kopieert bewust hetzelfde pdfId mee: het is maar een verwijzing
+      // naar de opslag, beide blokken tonen dan hetzelfde bestand.
       return copy;
   }
 }
@@ -105,6 +110,7 @@ export function BlockEditor({ block, onChange }: { block: CourseBlock; onChange:
     case 'image': return <ImageEditor b={block} onChange={onChange} />;
     case 'video': return <VideoEditor b={block} onChange={onChange} />;
     case 'audio': return <AudioEditor b={block} onChange={onChange} />;
+    case 'pdf': return <PdfBlockEditor b={block} onChange={onChange} />;
     case 'embed': return <EmbedEditor b={block} onChange={onChange} />;
     case 'callout': return <CalloutEditor b={block} onChange={onChange} />;
     case 'quote': return <QuoteEditor b={block} onChange={onChange} />;
@@ -259,6 +265,115 @@ function AudioEditor({ b, onChange }: { b: AudioBlock; onChange: OnChange }) {
           onChange={(e) => onChange({ ...b, caption: e.target.value || undefined })}
         />
       </Field>
+    </div>
+  );
+}
+
+const PDF_HEIGHTS = [420, 560, 720];
+
+function PdfBlockEditor({ b, onChange }: { b: PdfBlock; onChange: OnChange }) {
+  const toast = useToast();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  // Grootte/naam van de geüploade pdf tonen (die staan in IndexedDB, niet in het blok).
+  const [stored, setStored] = useState<{ name: string; size: number } | 'weg' | null>(null);
+  useEffect(() => {
+    let alive = true;
+    if (!b.pdfId) {
+      setStored(null);
+      return;
+    }
+    getPdf(b.pdfId).then((rec) => {
+      if (alive) setStored(rec ? { name: rec.name, size: rec.blob.size } : 'weg');
+    });
+    return () => { alive = false; };
+  }, [b.pdfId]);
+
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    setBusy(true);
+    const res = await pickAndStorePdf(f);
+    setBusy(false);
+    if ('error' in res) {
+      toast(res.error, 'err');
+      return;
+    }
+    // Bij "Vervangen": de vorige upload opruimen (fire-and-forget).
+    if (b.pdfId) void deletePdf(b.pdfId);
+    onChange({ ...b, pdfId: res.pdfId, name: res.name, url: undefined });
+  };
+
+  const removeUpload = () => {
+    if (b.pdfId) void deletePdf(b.pdfId);
+    onChange({ ...b, pdfId: undefined, name: undefined });
+  };
+
+  const height = b.height ?? 560;
+  return (
+    <div>
+      {b.pdfId ? (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            📄 {b.name || (typeof stored === 'object' && stored?.name) || 'pdf-bestand'}
+            {typeof stored === 'object' && stored && <span className="hint"> ({formatBytes(stored.size)})</span>}
+          </span>
+          {stored === 'weg' && (
+            <span className="hint" style={{ color: 'var(--err)' }}>⚠ niet gevonden op dit toestel</span>
+          )}
+          <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => inputRef.current?.click()}>
+            {busy ? 'Bezig…' : 'Vervangen…'}
+          </button>
+          <button className="btn btn-sm btn-ghost" onClick={removeUpload}>Verwijderen</button>
+        </div>
+      ) : (
+        <>
+          <div style={{ marginBottom: 10 }}>
+            <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => inputRef.current?.click()}>
+              📄 {busy ? 'Bezig met bewaren…' : 'Pdf-bestand kiezen…'}
+            </button>
+            <span className="hint" style={{ marginLeft: 8 }}>of gebruik een URL:</span>
+          </div>
+          <Field label="Pdf-URL" hint="Een openbaar https-adres dat rechtstreeks naar een pdf verwijst.">
+            <input
+              className="input"
+              type="url"
+              value={b.url ?? ''}
+              placeholder="https://…/document.pdf"
+              onChange={(e) => onChange({ ...b, url: e.target.value || undefined })}
+            />
+          </Field>
+        </>
+      )}
+      <input ref={inputRef} type="file" accept="application/pdf,.pdf" hidden onChange={onFile} aria-label="Pdf-bestand kiezen" />
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <Field label="Bijschrift (optioneel)">
+          <input
+            className="input input-sm"
+            style={{ minWidth: 220 }}
+            value={b.caption ?? ''}
+            onChange={(e) => onChange({ ...b, caption: e.target.value || undefined })}
+          />
+        </Field>
+        <Field label="Hoogte">
+          <select
+            className="select input-sm"
+            value={height}
+            aria-label="Hoogte van de pdf-weergave"
+            onChange={(e) => onChange({ ...b, height: parseInt(e.target.value) || 560 })}
+          >
+            {!PDF_HEIGHTS.includes(height) && <option value={height}>Aangepast ({height} px)</option>}
+            <option value={420}>Laag (420 px)</option>
+            <option value={560}>Normaal (560 px)</option>
+            <option value={720}>Hoog (720 px)</option>
+          </select>
+        </Field>
+      </div>
+      <span className="hint" style={{ display: 'block', marginTop: 4 }}>
+        Een geüploade pdf staat alleen op dit toestel — hij reist <strong>niet</strong> mee met de deellink.
+        Voor cursussen die je deelt gebruik je best een pdf-URL (bv. van je schoolwebsite of leeromgeving).
+      </span>
     </div>
   );
 }

@@ -30,6 +30,13 @@ en maximale opvolgbaarheid.
   begrippenlijst, afvinklijst, bijlage, scheiding, **ingebedde widget**).
 - **Ingebedde oefeningen**: elke widget speelt inline in de cursus; inzendingen lopen
   gewoon door de resultaten- en leerdoelenanalyse.
+- **Pdf's als bronmateriaal**: upload een pdf (of link naar één) in het **gesplitste
+  werkblad** — met **markeerstiften**: de leerkracht legt een kleurenlegende vast
+  ("geel = hoofdtitel, blauw = auteur, …"), de leerling markeert in de pdf zelf en de
+  markeringen komen mee in de inzending. Ook als **pdf-blok in cursussen** (bladeren,
+  zoomen, openen in nieuw tabblad). Uploads staan in IndexedDB (ruim genoeg voor echte
+  documenten); voor delen over toestellen heen gebruik je een pdf-URL of geeft de
+  leerling het bestand zelf op — de app vraagt er netjes om.
 - **Leerdoelen per sectie** en keuzesecties (verdieping, telt niet mee voor "afgewerkt"),
   met een **doelendekking-matrix** in de editor (welke leerplandoelen zijn gedekt, welke
   secties dragen nog geen doel).

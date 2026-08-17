@@ -10,6 +10,7 @@ export type CourseBlockType =
   | 'image'       // afbeelding met bijschrift
   | 'video'       // YouTube/Vimeo
   | 'audio'       // audiofragment (upload/data-URL)
+  | 'pdf'         // pdf-document, inline leesbaar (upload of URL)
   | 'embed'       // extern kader (GeoGebra, kaarten, …)
   | 'callout'     // kadertje: info/tip/let-op/leerdoelen
   | 'quote'       // citaat met bron
@@ -37,6 +38,18 @@ export interface ImageBlock extends BlockBase {
 }
 export interface VideoBlock extends BlockBase { type: 'video'; url: string; caption?: string }
 export interface AudioBlock extends BlockBase { type: 'audio'; url: string; caption?: string }
+export interface PdfBlock extends BlockBase {
+  type: 'pdf';
+  /** Verwijzing naar een geüploade pdf in IndexedDB (alleen op dít toestel). */
+  pdfId?: string;
+  /** Of een openbare pdf-URL (reist wél mee met een deellink). */
+  url?: string;
+  /** Bestandsnaam, ook getoond als de pdf op dit toestel ontbreekt. */
+  name?: string;
+  caption?: string;
+  /** Hoogte van de viewer in px (standaard 560). */
+  height?: number;
+}
 export interface EmbedBlock extends BlockBase { type: 'embed'; url: string; height: number; title?: string }
 export interface CalloutBlock extends BlockBase {
   type: 'callout';
@@ -58,9 +71,9 @@ export interface ChecklistBlock extends BlockBase { type: 'checklist'; title?: s
 export interface WidgetBlock extends BlockBase { type: 'widget'; widgetId: string; note?: string }
 
 export type CourseBlock =
-  | HeadingBlock | TextBlock | ImageBlock | VideoBlock | AudioBlock | EmbedBlock
-  | CalloutBlock | QuoteBlock | DividerBlock | AttachmentBlock | AccordionBlock
-  | ColumnsBlock | TableBlock | TermsBlock | ChecklistBlock | WidgetBlock;
+  | HeadingBlock | TextBlock | ImageBlock | VideoBlock | AudioBlock | PdfBlock
+  | EmbedBlock | CalloutBlock | QuoteBlock | DividerBlock | AttachmentBlock
+  | AccordionBlock | ColumnsBlock | TableBlock | TermsBlock | ChecklistBlock | WidgetBlock;
 
 export interface CourseSection {
   id: string;
@@ -143,6 +156,17 @@ export function referencedWidgetIds(course: Course): string[] {
   for (const { section } of allSections(course)) {
     for (const b of section.blocks) {
       if (b.type === 'widget' && b.widgetId) ids.add(b.widgetId);
+    }
+  }
+  return [...ids];
+}
+
+/** Alle pdfId's van geüploade pdf's waarnaar de cursus verwijst (voor opruimen). */
+export function referencedPdfIds(course: Course): string[] {
+  const ids = new Set<string>();
+  for (const { section } of allSections(course)) {
+    for (const b of section.blocks) {
+      if (b.type === 'pdf' && b.pdfId) ids.add(b.pdfId);
     }
   }
   return [...ids];

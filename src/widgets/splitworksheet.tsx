@@ -3,6 +3,9 @@ import type { Question, QuestionType, SourcePane, SplitWorksheetConfig } from '.
 import { gradeQuiz } from '../lib/grading';
 import { shuffled, uid } from '../lib/utils';
 import { CheckRow, Field, ImagePicker } from '../components/ui';
+import { DEFAULT_PALETTE, PdfViewer, pickAndStorePdf } from '../components/pdf/PdfViewer';
+import type { HighlightColor, PdfHighlight } from '../components/pdf/PdfViewer';
+import { deletePdf, formatBytes, getPdf, savePdf } from '../lib/pdfStore';
 import { EditorProps, ItemHeader, moveItem, PlayerProps, ResultHero } from './shared';
 import { makeQuestion, QUESTION_TYPES, questionLabel, QuestionView } from './quiz';
 
@@ -12,13 +15,17 @@ import { makeQuestion, QUESTION_TYPES, questionLabel, QuestionView } from './qui
 const EDITABLE_TYPES: ReadonlySet<QuestionType> = new Set(['mc', 'tf', 'short', 'long']);
 
 const SOURCE_KINDS: { kind: SourcePane['kind']; icon: string; label: string }[] = [
-  { kind: 'text', icon: '📄', label: 'Tekst' },
+  { kind: 'text', icon: '📝', label: 'Tekst' },
   { kind: 'image', icon: '🖼️', label: 'Afbeelding' },
   { kind: 'video', icon: '🎬', label: 'Video' },
+  { kind: 'pdf', icon: '📄', label: 'Pdf' },
 ];
 
 function sourceKindLabel(kind: SourcePane['kind']): string {
-  return kind === 'text' ? 'Leestekst' : kind === 'image' ? 'Afbeelding' : 'Video';
+  return kind === 'text' ? 'Leestekst'
+    : kind === 'image' ? 'Afbeelding'
+    : kind === 'video' ? 'Video'
+    : 'Pdf-document';
 }
 
 /** YouTube-id uit een URL of los id halen. Geeft null als er niets herkend wordt. */
@@ -37,7 +44,27 @@ function sourceIsFilled(source: SourcePane | undefined): source is SourcePane {
   if (!source) return false;
   if (source.kind === 'text') return !!source.text?.trim();
   if (source.kind === 'image') return !!source.imageUrl;
+  if (source.kind === 'pdf') return !!(source.pdfId || source.pdfUrl?.trim());
   return !!source.videoUrl?.trim();
+}
+
+/** Markeerlegende: rijtje kleurstaal + label. Toont niets zonder ingevulde labels. */
+function HighlightLegend({ palette }: { palette: { color: string; label: string }[] | undefined }) {
+  const entries = (palette ?? []).filter((p) => p.label.trim());
+  if (entries.length === 0) return null;
+  return (
+    <div
+      aria-label="Markeerlegende"
+      style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', marginBottom: 8, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-soft)' }}
+    >
+      {entries.map((p) => (
+        <span key={p.color} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span aria-hidden style={{ width: 13, height: 13, borderRadius: 4, background: p.color, border: '1px solid var(--line)', flex: 'none' }} />
+          {p.label}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 /** Heeft de leerling deze vraag beantwoord? (zelfde logica als de quiz) */
@@ -158,6 +185,142 @@ function CompactQuestionEditor({ q, onChange }: { q: Question; onChange: (q: Que
   }
 }
 
+/** Editorvelden voor een pdf-bron: upload of URL, markeerlegende en voorvertoning. */
+function PdfSourceEditor({ source, setSource }: { source: SourcePane; setSource: (s: SourcePane) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  // Blob van de geüploade pdf op dit toestel (voor grootte + voorvertoning).
+  const [stored, setStored] = useState<{ blob: Blob; name: string } | 'loading' | 'missing' | null>(
+    source.pdfId ? 'loading' : null
+  );
+
+  useEffect(() => {
+    let alive = true;
+    if (!source.pdfId) { setStored(null); return; }
+    setStored('loading');
+    getPdf(source.pdfId).then((rec) => {
+      if (alive) setStored(rec ? { blob: rec.blob, name: rec.name } : 'missing');
+    });
+    return () => { alive = false; };
+  }, [source.pdfId]);
+
+  const pick = async (file: File) => {
+    setBusy(true);
+    setUploadError('');
+    const res = await pickAndStorePdf(file);
+    setBusy(false);
+    if ('error' in res) { setUploadError(res.error); return; }
+    const oldId = source.pdfId;
+    if (oldId && oldId !== res.pdfId) void deletePdf(oldId);
+    setSource({ ...source, pdfId: res.pdfId, pdfName: res.name });
+  };
+
+  const removeUpload = () => {
+    if (source.pdfId) void deletePdf(source.pdfId);
+    setSource({ ...source, pdfId: undefined, pdfName: undefined });
+  };
+
+  const hasStored = typeof stored === 'object' && stored !== null;
+  const palette = source.highlightPalette;
+  // Voorvertoning: geüploade pdf gaat voor; anders de URL.
+  const previewSrc: Blob | string | null = hasStored ? stored.blob : source.pdfUrl?.trim() || null;
+
+  return (
+    <>
+      <Field label="Pdf-bestand (upload)">
+        {source.pdfId ? (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span>
+              <span aria-hidden>📄</span> <strong>{source.pdfName ?? (hasStored ? stored.name : 'pdf')}</strong>
+              {hasStored && <span className="hint"> · {formatBytes(stored.blob.size)}</span>}
+            </span>
+            <button className="btn btn-sm btn-ghost" onClick={() => fileRef.current?.click()} disabled={busy}>Vervangen</button>
+            <button className="btn btn-sm btn-ghost" onClick={removeUpload}>Verwijderen</button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-sm btn-ghost" onClick={() => fileRef.current?.click()} disabled={busy}>
+              📄 Pdf kiezen… {busy && '(bezig)'}
+            </button>
+          </div>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/pdf"
+          hidden
+          aria-label="Pdf-bestand kiezen"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void pick(f);
+            e.target.value = '';
+          }}
+        />
+        {uploadError && <span role="alert" className="hint" style={{ color: 'var(--err)', fontWeight: 600 }}>{uploadError}</span>}
+        {source.pdfId && stored === 'missing' && (
+          <span className="hint" role="status" style={{ color: 'var(--warn)', fontWeight: 600 }}>
+            ⚠ Dit bestand staat niet (meer) op dit toestel. Kies het opnieuw via “Vervangen”.
+          </span>
+        )}
+        <span className="hint">
+          Een geüploade pdf staat alleen op dit toestel. Deel je dit werkblad via een link met thuiswerkers?
+          Gebruik dan een pdf-URL, of geef het bestand apart mee — de leerling kan het dan zelf kiezen bij het openen.
+        </span>
+      </Field>
+
+      <Field label="Of: pdf-URL" hint="Een URL werkt op elk toestel — handig bij delen via een link.">
+        <input
+          className="input"
+          type="url"
+          value={source.pdfUrl ?? ''}
+          placeholder="https://…/bestand.pdf"
+          onChange={(e) => setSource({ ...source, pdfUrl: e.target.value })}
+        />
+      </Field>
+
+      <CheckRow
+        checked={!!palette?.length}
+        onChange={(on) =>
+          setSource({ ...source, highlightPalette: on ? DEFAULT_PALETTE.map((p) => ({ ...p })) : undefined })
+        }
+        label="🖍 Leerlingen kunnen markeren in de pdf"
+      />
+      {!!palette?.length && (
+        <div style={{ margin: '6px 0 12px', paddingLeft: 4 }}>
+          <p className="hint" style={{ margin: '0 0 6px' }}>
+            Geef elke kleur een betekenis, zoals bij een markeeropdracht op papier (bv. “geel = hoofdtitel”).
+          </p>
+          {palette.map((p, i) => (
+            <div key={p.color} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, maxWidth: 420 }}>
+              <span
+                aria-hidden
+                style={{ width: 22, height: 22, borderRadius: 6, background: p.color, border: '1px solid var(--line)', flex: 'none' }}
+              />
+              <input
+                className="input input-sm"
+                value={p.label}
+                placeholder="Betekenis van deze kleur…"
+                aria-label={`Betekenis van markeerkleur ${i + 1}`}
+                onChange={(e) => {
+                  const next = palette.map((x, j) => (j === i ? { ...x, label: e.target.value } : x));
+                  setSource({ ...source, highlightPalette: next });
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {previewSrc !== null && (
+        <Field label="Voorvertoning">
+          <PdfViewer src={previewSrc} title={source.title?.trim() || source.pdfName || 'Pdf-document'} height={380} />
+        </Field>
+      )}
+    </>
+  );
+}
+
 export function SplitWorksheetEditor({ config, onChange }: EditorProps<SplitWorksheetConfig>) {
   const source: SourcePane = config.source ?? { kind: 'text' };
   const questions: Question[] = config.questions ?? [];
@@ -248,6 +411,8 @@ export function SplitWorksheetEditor({ config, onChange }: EditorProps<SplitWork
               )}
             </Field>
           )}
+
+          {source.kind === 'pdf' && <PdfSourceEditor source={source} setSource={setSource} />}
         </div>
       </div>
 
@@ -354,7 +519,111 @@ export function SplitWorksheetEditor({ config, onChange }: EditorProps<SplitWork
 
 // ── SPELER ──────────────────────────────────────────────────────────────────
 
-function SourceContent({ source }: { source: SourcePane }) {
+/** Markeer-doorgave van de speler naar het pdf-bronpaneel. */
+interface PdfPaneProps {
+  palette?: HighlightColor[];
+  highlights?: PdfHighlight[];
+  onHighlightsChange?: (h: PdfHighlight[]) => void;
+}
+
+/**
+ * Pdf-bron in de speler: haalt de upload uit IndexedDB (of gebruikt de URL),
+ * toont de markeerlegende en vangt een ontbrekende upload netjes op.
+ */
+function PdfSourcePane({ source, palette, highlights, onHighlightsChange }: PdfPaneProps & { source: SourcePane }) {
+  const [blob, setBlob] = useState<Blob | null>(null);
+  const [state, setState] = useState<'loading' | 'ready' | 'missing'>(source.pdfId ? 'loading' : 'ready');
+  const [pickError, setPickError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let alive = true;
+    if (!source.pdfId) { setBlob(null); setState('ready'); return; }
+    setState('loading');
+    getPdf(source.pdfId).then((rec) => {
+      if (!alive) return;
+      if (rec) { setBlob(rec.blob); setState('ready'); } else { setBlob(null); setState('missing'); }
+    });
+    return () => { alive = false; };
+  }, [source.pdfId]);
+
+  const url = source.pdfUrl?.trim() || null;
+  const title = source.title?.trim() || source.pdfName || 'Pdf-document';
+
+  /** Leerling kiest het bestand dat de leerkracht apart meegaf → koppeling herstellen. */
+  const restore = async (file: File) => {
+    if (!source.pdfId) return;
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setPickError('Kies een pdf-bestand.');
+      return;
+    }
+    setPickError('');
+    try {
+      // zelfde pdfId → savePdf overschrijft en de koppeling is hersteld
+      await savePdf(source.pdfId, file.name, file);
+    } catch {
+      /* opslag vol? Dan werken we gewoon verder met het bestand in het geheugen. */
+    }
+    setBlob(file);
+    setState('ready');
+  };
+
+  // Geüploade pdf gaat voor; ontbreekt hij, dan is de URL de terugval.
+  const src: Blob | string | null = blob ?? (state === 'loading' ? null : url);
+
+  return (
+    <div>
+      <HighlightLegend palette={palette} />
+      {state === 'loading' && (
+        <p className="hint" role="status" aria-live="polite">Pdf laden…</p>
+      )}
+      {state === 'missing' && (
+        <div className="callout warn" style={{ marginBottom: src ? 10 : 0 }}>
+          <span aria-hidden>📄</span>
+          <div>
+            <p style={{ margin: 0 }}>
+              <strong>Deze pdf staat niet op dit toestel.</strong>{' '}
+              {url
+                ? 'We tonen hieronder de online versie. Kreeg je het bestand ook van je leerkracht? Kies het dan hier.'
+                : 'Kreeg je het bestand van je leerkracht (bv. via e-mail of een USB-stick)? Kies het hier om verder te werken.'}
+            </p>
+            <button className="btn btn-sm btn-ghost" style={{ marginTop: 8 }} onClick={() => fileRef.current?.click()}>
+              📂 Kies het pdf-bestand dat je van je leerkracht kreeg
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/pdf"
+              hidden
+              aria-label="Pdf-bestand van je leerkracht kiezen"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void restore(f);
+                e.target.value = '';
+              }}
+            />
+            {pickError && <p role="alert" style={{ margin: '6px 0 0', color: 'var(--err)', fontWeight: 600 }}>{pickError}</p>}
+          </div>
+        </div>
+      )}
+      {src !== null && (
+        <PdfViewer
+          src={src}
+          title={title}
+          palette={palette}
+          highlights={highlights}
+          onHighlightsChange={onHighlightsChange}
+          height={520}
+        />
+      )}
+    </div>
+  );
+}
+
+function SourceContent({ source, pdf }: { source: SourcePane; pdf?: PdfPaneProps }) {
+  if (source.kind === 'pdf') {
+    return <PdfSourcePane source={source} {...pdf} />;
+  }
   if (source.kind === 'image' && source.imageUrl) {
     return (
       <img
@@ -393,12 +662,13 @@ function SourceContent({ source }: { source: SourcePane }) {
 }
 
 function SourcePanel({
-  source, narrow, open, onToggle,
+  source, narrow, open, onToggle, pdf,
 }: {
   source: SourcePane;
   narrow: boolean;
   open: boolean;
   onToggle: () => void;
+  pdf?: PdfPaneProps;
 }) {
   const contentId = useId();
   const title = source.title?.trim() || sourceKindLabel(source.kind);
@@ -427,14 +697,18 @@ function SourcePanel({
       </div>
       {showContent && (
         <div id={contentId} style={{ padding: '0 18px 18px' }}>
-          <SourceContent source={source} />
+          <SourceContent source={source} pdf={pdf} />
         </div>
       )}
     </section>
   );
 }
 
-export function SplitWorksheetPlayer({ widget, timeUp, onComplete }: PlayerProps<SplitWorksheetConfig>) {
+/** Sleutel voor tussentijds bewaarde markeringen (zelfde stijl als lib/autosave). */
+const highlightKey = (widgetId: string, studentName: string) =>
+  `wf.markeringen.${widgetId}.${studentName.trim().toLowerCase()}`;
+
+export function SplitWorksheetPlayer({ widget, studentName, preview, timeUp, onComplete }: PlayerProps<SplitWorksheetConfig>) {
   const questions = useMemo<Question[]>(() => {
     const all = widget.config.questions ?? [];
     return widget.settings.shuffle ? shuffled(all) : all;
@@ -449,6 +723,33 @@ export function SplitWorksheetPlayer({ widget, timeUp, onComplete }: PlayerProps
 
   const source = widget.config.source ?? { kind: 'text' as const };
   const hasSource = sourceIsFilled(source);
+  const canMark = source.kind === 'pdf' && !!source.highlightPalette?.length;
+
+  // Markeringen in de pdf-bron: tussentijds bewaard (zoals autosave), leeg bij indienen.
+  const [sourceHighlights, setSourceHighlights] = useState<PdfHighlight[]>(() => {
+    if (preview || !canMark) return [];
+    try {
+      const raw = localStorage.getItem(highlightKey(widget.id, studentName));
+      if (!raw) return [];
+      const data = JSON.parse(raw) as { highlights?: PdfHighlight[]; savedAt?: number };
+      if (!data.savedAt || Date.now() - data.savedAt > 7 * 24 * 3600 * 1000) return [];
+      return Array.isArray(data.highlights) ? data.highlights : [];
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    if (preview || !canMark || submittedRef.current) return;
+    try {
+      localStorage.setItem(
+        highlightKey(widget.id, studentName),
+        JSON.stringify({ highlights: sourceHighlights, savedAt: Date.now() })
+      );
+    } catch {
+      /* opslag vol — autosave is best-effort */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceHighlights]);
 
   const gradable: Question[] = questions.filter((q) => q.type !== 'info');
   const answeredCount = gradable.filter((q) => isAnswered(q, answers[q.id])).length;
@@ -458,7 +759,14 @@ export function SplitWorksheetPlayer({ widget, timeUp, onComplete }: PlayerProps
     submittedRef.current = true;
     const res = gradeQuiz({ questions, layout: 'scroll' }, answers);
     setResult(res);
-    onComplete({ answers, itemScores: res.itemScores, earned: res.earned, max: res.max, hasPending: res.hasPending });
+    // markeringen gaan als meta-veld mee in de inzending (zoals _zekerheid/_hints)
+    const answersOut = canMark && sourceHighlights.length > 0
+      ? { ...answers, _sourceHighlights: sourceHighlights }
+      : answers;
+    onComplete({ answers: answersOut, itemScores: res.itemScores, earned: res.earned, max: res.max, hasPending: res.hasPending });
+    if (!preview) {
+      try { localStorage.removeItem(highlightKey(widget.id, studentName)); } catch { /* negeren */ }
+    }
     window.scrollTo({ top: 0 });
   };
 
@@ -494,7 +802,11 @@ export function SplitWorksheetPlayer({ widget, timeUp, onComplete }: PlayerProps
                   📌 Bron opnieuw bekijken
                 </summary>
                 <div style={{ marginTop: 12 }}>
-                  <SourceContent source={source} />
+                  {/* alleen-lezen: eigen markeringen blijven zichtbaar, markeren kan niet meer */}
+                  <SourceContent
+                    source={source}
+                    pdf={{ palette: canMark ? source.highlightPalette : undefined, highlights: sourceHighlights }}
+                  />
                 </div>
               </details>
             )}
@@ -539,6 +851,11 @@ export function SplitWorksheetPlayer({ widget, timeUp, onComplete }: PlayerProps
             narrow={narrow}
             open={sourceOpen}
             onToggle={() => setSourceOpen((v) => !v)}
+            pdf={{
+              palette: canMark ? source.highlightPalette : undefined,
+              highlights: sourceHighlights,
+              onHighlightsChange: canMark ? setSourceHighlights : undefined,
+            }}
           />
         </div>
       )}

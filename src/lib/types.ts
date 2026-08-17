@@ -316,12 +316,23 @@ export interface ExitTicketConfig extends QuizConfig {}
 // ── Bronpaneel (voor gesplitste widgets) ────────────────────────────────────
 
 export interface SourcePane {
-  kind: 'text' | 'image' | 'video';
+  kind: 'text' | 'image' | 'video' | 'pdf';
   /** Bron als tekst (mag meerdere alinea's bevatten). */
   text?: string;
   imageUrl?: string;
   /** YouTube- of Vimeo-URL. */
   videoUrl?: string;
+  /** Geüploade pdf: verwijzing naar IndexedDB (zie lib/pdfStore). Staat alleen op het toestel van de upload. */
+  pdfId?: string;
+  /** Externe pdf-URL — werkt op elk toestel; ook terugval als de upload ontbreekt. */
+  pdfUrl?: string;
+  /** Bestandsnaam van de geüploade pdf (weergave). */
+  pdfName?: string;
+  /**
+   * Markeerlegende voor de leerling (markeerstiften in de pdf), bv.
+   * geel = hoofdtitel. Leeg of undefined = geen markeeropdracht.
+   */
+  highlightPalette?: { color: string; label: string }[];
   title?: string;
 }
 

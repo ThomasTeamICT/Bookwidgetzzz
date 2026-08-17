@@ -248,6 +248,82 @@ check('kapotte cursuslink → melding', await page.locator('text=/werkt niet|ong
 await go('/#/dit-bestaat-niet');
 check('onbekende route → meedoen-pagina', await page.locator('input[aria-label="Klascode van 6 tekens"]').isVisible());
 
+// ── 17. Pdf-laag: opslag, viewer, markeerstiften, cursusblok ────────────────
+console.log('17. Pdf-laag');
+// Mini-pdf met correcte xref programmatisch opbouwen (pdf.js-vriendelijk).
+function buildTinyPdf() {
+  const objs = [
+    '<</Type/Catalog/Pages 2 0 R>>',
+    '<</Type/Pages/Kids[3 0 R]/Count 1>>',
+    '<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Resources<</Font<</F1 4 0 R>>>>/Contents 5 0 R>>',
+    '<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>',
+  ];
+  const streamBody = 'BT /F1 24 Tf 72 770 Td (Markeer mij: de hoofdtitel) Tj ET';
+  objs.push(`<</Length ${streamBody.length}>>stream\n${streamBody}\nendstream`);
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objs.forEach((o, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj${o}endobj\n`;
+  });
+  const xrefAt = out.length;
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) out += `${String(off).padStart(10, '0')} 00000 n \n`;
+  out += `trailer<</Size ${objs.length + 1}/Root 1 0 R>>\nstartxref\n${xrefAt}\n%%EOF`;
+  return out;
+}
+await go('/#/widgets');
+await page.evaluate(async (pdfText) => {
+  // 1. mini-pdf in IndexedDB (zelfde schema als lib/pdfStore.ts)
+  const blob = new Blob([pdfText], { type: 'application/pdf' });
+  await new Promise((resolve, reject) => {
+    const req = indexedDB.open('wf-files', 1);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains('pdfs')) req.result.createObjectStore('pdfs', { keyPath: 'id' });
+    };
+    req.onsuccess = () => {
+      const t = req.result.transaction('pdfs', 'readwrite');
+      t.objectStore('pdfs').put({ id: 'smoketestpdf', name: 'smoke.pdf', blob, size: blob.size, createdAt: 1 });
+      t.oncomplete = () => resolve(null);
+      t.onerror = () => reject(t.error);
+    };
+    req.onerror = () => reject(req.error);
+  });
+  // 2. gesplitst werkblad omschakelen naar pdf-bron met markeerlegende
+  const ws = JSON.parse(localStorage.getItem('wf.widgets.v1'));
+  const sw = ws.find((w) => w.type === 'splitworksheet');
+  sw.config.source = {
+    kind: 'pdf', title: 'Smoketest-pdf', pdfId: 'smoketestpdf', pdfName: 'smoke.pdf',
+    highlightPalette: [
+      { color: '#ffd54a', label: 'hoofdtitel' }, { color: '#7cc4ff', label: 'auteur' },
+      { color: '#8ce99a', label: 'jaartal' }, { color: '#ffb26b', label: 'e-mail' },
+      { color: '#f7a8d8', label: 'extra' },
+    ],
+  };
+  localStorage.setItem('wf.widgets.v1', JSON.stringify(ws));
+  // 3. pdf-blok in de demo-cursus
+  const cs = JSON.parse(localStorage.getItem('wf.courses.v1'));
+  cs[0].chapters[0].sections[0].blocks.push({ id: 'smokepdfblock', type: 'pdf', pdfId: 'smoketestpdf', name: 'smoke.pdf', height: 420 });
+  localStorage.setItem('wf.courses.v1', JSON.stringify(cs));
+}, buildTinyPdf());
+const swCode = await page.evaluate(() => JSON.parse(localStorage.getItem('wf.widgets.v1')).find((w) => w.type === 'splitworksheet').code);
+await go(`/#/speel/${swCode}`);
+if (await page.locator('#student-name').isVisible().catch(() => false)) {
+  await page.fill('#student-name', 'Testleerling');
+  await page.getByRole('button', { name: /Starten/ }).click();
+}
+await page.waitForSelector('.pdfv-page canvas', { timeout: 15000 }).catch(() => {});
+check('pdf rendert in gesplitst werkblad', (await page.locator('.pdfv-page canvas').count()) >= 1);
+await sleep(400);
+check('tekstlaag aanwezig (markeerbaar)', (await page.locator('.pdfv-text span').count()) >= 1);
+check('markeerstiften zichtbaar', (await page.locator('.pdfv-swatch').count()) === 5);
+check('vragenkant blijft werken', (await page.locator('.question-card').count()) >= 1);
+await go(`/#/cursus/lees/${demo.code}`);
+// naar de eerste sectie (daar staat het pdf-blok); de viewer kan elders hervatten
+await page.locator('nav[aria-label="Inhoudstafel"] button').first().click().catch(() => {});
+await page.waitForSelector('.pdfv-page canvas', { timeout: 15000 }).catch(() => {});
+check('pdf-blok rendert in cursus', (await page.locator('.pdfv-page canvas').count()) >= 1);
+
 // ── Slot ────────────────────────────────────────────────────────────────────
 console.log('\n──────────');
 if (errors.length) {
