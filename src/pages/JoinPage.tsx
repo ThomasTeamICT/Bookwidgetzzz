@@ -10,7 +10,7 @@ export function JoinPage() {
 
   const go = () => {
     const c = code.trim().toUpperCase();
-    if (c.length < 4) {
+    if (c.length < 6) {
       setError('Vul de volledige code in (6 tekens).');
       return;
     }
@@ -51,7 +51,7 @@ export function JoinPage() {
                 onChange={(e) => { setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')); setError(''); }}
               />
               {error && <p role="alert" style={{ color: 'var(--err)', fontWeight: 600, marginTop: 10 }}>{error}</p>}
-              <button className="btn btn-primary btn-lg" style={{ width: '100%', marginTop: 14 }} type="submit" disabled={code.length < 4}>
+              <button className="btn btn-primary btn-lg" style={{ width: '100%', marginTop: 14 }} type="submit" disabled={code.length < 6}>
                 Start →
               </button>
             </form>

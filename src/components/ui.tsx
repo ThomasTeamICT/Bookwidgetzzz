@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fileToDataUrl } from '../lib/utils';
 
@@ -53,10 +53,10 @@ export function Modal({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
       if (e.key === 'Tab' && ref.current) {
-        // eenvoudige focus-trap
-        const els = ref.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
+        // eenvoudige focus-trap (disabled/verborgen elementen tellen niet mee)
+        const els = Array.from(ref.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]):not([disabled])'
+        )).filter((el) => !el.hasAttribute('hidden'));
         if (els.length === 0) return;
         const first = els[0];
         const last = els[els.length - 1];
@@ -127,10 +127,26 @@ export function ConfirmModal({
 // ── Formulier-hulpjes ───────────────────────────────────────────────────────
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  const id = useId();
+  // label aan het invoerveld koppelen (a11y): alleen bij precies één kind dat
+  // een formulier-element is (of een component die zijn props doorgeeft) en
+  // nog geen eigen id heeft; in alle andere gevallen blijft alles zoals het was
+  let child: React.ReactNode = children;
+  let htmlFor: string | undefined;
+  if (React.Children.count(children) === 1 && React.isValidElement(children) && children.type !== React.Fragment) {
+    const el = children as React.ReactElement<{ id?: string }>;
+    const koppelbaar = typeof el.type === 'string'
+      ? el.type === 'input' || el.type === 'textarea' || el.type === 'select'
+      : true;
+    if (koppelbaar && !el.props.id) {
+      htmlFor = id;
+      child = React.cloneElement(el, { id });
+    }
+  }
   return (
     <div className="field">
-      <label>{label}</label>
-      {children}
+      <label htmlFor={htmlFor}>{label}</label>
+      {child}
       {hint && <span className="hint">{hint}</span>}
     </div>
   );

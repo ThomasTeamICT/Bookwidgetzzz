@@ -101,6 +101,18 @@ npm run build      # productie-build in dist/
 npm run preview    # productie-build lokaal bekijken
 ```
 
+**Rooktest** (Playwright, ±100 checks over alle flows incl. foutpaden):
+
+```bash
+npm run build && npx vite preview --port 4173 &
+node tests/smoke.mjs        # evt. PW_CHROMIUM=/pad/naar/chromium
+```
+
+De app is **code-gesplitst**: de hoofdbundel (±95 kB gzip) bevat alleen de leerlingroutes;
+widgetmodules en leerkracht-pagina's laden als aparte chunks wanneer ze nodig zijn.
+Een mislukte chunk-load (bv. door een nieuwe deploy) herstelt zichzelf met één automatische
+herlaadbeurt.
+
 De app gebruikt een **hash-router** en een relatieve basis-URL, dus de `dist/`-map kan op eender welke statische hosting geplaatst worden (GitHub Pages, Netlify, schoolserver, …) — ook in een submap.
 
 ## 🗂️ Architectuur

@@ -221,13 +221,15 @@ function CourseReader({ course }: { course: Course }) {
   sectionIdRef.current = sectionId;
   const lastSaveRef = useRef(Date.now());
   const narrow = useIsNarrow();
+  // ☰-knop van de mobiele lade: de focus keert hierheen terug bij het sluiten.
+  const navToggleRef = useRef<HTMLButtonElement | null>(null);
 
   // ── Mijn notities: per leerlingnaam, per sectie ──────────────────────────
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [noteSaved, setNoteSaved] = useState(false);
   const notesRef = useRef<Record<string, string>>({});
   const notesKeyRef = useRef(''); // leerlingnaam in kleine letters
-  const noteDirtyRef = useRef(false);
+  const noteDirtyRef = useRef<Set<string>>(new Set()); // sectie-id's die dít tabblad wijzigde
   const noteTimerRef = useRef<number | null>(null);
   const savedHintTimerRef = useRef<number | null>(null);
 
@@ -237,14 +239,21 @@ function CourseReader({ course }: { course: Course }) {
       window.clearTimeout(noteTimerRef.current);
       noteTimerRef.current = null;
     }
-    if (!noteDirtyRef.current) return;
-    noteDirtyRef.current = false;
+    const dirty = noteDirtyRef.current;
+    if (dirty.size === 0) return;
+    noteDirtyRef.current = new Set();
     const key = notesKeyRef.current;
     if (!key) return;
+    // Vers lezen en alléén de secties toepassen die dít tabblad wijzigde,
+    // zodat een tweede tabblad/iframe elkaars notities niet overschrijft.
     const store = readCourseNotes(course.id);
-    const mine: Record<string, string> = {};
-    for (const [sid, txt] of Object.entries(notesRef.current)) {
+    const existing = store[key];
+    const mine: Record<string, string> =
+      existing && typeof existing === 'object' && !Array.isArray(existing) ? { ...existing } : {};
+    for (const sid of dirty) {
+      const txt = notesRef.current[sid];
       if (typeof txt === 'string' && txt.trim() !== '') mine[sid] = txt;
+      else delete mine[sid];
     }
     if (Object.keys(mine).length > 0) store[key] = mine;
     else delete store[key];
@@ -278,7 +287,7 @@ function CourseReader({ course }: { course: Course }) {
     const next = { ...notesRef.current, [sid]: text };
     notesRef.current = next;
     setNotes(next);
-    noteDirtyRef.current = true;
+    noteDirtyRef.current.add(sid);
     // Debounce: pas 600 ms na de laatste toetsaanslag bewaren.
     if (noteTimerRef.current !== null) window.clearTimeout(noteTimerRef.current);
     noteTimerRef.current = window.setTimeout(() => {
@@ -408,6 +417,25 @@ function CourseReader({ course }: { course: Course }) {
     return () => window.removeEventListener('pagehide', flush);
   }, []);
 
+  // Mobiele lade open? Escape sluit ze, en de focus keert terug naar de ☰-knop.
+  useEffect(() => {
+    if (!(narrow && navOpen)) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setNavOpen(false);
+        navToggleRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [narrow, navOpen]);
+
+  /** Sluit de mobiele inhoudstafel-lade en zet de focus terug op de ☰-knop. */
+  const closeNav = () => {
+    setNavOpen(false);
+    navToggleRef.current?.focus();
+  };
+
   const goTo = (id: string) => {
     const p = progressRef.current;
     if (!p) return;
@@ -415,7 +443,7 @@ function CourseReader({ course }: { course: Course }) {
     p.lastSectionId = id;
     persist();
     setSectionId(id);
-    setNavOpen(false);
+    if (navOpen) closeNav(); // lade dicht op mobiel, mét focusherstel
     window.scrollTo({ top: 0 });
   };
 
@@ -619,6 +647,7 @@ function CourseReader({ course }: { course: Course }) {
       <header className="player-topbar">
         {narrow && (
           <button
+            ref={navToggleRef}
             className="btn btn-quiet btn-icon"
             aria-label={navOpen ? 'Inhoudstafel verbergen' : 'Inhoudstafel tonen'}
             aria-expanded={navOpen}
@@ -641,7 +670,7 @@ function CourseReader({ course }: { course: Course }) {
           navOpen && (
             <>
               <div
-                onClick={() => setNavOpen(false)}
+                onClick={closeNav}
                 aria-hidden
                 style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 50 }}
               />
@@ -654,7 +683,7 @@ function CourseReader({ course }: { course: Course }) {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 8px 0' }}>
-                  <button className="btn btn-quiet btn-icon" aria-label="Inhoudstafel sluiten" onClick={() => setNavOpen(false)}>✕</button>
+                  <button className="btn btn-quiet btn-icon" aria-label="Inhoudstafel sluiten" onClick={closeNav}>✕</button>
                 </div>
                 {sidebar}
               </aside>

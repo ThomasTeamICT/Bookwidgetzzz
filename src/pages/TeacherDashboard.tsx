@@ -12,11 +12,19 @@ import { ShareModal } from '../components/ShareModal';
 const FOLDER_COLORS = ['#4f46e5', '#0ea5e9', '#16a34a', '#d97706', '#dc2626', '#9333ea'];
 
 export function TeacherDashboard() {
-  const [, force] = useState(0);
+  // 'tick' bumpt bij elke opslagwijziging (onStorageChange) en drijft de memo's hieronder aan,
+  // zodat localStorage niet bij elke zoekletter opnieuw geparset wordt.
+  const [tick, force] = useState(0);
   React.useEffect(() => onStorageChange(() => force((x) => x + 1)), []);
 
-  const widgets = getWidgets();
-  const folders = getFolders();
+  const widgets = useMemo(() => getWidgets(), [tick]);
+  const folders = useMemo(() => getFolders(), [tick]);
+  // Aantal inzendingen per widget in één keer tellen i.p.v. per kaart te filteren.
+  const submissionCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of getSubmissions()) m.set(s.widgetId, (m.get(s.widgetId) ?? 0) + 1);
+    return m;
+  }, [tick]);
   const [search, setSearch] = useState('');
   const [activeFolder, setActiveFolder] = useState<string | null | 'all'>('all');
   const [folderModal, setFolderModal] = useState<Folder | 'new' | null>(null);
@@ -168,7 +176,7 @@ export function TeacherDashboard() {
         <div className="widget-grid">
           {visible.map((w) => {
             const def = getTypeDef(w.type);
-            const subs = getSubmissions(w.id);
+            const subCount = submissionCounts.get(w.id) ?? 0;
             return (
               <div key={w.id} className="card widget-card" onClick={() => navigate(`/bewerk/${w.id}`)} role="button" tabIndex={0}
                 onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/bewerk/${w.id}`); }}
@@ -190,7 +198,7 @@ export function TeacherDashboard() {
                     {menuFor === w.id && (
                       <div className="card" role="menu" style={{ position: 'absolute', right: 0, top: '110%', zIndex: 40, width: 190, padding: 6, display: 'grid', boxShadow: 'var(--shadow-2)' }}>
                         <button className="btn btn-quiet btn-sm" style={{ justifyContent: 'flex-start' }} role="menuitem" onClick={() => { setMenuFor(null); setShareTarget(w); }}>📤 Delen</button>
-                        <button className="btn btn-quiet btn-sm" style={{ justifyContent: 'flex-start' }} role="menuitem" onClick={() => { setMenuFor(null); navigate(`/resultaten/${w.id}`); }}>📊 Resultaten ({subs.length})</button>
+                        <button className="btn btn-quiet btn-sm" style={{ justifyContent: 'flex-start' }} role="menuitem" onClick={() => { setMenuFor(null); navigate(`/resultaten/${w.id}`); }}>📊 Resultaten ({subCount})</button>
                         <button className="btn btn-quiet btn-sm" style={{ justifyContent: 'flex-start' }} role="menuitem" onClick={() => { setMenuFor(null); duplicate(w); }}>⧉ Dupliceren</button>
                         {['quiz', 'worksheet', 'exitticket'].includes(w.type) && (
                           <select
@@ -231,7 +239,7 @@ export function TeacherDashboard() {
                 <div className="widget-card-body">
                   <span className="widget-card-title">{w.title}</span>
                   <div className="widget-card-meta">
-                    {subs.length > 0 && <span className="badge badge-ok">📊 {subs.length} inzending{subs.length === 1 ? '' : 'en'}</span>}
+                    {subCount > 0 && <span className="badge badge-ok">📊 {subCount} inzending{subCount === 1 ? '' : 'en'}</span>}
                     <span className="date">{formatDateShort(w.updatedAt)}</span>
                   </div>
                 </div>

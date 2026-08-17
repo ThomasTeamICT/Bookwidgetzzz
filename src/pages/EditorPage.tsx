@@ -127,7 +127,9 @@ export function EditorPage() {
             </div>
           </div>
           <div className={`player-main ${def.wide ? 'player-main-wide' : ''}`}>
-            <def.Player key={previewKey} widget={widget} studentName="Voorbeeld" preview onComplete={() => {}} />
+            <React.Suspense fallback={<div className="hint" role="status" style={{ textAlign: 'center', padding: '40px 0' }}>Widget laden…</div>}>
+              <def.Player key={previewKey} widget={widget} studentName="Voorbeeld" preview onComplete={() => {}} />
+            </React.Suspense>
           </div>
         </main>
       ) : (
@@ -143,7 +145,10 @@ export function EditorPage() {
                 </button>
               </div>
               {tab === 'content' ? (
-                <def.Editor config={widget.config} onChange={(config: unknown) => setWidget({ ...widget, config })} />
+                // de editormodule wordt lazy geladen (zie registry): even een laadmelding tonen
+                <React.Suspense fallback={<div className="hint" role="status" style={{ textAlign: 'center', padding: '40px 0' }}>Widget laden…</div>}>
+                  <def.Editor config={widget.config} onChange={(config: unknown) => setWidget({ ...widget, config })} />
+                </React.Suspense>
               ) : (
                 <SettingsPanel widget={widget} onChange={setWidget} />
               )}

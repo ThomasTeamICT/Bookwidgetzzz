@@ -55,6 +55,12 @@ export function saveCourse(course: Course) {
 export function deleteCourse(id: string) {
   write(COURSES_KEY, getCourses().filter((c) => c.id !== id));
   write(PROGRESS_KEY, readAllProgress().filter((p) => p.courseId !== id));
+  // Privé leerlingnotities bij deze cursus mee opruimen (zie CourseViewerPage).
+  try {
+    localStorage.removeItem('wf.coursenotes.' + id);
+  } catch {
+    // genegeerd: notities opruimen mag verwijderen nooit blokkeren
+  }
 }
 
 export function createCourse(title: string, author = ''): Course {
@@ -398,9 +404,7 @@ export function importCourseJson(json: string): { course: Course; widgets: Widge
     const course = sanitizeCourse(data.course ?? data.c ?? data);
     if (!course) return null;
     const widgets = Array.isArray(data.widgets ?? data.w)
-      ? (data.widgets ?? data.w).filter(
-          (w: Widget) => w && typeof w === 'object' && typeof w.type === 'string' && w.config
-        )
+      ? (data.widgets ?? data.w).map(sanitizeSharedWidget).filter((x: Widget | null): x is Widget => x !== null)
       : [];
     return { course, widgets };
   } catch {
@@ -450,7 +454,10 @@ function sanitizeBlock(raw: unknown): CourseBlock | null {
             .map((it) => {
               const ii = it as Record<string, unknown>;
               const title = s(ii?.title).trim();
-              return title ? { id: s(ii?.id) || uid(), title, text: s(ii?.text) } : null;
+              const text = s(ii?.text);
+              // Half-ingevuld item behouden: alleen weggooien als béíde velden leeg zijn.
+              if (!title && !text.trim()) return null;
+              return { id: s(ii?.id) || uid(), title: title || '—', text };
             })
             .filter((x): x is { id: string; title: string; text: string } => x !== null)
         : [];
@@ -474,7 +481,10 @@ function sanitizeBlock(raw: unknown): CourseBlock | null {
             .map((it) => {
               const ii = it as Record<string, unknown>;
               const term = s(ii?.term).trim();
-              return term ? { id: s(ii?.id) || uid(), term, uitleg: s(ii?.uitleg) } : null;
+              const uitleg = s(ii?.uitleg);
+              // Half-ingevuld begrip behouden: alleen weggooien als béíde velden leeg zijn.
+              if (!term && !uitleg.trim()) return null;
+              return { id: s(ii?.id) || uid(), term: term || '—', uitleg };
             })
             .filter((x): x is { id: string; term: string; uitleg: string } => x !== null)
         : [];

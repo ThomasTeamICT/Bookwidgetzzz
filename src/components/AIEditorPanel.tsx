@@ -143,6 +143,24 @@ const ITEM_DEFS: Partial<Record<WidgetTypeId, ItemDef>> = {
   },
 };
 
+/**
+ * Dedupe-sleutels voor één bestaande itemtekst. Naast de genormaliseerde tekst
+ * ook de variant zoals de sanitizer (aiWidgetGen) die terugstuurt — anders komt
+ * "ideeën" na de accentstrip als "ideeen" opnieuw binnen als "nieuw" item.
+ */
+function dedupeKeys(text: string, type: WidgetTypeId): string[] {
+  const keys = [norm(text)];
+  const stripped = text.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  if (type === 'crossword' || type === 'wordsearch') {
+    // Volgt puzzleWord(): accentstrip + spaties weg + max 15 tekens.
+    keys.push(norm(stripped.replace(/\s+/g, '').slice(0, 15)));
+  } else if (type === 'hangman') {
+    // De galgje-sanitizer stript alleen diakritische tekens.
+    keys.push(norm(stripped));
+  }
+  return keys.filter(Boolean);
+}
+
 /** "1:23", "01:02:03", "83" of 83 → seconden; null als het geen tijdstip is. */
 function parseTimestamp(v: unknown): number | null {
   if (typeof v === 'number' && Number.isFinite(v) && v >= 0) return Math.round(v);
@@ -691,7 +709,9 @@ ${payload}`;
 
       if (!itemDef) throw new AIError('Voor dit widgettype is er (nog) geen AI-hulp.');
       const existingList = Array.isArray(cfg[itemDef.field]) ? (cfg[itemDef.field] as unknown[]) : [];
-      const seen = new Set(existingList.map((i) => norm(itemDef.textOf(i))).filter(Boolean));
+      // Ook de gesaneerde variant(en) van bestaande teksten meenemen, zodat de
+      // sanitizer-transformatie (bv. "ideeën" → "ideeen") geen dubbels oplevert.
+      const seen = new Set(existingList.flatMap((i) => dedupeKeys(itemDef.textOf(i), widget.type)));
       const genList = Array.isArray(genCfg[itemDef.field]) ? (genCfg[itemDef.field] as unknown[]) : [];
       const fresh: unknown[] = [];
       for (const it of genList) {
@@ -754,8 +774,10 @@ ${quizSchemaText()}
 ${source.trim()}
 === EINDE TRANSCRIPT ===`;
     runAI('videovragen uit transcript', system, prompt, (full) => {
-      const json = asRec(extractJson(full));
-      const arr = Array.isArray(json.checkpoints) ? json.checkpoints : Array.isArray(json) ? (json as unknown[]) : [];
+      const parsed = extractJson(full);
+      const arr: unknown[] = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray(asRec(parsed).checkpoints) ? (asRec(parsed).checkpoints as unknown[]) : [];
       const seen = new Set(existing.map((c) => `${c.timeSec}::${norm(c.question?.prompt ?? '')}`));
       const fresh: VideoCheckpoint[] = [];
       for (const it of arr) {

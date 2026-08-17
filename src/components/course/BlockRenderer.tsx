@@ -360,7 +360,8 @@ function ChecklistView({ block, interactive, props }: { block: ChecklistBlock; i
 function WidgetBlockView({
   block, interactive, studentName, accent,
 }: { block: WidgetBlock; interactive: boolean; studentName?: string; accent?: string }) {
-  const widget = block.widgetId ? getWidget(block.widgetId) : undefined;
+  // Memo: anders wordt de hele widgetstore herparset bij elke toetsaanslag elders op de pagina.
+  const widget = useMemo(() => (block.widgetId ? getWidget(block.widgetId) : undefined), [block.widgetId]);
   let def: WidgetTypeDef | undefined;
   try {
     def = widget ? getTypeDef(widget.type) : undefined;
@@ -380,7 +381,12 @@ function WidgetBlockView({
     widget?.settings.expiresAt && Date.now() > new Date(widget.settings.expiresAt).getTime()
   );
   const maxAttempts = widget?.settings.maxAttempts ?? 0;
-  const usedAttempts = widget ? getAttemptCount(widget.id, name) : 0;
+  // 'sub' en 'attempt' zitten erin zodat de teller ververst na indienen
+  // (onComplete bumpt en zet sub) en na "opnieuw proberen"
+  const usedAttempts = useMemo(
+    () => (widget ? getAttemptCount(widget.id, name) : 0),
+    [widget?.id, name, attempt, sub] // eslint-disable-line react-hooks/exhaustive-deps
+  );
   const attemptsLeft = maxAttempts > 0 ? Math.max(0, maxAttempts - usedAttempts) : Infinity;
 
   // Was er (op dit toestel) al eerder een inzending van deze leerling?
@@ -503,7 +509,10 @@ function WidgetBlockView({
             </div>
           </div>
         ) : (
-          <def.Player key={attempt} widget={widget} studentName={name} preview={false} onComplete={onComplete} />
+          // Suspense: de spelers uit de registry worden lui geladen (React.lazy)
+          <React.Suspense fallback={<div className="hint" role="status">Widget laden…</div>}>
+            <def.Player key={attempt} widget={widget} studentName={name} preview={false} onComplete={onComplete} />
+          </React.Suspense>
         )}
         {sub && (
           <div

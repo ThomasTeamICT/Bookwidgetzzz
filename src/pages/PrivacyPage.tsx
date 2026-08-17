@@ -19,7 +19,8 @@ export function PrivacyPage() {
     localStorage.removeItem('wf.live.v1');
     localStorage.removeItem('wf.courseprogress.v1');
     Object.keys(localStorage)
-      .filter((k) => k.startsWith('wf.autosave.') || k.startsWith('wf.coursename.'))
+      .filter((k) => k.startsWith('wf.autosave.') || k.startsWith('wf.coursename.')
+        || k.startsWith('wf.coursenotes.') || k.startsWith('wf.deadline.'))
       .forEach((k) => localStorage.removeItem(k));
     // storage-laag opnieuw laten emitten
     localStorage.setItem('wf.submissions.v1', '[]');
@@ -60,6 +61,7 @@ export function PrivacyPage() {
           <li><strong>Cursussen &amp; leesvoortgang</strong>: je cursusinhoud en, per leerling(naam), welke secties gelezen zijn en hoelang.</li>
           <li><strong>Inzendingen</strong> ({subs.length}, van {names.size} {names.size === 1 ? 'naam' : 'verschillende namen'}): naam, antwoorden, score, tijdstip en duur.</li>
           <li><strong>Tussentijds werk</strong>: automatisch opgeslagen antwoorden zodat leerlingen kunnen hervatten.</li>
+          <li><strong>Notities &amp; deadlines</strong>: privénotities van leerlingen bij cursussen en de einddeadline per leerling bij oefeningen met tijdslimiet.</li>
           <li><strong>Voorkeuren</strong>: thema en weergave-instellingen.</li>
         </ul>
         <h3>En de AI-assistent?</h3>
@@ -98,7 +100,7 @@ export function PrivacyPage() {
       {confirm === 'subs' && (
         <ConfirmModal
           title="Alle leerlinggegevens wissen?"
-          message={`${subs.length} inzendingen, pogingtellers en tussentijds opgeslagen werk worden definitief verwijderd. Je widgets blijven bestaan.`}
+          message={`${subs.length} inzendingen, pogingtellers, tussentijds opgeslagen werk, leerlingnotities en deadlines worden definitief verwijderd. Je widgets blijven bestaan.`}
           onConfirm={wipeSubmissions}
           onClose={() => setConfirm(null)}
         />

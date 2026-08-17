@@ -1,5 +1,7 @@
 import LZString from 'lz-string';
-import type { Submission, Widget } from './types';
+import type { Submission, Widget, WidgetSettings } from './types';
+import { makeCode, uid } from './utils';
+import { WIDGET_TYPES } from '../widgets/registry';
 
 /**
  * Delen van widgets:
@@ -15,13 +17,37 @@ export function encodeWidgetToUrl(widget: Widget): string {
   return `${base}#/open?d=${compressed}`;
 }
 
+const KNOWN_TYPES = new Set(WIDGET_TYPES.map((t) => t.id));
+
+/**
+ * Widget uit een draagbare link defensief saneren: onbekend type weigeren,
+ * ontbrekende velden aanvullen zodat spelen/bewaren niet crasht.
+ */
+function sanitizeSharedWidget(raw: unknown): Widget | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const w = raw as Record<string, unknown>;
+  if (typeof w.type !== 'string' || !KNOWN_TYPES.has(w.type as Widget['type'])) return null;
+  if (!w.config || typeof w.config !== 'object') return null;
+  return {
+    id: typeof w.id === 'string' && w.id ? w.id : uid(),
+    type: w.type as Widget['type'],
+    title: typeof w.title === 'string' && w.title.trim() ? w.title : 'Gedeelde widget',
+    folderId: typeof w.folderId === 'string' ? (w.folderId as string) : null,
+    config: w.config,
+    settings: { ...FALLBACK_SETTINGS, ...(typeof w.settings === 'object' && w.settings ? (w.settings as Partial<WidgetSettings>) : {}) },
+    code: typeof w.code === 'string' && w.code ? (w.code as string) : makeCode(),
+    createdAt: typeof w.createdAt === 'number' ? (w.createdAt as number) : Date.now(),
+    updatedAt: Date.now(),
+  };
+}
+
 export function decodeWidgetFromParam(d: string): Widget | null {
   try {
     const json = LZString.decompressFromEncodedURIComponent(d);
     if (!json) return null;
     const payload = JSON.parse(json);
     if (!payload || payload.v !== 1 || !payload.w) return null;
-    return payload.w as Widget;
+    return sanitizeSharedWidget(payload.w);
   } catch {
     return null;
   }

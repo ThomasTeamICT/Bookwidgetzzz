@@ -315,7 +315,10 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
                 <div>Je verliet het toetsvenster ({focusWarn}×). Dit wordt bij je inzending vermeld.</div>
               </div>
             )}
-            <def.Player widget={widget} studentName={name.trim() || 'Anoniem'} timeUp={timeUp} onComplete={onComplete} />
+            {/* de widgetmodule wordt lazy geladen (zie registry): even een laadmelding tonen */}
+            <React.Suspense fallback={<div className="hint" role="status" style={{ textAlign: 'center', padding: '40px 0' }}>Widget laden…</div>}>
+              <def.Player widget={widget} studentName={name.trim() || 'Anoniem'} timeUp={timeUp} onComplete={onComplete} />
+            </React.Suspense>
             {completedSub && widget.settings.showFeedback && (
               <FoutenAnalysePanel
                 widget={widget}
