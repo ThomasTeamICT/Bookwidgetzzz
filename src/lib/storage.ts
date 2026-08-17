@@ -74,8 +74,41 @@ export function saveWidget(widget: Widget) {
   write(KEYS.widgets, all);
 }
 export function deleteWidget(id: string) {
+  // Vóór het verwijderen: heeft deze widget een geüploade pdf als bron
+  // (bv. splitwidgets: config.source.pdfId)? Dan die straks mee opruimen.
+  const widget = getWidget(id);
+  const src = widget ? (widget.config as unknown as { source?: unknown }).source : undefined;
+  const pdfId =
+    src && typeof src === 'object' && typeof (src as Record<string, unknown>).pdfId === 'string'
+      ? ((src as Record<string, unknown>).pdfId as string)
+      : null;
   write(KEYS.widgets, getWidgets().filter((w) => w.id !== id));
   write(KEYS.submissions, getSubmissions().filter((s) => s.widgetId !== id));
+  if (pdfId) cleanupOrphanPdf(pdfId);
+}
+
+/**
+ * Geüploade pdf van een verwijderde widget uit IndexedDB opruimen — maar
+ * alleen als niets er nog naar verwijst (dupliceren deelt bewust hetzelfde
+ * pdfId). De scan is bewust simpel en conservatief: komt het pdfId nog ergens
+ * voor in de ruwe JSON van de widgets- of cursussenopslag, dan blijft de blob
+ * staan. De cursussen lezen we hier rechtstreeks uit localStorage
+ * ('wf.courses.v1'): courses.ts importeert deze module al, dus andersom
+ * importeren zou een kringimport geven.
+ */
+function cleanupOrphanPdf(pdfId: string) {
+  try {
+    const widgetsRaw = localStorage.getItem(KEYS.widgets) ?? '';
+    const coursesRaw = localStorage.getItem('wf.courses.v1') ?? '';
+    if (widgetsRaw.includes(pdfId) || coursesRaw.includes(pdfId)) return;
+  } catch {
+    return; // bij twijfel laten staan: een wees is onschuldiger dan een kapotte verwijzing
+  }
+  // Fire-and-forget; de dynamische import houdt de basisbundel licht en
+  // opruimen mag het verwijderen van de widget nooit blokkeren.
+  void import('./pdfStore')
+    .then(({ deletePdf }) => deletePdf(pdfId))
+    .catch(() => { /* genegeerd: opruimen is best-effort */ });
 }
 
 // ── Mappen ──────────────────────────────────────────────────────────────────

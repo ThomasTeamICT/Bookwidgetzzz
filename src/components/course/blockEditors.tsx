@@ -16,6 +16,7 @@ import { getTypeDef } from '../../widgets/registry';
 import { fileToDataUrl, uid } from '../../lib/utils';
 import { pickAndStorePdf } from '../pdf/PdfViewer';
 import { deletePdf, formatBytes, getPdf } from '../../lib/pdfStore';
+import { pdfReferenceCount } from '../../lib/courses';
 import { CheckRow, Field, ImagePicker, useToast } from '../ui';
 import { renderMarkdown } from '../../lib/markdown';
 
@@ -300,13 +301,18 @@ function PdfBlockEditor({ b, onChange }: { b: PdfBlock; onChange: OnChange }) {
       toast(res.error, 'err');
       return;
     }
-    // Bij "Vervangen": de vorige upload opruimen (fire-and-forget).
-    if (b.pdfId) void deletePdf(b.pdfId);
+    // Bij "Vervangen": de vorige upload opruimen (fire-and-forget) — maar
+    // alleen als dit blok de laatste verwijzing is. Dupliceren (blok, cursus,
+    // widget) deelt bewust hetzelfde pdfId, dus een duplicaat mag het bestand
+    // niet kwijtraken.
+    if (b.pdfId && pdfReferenceCount(b.pdfId) <= 1) void deletePdf(b.pdfId);
     onChange({ ...b, pdfId: res.pdfId, name: res.name, url: undefined });
   };
 
   const removeUpload = () => {
-    if (b.pdfId) void deletePdf(b.pdfId);
+    // Zelfde regel als bij "Vervangen": de blob alleen wissen als niets
+    // anders er nog naar verwijst; anders enkel de verwijzing loskoppelen.
+    if (b.pdfId && pdfReferenceCount(b.pdfId) <= 1) void deletePdf(b.pdfId);
     onChange({ ...b, pdfId: undefined, name: undefined });
   };
 

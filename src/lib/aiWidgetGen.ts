@@ -307,7 +307,11 @@ export function sanitizeQuestion(raw: unknown): Question | null {
           const answersRaw = Array.isArray(rr?.answers) ? rr.answers : [];
           // Lengtes gelijktrekken aan de kolommen; alleen lege cellen (invulvelden)
           // houden hun antwoord, elders wordt het antwoord genegeerd.
-          const cells = columns.map((_, i) => (typeof cellsRaw[i] === 'string' ? (cellsRaw[i] as string).trim() : ''));
+          // Cellen zijn even numeriek-tolerant als antwoorden: "12" en 12 zijn allebei geldig.
+          const cells = columns.map((_, i) => {
+            const cl = cellsRaw[i];
+            return (typeof cl === 'string' ? cl : typeof cl === 'number' ? String(cl) : '').trim();
+          });
           const answers = columns.map((_, i): string | null => {
             const a = answersRaw[i];
             const s = (typeof a === 'string' ? a : typeof a === 'number' ? String(a) : '').trim();
@@ -327,8 +331,9 @@ export function sanitizeQuestion(raw: unknown): Question | null {
         .filter((t) => t !== '')
         .map((text) => ({ id: uid(), text }));
       if (statements.length === 0) return null;
+      // 2 à 7 schaalpunten is geldig (bv. "Oneens/Eens"); pas onder 2 valt er niets te kiezen.
       let options = strArr(q.options).slice(0, 7);
-      if (options.length < 3) options = ['Helemaal oneens', 'Oneens', 'Neutraal', 'Eens', 'Helemaal eens'];
+      if (options.length < 2) options = ['Helemaal oneens', 'Oneens', 'Neutraal', 'Eens', 'Helemaal eens'];
       // Reflectie zonder juist/fout → nooit punten.
       return { ...base, type, points: 0, statements, options };
     }

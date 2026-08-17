@@ -6,6 +6,7 @@ import { CheckRow, Field, ImagePicker } from '../components/ui';
 import { DEFAULT_PALETTE, PdfViewer, pickAndStorePdf } from '../components/pdf/PdfViewer';
 import type { HighlightColor, PdfHighlight } from '../components/pdf/PdfViewer';
 import { deletePdf, formatBytes, getPdf, savePdf } from '../lib/pdfStore';
+import { pdfReferenceCount } from '../lib/courses';
 import { EditorProps, ItemHeader, moveItem, PlayerProps, ResultHero } from './shared';
 import { makeQuestion, QUESTION_TYPES, questionLabel, QuestionView } from './quiz';
 
@@ -212,12 +213,15 @@ function PdfSourceEditor({ source, setSource }: { source: SourcePane; setSource:
     setBusy(false);
     if ('error' in res) { setUploadError(res.error); return; }
     const oldId = source.pdfId;
-    if (oldId && oldId !== res.pdfId) void deletePdf(oldId);
+    // De oude upload alleen wissen als deze bron de laatste verwijzing is:
+    // dupliceren (widget, blok, cursus) deelt bewust hetzelfde pdfId.
+    if (oldId && oldId !== res.pdfId && pdfReferenceCount(oldId) <= 1) void deletePdf(oldId);
     setSource({ ...source, pdfId: res.pdfId, pdfName: res.name });
   };
 
   const removeUpload = () => {
-    if (source.pdfId) void deletePdf(source.pdfId);
+    // Zelfde regel als bij "Vervangen": anders alleen de verwijzing loskoppelen.
+    if (source.pdfId && pdfReferenceCount(source.pdfId) <= 1) void deletePdf(source.pdfId);
     setSource({ ...source, pdfId: undefined, pdfName: undefined });
   };
 

@@ -407,7 +407,13 @@ export function AIEditorPanel({ widget, onClose, onApply }: {
       return;
     }
     // Afbeeldingen (data-URL's) niet meesturen: scheelt veel tokens.
-    const payload = JSON.stringify({ questions: targets }, (key, value) => (key === 'imageUrl' ? undefined : value));
+    // "imageUrl" (o.a. splitworksheet) én "image" (o.a. imagepoint) strippen,
+    // plus defensief elke andere data-URL vervangen door een placeholder.
+    const payload = JSON.stringify({ questions: targets }, (key, value) => {
+      if (key === 'imageUrl' || key === 'image') return undefined;
+      if (typeof value === 'string' && value.startsWith('data:')) return '[afbeelding]';
+      return value;
+    });
     const system = `Je bent een ervaren Vlaamse leerkracht die leerhulp toevoegt aan bestaande quizvragen.
 Je verandert NOOIT de vragen of de antwoorden zelf. Antwoord met ALLEEN geldige JSON (geen uitleg, geen markdown).`;
     const prompt = `Vul bij de onderstaande vragen de ONTBREKENDE hulpvelden aan:

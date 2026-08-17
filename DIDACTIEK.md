@@ -73,6 +73,38 @@ De client-side roadmap is hiermee afgewerkt. Wat didactisch nog waardevol is, vr
 een (lichte) server: live klasoverzicht over toestellen heen, cijferdoorstroom naar
 het LMS-puntenboek (LTI/Smartschool), en realtime samen ontwikkelen met collega's.
 
+## 🖍 Uitgebreide vraagtypes en pdf-bronnen: didactische keuzes
+
+De vragenfamilie groeide naar 19 types. De nieuwe zijn gekozen op wat ze *toetsen*,
+niet op showwaarde:
+
+- **Woorden markeren** en **markeerstiften op pdf-bronnen** digitaliseren de
+  fluostift — dé strategie voor begrijpend lezen (signaalwoorden, hoofdzaken,
+  tekststructuur). De leerkracht legt een **kleurenlegende** vast ("geel =
+  hoofdtitel"), waardoor het markeren een gerichte leesopdracht wordt in plaats
+  van kleuren om te kleuren. Markeringen reizen mee in de inzending: de
+  leerkracht ziet *hoe* een leerling las, niet alleen wat hij antwoordde.
+- **Sorteren in categorieën** toetst begripsstructuren (classificeren), een stap
+  dieper dan herkennen. Bewust tik-gebaseerd: slepen sluit leerlingen met
+  motorische beperkingen uit en werkt slecht op schooltablets.
+- **Invultabel** past bij schema's en vergelijkend leren (kenmerken naast
+  elkaar); **keuzelijst-in-zin** is de laagdrempelige variant van de
+  invuloefening voor jongere leerlingen (herkennen i.p.v. produceren — bewust
+  een andere cognitieve lat).
+- **Aanduiden op afbeelding** toetst ruimtelijk-visuele kennis (kaarten,
+  anatomie, kunstanalyse) die talige vragen niet vatten.
+- **Stellingenmatrix en sterren** zijn géén toetsvragen (0 punten, geen
+  juist/fout): ze dienen zelfinschatting en lesevaluatie — vaste ingrediënten
+  van exit-tickets. De AI genereert ze alleen in die rol.
+- **Bestand inleveren** brengt authentieke producten (verslag, foto van
+  papierwerk) in dezelfde nakijkcockpit als open vragen — één nakijkplek.
+
+Bewuste grenzen: meningsvragen krijgen nooit punten; de AI mag geen
+beoordelingsschalen of inleveropdrachten verzinnen (dat is een didactische
+keuze van de leerkracht); en pdf-bronnen blijven op het toestel — wie thuis
+werkt krijgt een eerlijke melding plus een herstelknop in plaats van een
+stilzwijgend lege bron.
+
 ## ✨ AI-ondersteuning: uitgangspunten
 
 De AI-laag (AI-studio, editor-assistent, cursusbouwer, feedbacksuggesties) volgt

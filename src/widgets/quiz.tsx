@@ -1599,6 +1599,9 @@ function answered(q: Question, v: unknown): boolean {
   if (typeof v === 'string') return v.trim() !== '';
   if (Array.isArray(v)) return q.type === 'order' ? true : v.some((x) => x !== null && x !== undefined && x !== '');
   if (typeof v === 'object') {
+    // Uitgebreide types bewaren records ({gat: keuze}, {itemId: catId}, {name,size,…}):
+    // elke niet-lege sleutel telt als "eraan begonnen".
+    if (extraQType(q.type)) return Object.keys(v).length > 0;
     const lv = v as LongAnswerValue;
     return !!(lv.tekst?.trim() || lv.tekening || lv.audio);
   }

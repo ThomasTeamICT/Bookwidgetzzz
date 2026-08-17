@@ -7,6 +7,7 @@ import type {
   DropdownQuestion, ItemScore, LikertQuestion, QuestionType, RatingQuestion, UploadQuestion,
 } from '../../lib/types';
 import { clamp, uid } from '../../lib/utils';
+import { deleteStudentFile, getStudentFile, saveStudentFile } from '../../lib/pdfStore';
 import { CheckRow, Field } from '../../components/ui';
 import type { AnswerProps, ExtraQType } from './contract';
 
@@ -252,22 +253,40 @@ function RatingEditor({ q, onChange }: { q: RatingQuestion; onChange: (q: Rating
 function RatingAnswer({ q, value, onChange, review }: AnswerProps<RatingQuestion>) {
   const scale = clamp(Math.round(q.scale) || 5, 2, 10);
   const v = typeof value === 'number' ? clamp(Math.round(value), 0, scale) : 0;
+  const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  // radiogroup-toetsenbord: pijltjes verplaatsen de keuze (met wrap), Home/End
+  // naar eerste/laatste; roving tabindex zit op de gekozen (of eerste) ster
+  const onKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (review) return;
+    let next: number | null = null;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = v >= scale ? 1 : v + 1;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = v <= 1 ? scale : v - 1;
+    else if (e.key === 'Home') next = 1;
+    else if (e.key === 'End') next = scale;
+    if (next === null) return;
+    e.preventDefault();
+    onChange(next);
+    btnRefs.current[next - 1]?.focus();
+  };
   return (
     <div>
       <div
         role="radiogroup"
         aria-label={`Beoordeling: kies 1 tot ${scale} sterren`}
         style={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}
+        onKeyDown={onKey}
       >
         {Array.from({ length: scale }, (_, i) => i + 1).map((n) => {
           const filled = n <= v;
           return (
             <button
               key={n}
+              ref={(el) => { btnRefs.current[n - 1] = el; }}
               type="button"
               role="radio"
               aria-checked={v === n}
               aria-label={`${n} van ${scale} sterren`}
+              tabIndex={(v === 0 ? n === 1 : v === n) ? 0 : -1}
               disabled={review}
               onClick={() => onChange(n)}
               style={{
@@ -333,10 +352,23 @@ function LikertEditor({ q, onChange }: { q: LikertQuestion; onChange: (q: Likert
   const [customText, setCustomText] = useState(q.options.join(', '));
   // vangnet: opties die bij geen enkele preset horen (bv. oudere data) → aangepast
   const showCustom = custom || !matched;
+  const listRef = useRef<HTMLDivElement>(null);
+  const addBtnRef = useRef<HTMLButtonElement>(null);
+  /** Verwijderen unmount de gefocuste knop; zet de focus op de verwijderknop
+   *  van de vorige stelling, of anders op de “+ Stelling toevoegen”-knop. */
+  const removeStatement = (i: number) => {
+    const delBtns = listRef.current?.querySelectorAll<HTMLButtonElement>('button[aria-label="Stelling verwijderen"]');
+    const prevBtn = delBtns?.[i - 1] ?? null;
+    onChange({ ...q, statements: q.statements.filter((_, j) => j !== i) });
+    requestAnimationFrame(() => {
+      if (prevBtn && prevBtn.isConnected && !prevBtn.disabled) prevBtn.focus();
+      else addBtnRef.current?.focus();
+    });
+  };
   return (
     <div>
       <Field label="Stellingen" hint="Elke stelling wordt op dezelfde schaal beoordeeld.">
-        <div>
+        <div ref={listRef}>
           {q.statements.map((st, i) => (
             <div className="option-row" key={st.id}>
               <input
@@ -351,11 +383,12 @@ function LikertEditor({ q, onChange }: { q: LikertQuestion; onChange: (q: Likert
               <button
                 className="btn btn-quiet btn-icon btn-sm" aria-label="Stelling verwijderen"
                 disabled={q.statements.length <= 1}
-                onClick={() => onChange({ ...q, statements: q.statements.filter((_, j) => j !== i) })}
+                onClick={() => removeStatement(i)}
               >✕</button>
             </div>
           ))}
           <button
+            ref={addBtnRef}
             className="btn btn-sm btn-ghost"
             onClick={() => onChange({ ...q, statements: [...q.statements, { id: uid(), text: '' }] })}
           >
@@ -407,6 +440,23 @@ function LikertAnswer({ q, value, onChange, review }: AnswerProps<LikertQuestion
   const chosenOf = (id: string): number | null => (typeof raw[id] === 'number' ? (raw[id] as number) : null);
   const set = (id: string, oi: number) => onChange({ ...raw, [id]: oi });
   const label = (st: { text: string }, i: number) => st.text.trim() || `Stelling ${i + 1}`;
+  // radiogroup-toetsenbord voor de smalle chips: pijltjes verplaatsen de keuze
+  // (met wrap), Home/End naar eerste/laatste; roving tabindex op de gekozen chip
+  const onChipKey = (stId: string, e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (review) return;
+    const n = q.options.length;
+    const cur = chosenOf(stId);
+    let next: number | null = null;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = cur === null ? 0 : (cur + 1) % n;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = cur === null ? n - 1 : (cur - 1 + n) % n;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = n - 1;
+    if (next === null) return;
+    e.preventDefault();
+    set(stId, next);
+    const chips = e.currentTarget.querySelectorAll<HTMLButtonElement>('button[role="radio"]');
+    chips[next]?.focus();
+  };
 
   if (q.statements.length === 0 || q.options.length === 0) {
     return <p className="hint">(nog geen stellingen of schaalopties)</p>;
@@ -424,15 +474,22 @@ function LikertAnswer({ q, value, onChange, review }: AnswerProps<LikertQuestion
           {q.statements.map((st, si) => (
             <div key={st.id} className="card" style={{ padding: '12px 14px' }}>
               <p style={{ fontWeight: 600, margin: '0 0 8px' }}>{label(st, si)}</p>
-              <div role="radiogroup" aria-label={label(st, si)} style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <div
+                role="radiogroup"
+                aria-label={label(st, si)}
+                style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}
+                onKeyDown={(e) => onChipKey(st.id, e)}
+              >
                 {q.options.map((opt, oi) => {
-                  const sel = chosenOf(st.id) === oi;
+                  const chosen = chosenOf(st.id);
+                  const sel = chosen === oi;
                   return (
                     <button
                       key={oi}
                       type="button"
                       role="radio"
                       aria-checked={sel}
+                      tabIndex={(chosen === null ? oi === 0 : sel) ? 0 : -1}
                       className={`chip ${sel ? 'placed' : ''}`}
                       disabled={review}
                       style={{
@@ -524,14 +581,18 @@ const likertType: ExtraQType<LikertQuestion> = {
 };
 
 // ── upload — bestand inleveren ──────────────────────────────────────────────
-// Antwoordvorm: { name, size, dataUrl } (serialiseerbaar, past in localStorage).
+// Antwoordvorm: { name, size, fileId } — het bestand zelf staat als Blob in
+// IndexedDB (pdfStore), zodat autosave/inzendingen/resultaatcode (localStorage)
+// niet vollopen met megabytes base64. Legacy: { name, size, dataUrl } (oudere
+// antwoorden) blijft gewoon werken.
 
-interface UploadAnswerValue { name: string; size: number; dataUrl: string }
+interface UploadAnswerValue { name: string; size: number; fileId?: string; dataUrl?: string }
 
 function isUploadAnswer(v: unknown): v is UploadAnswerValue {
   if (!isRecord(v)) return false;
-  return typeof v.name === 'string' && typeof v.size === 'number'
-    && typeof v.dataUrl === 'string' && v.dataUrl.startsWith('data:');
+  if (typeof v.name !== 'string' || typeof v.size !== 'number') return false;
+  return (typeof v.fileId === 'string' && v.fileId !== '')
+    || (typeof v.dataUrl === 'string' && v.dataUrl.startsWith('data:'));
 }
 
 function UploadEditor({ q, onChange }: { q: UploadQuestion; onChange: (q: UploadQuestion) => void }) {
@@ -570,6 +631,28 @@ function UploadAnswer({ q, value, onChange, review }: AnswerProps<UploadQuestion
   const file = isUploadAnswer(value) ? value : null;
   const maxMb = clamp(q.maxMb || 2, 1, 5);
 
+  // Review met fileId: blob async uit IndexedDB halen voor de downloadlink.
+  // Niet gevonden (ander toestel, bv. via resultaatcode) → alleen de bestandsnaam.
+  const fileId = review && file?.fileId && !file.dataUrl ? file.fileId : null;
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [blobMissing, setBlobMissing] = useState(false);
+  useEffect(() => {
+    setBlobUrl(null);
+    setBlobMissing(false);
+    if (!fileId) return;
+    let alive = true;
+    let url: string | null = null;
+    void getStudentFile(fileId).then((rec) => {
+      if (!alive) return;
+      if (rec) { url = URL.createObjectURL(rec.blob); setBlobUrl(url); }
+      else setBlobMissing(true);
+    });
+    return () => {
+      alive = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [fileId]);
+
   const pick = (f: File | undefined) => {
     if (!f) return;
     if (f.size > maxMb * 1024 * 1024) {
@@ -577,29 +660,35 @@ function UploadAnswer({ q, value, onChange, review }: AnswerProps<UploadQuestion
       return;
     }
     setError('');
-    const reader = new FileReader();
-    reader.onerror = () => setError('Het bestand kon niet gelezen worden. Probeer opnieuw.');
-    reader.onload = () => {
-      // bewust een kaal object met alleen strings/getallen: blijft serialiseerbaar
-      const answer: UploadAnswerValue = { name: f.name, size: f.size, dataUrl: String(reader.result) };
-      onChange(answer);
-    };
-    reader.readAsDataURL(f);
+    // blob naar IndexedDB; in het antwoord alleen een kaal verwijzingsobject
+    // met strings/getallen — klein genoeg voor autosave en resultaatcode
+    const newId = uid();
+    const prevId = file?.fileId;
+    saveStudentFile(newId, f.name, f)
+      .then(() => {
+        if (prevId) void deleteStudentFile(prevId);
+        const answer: UploadAnswerValue = { name: f.name, size: f.size, fileId: newId };
+        onChange(answer);
+      })
+      .catch(() => setError('Het bestand kon niet bewaard worden. Probeer opnieuw.'));
   };
 
   if (review) {
+    if (!file) return <div><p className="hint">(geen bestand ingeleverd)</p></div>;
+    const tag = `📎 ${file.name} (${formatBytes(file.size)})`;
+    const href = file.dataUrl ?? blobUrl; // legacy data-URL rechtstreeks als link
     return (
       <div>
-        {file ? (
-          <>
-            <a className="btn btn-sm btn-ghost" href={file.dataUrl} download={file.name}>
-              📎 {file.name} ({formatBytes(file.size)}) — downloaden
-            </a>
-            <p className="hint" style={{ marginTop: 8 }}>✍️ Dit bestand wordt door je leerkracht beoordeeld.</p>
-          </>
+        {href ? (
+          <a className="btn btn-sm btn-ghost" href={href} download={file.name}>
+            {tag} — downloaden
+          </a>
+        ) : blobMissing ? (
+          <p className="hint">{tag} — het bestand staat op het toestel van de leerling.</p>
         ) : (
-          <p className="hint">(geen bestand ingeleverd)</p>
+          <p className="hint">{tag} — bestand laden…</p>
         )}
+        <p className="hint" style={{ marginTop: 8 }}>✍️ Dit bestand wordt door je leerkracht beoordeeld.</p>
       </div>
     );
   }
@@ -624,7 +713,14 @@ function UploadAnswer({ q, value, onChange, review }: AnswerProps<UploadQuestion
           <button type="button" className="btn btn-sm btn-ghost" onClick={() => inputRef.current?.click()}>
             Vervangen
           </button>
-          <button type="button" className="btn btn-sm btn-quiet" onClick={() => { onChange(undefined); setError(''); }}>
+          <button
+            type="button" className="btn btn-sm btn-quiet"
+            onClick={() => {
+              if (file.fileId) void deleteStudentFile(file.fileId);
+              onChange(undefined);
+              setError('');
+            }}
+          >
             Verwijderen
           </button>
         </div>
@@ -650,7 +746,8 @@ const uploadType: ExtraQType<UploadQuestion> = {
   Editor: UploadEditor,
   Answer: UploadAnswer,
   grade: (q, answer): ItemScore | null => {
-    // geen (geldig) bestand → 0 op maximum; wel een bestand → manueel nakijken (pending)
+    // geen (geldig) bestand → 0 op maximum; wel een bestand (fileId of legacy
+    // dataUrl) → manueel nakijken (pending)
     if (!isUploadAnswer(answer)) return { earned: 0, max: q.points, mode: 'auto' };
     return null;
   },

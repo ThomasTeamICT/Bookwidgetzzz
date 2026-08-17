@@ -1,4 +1,4 @@
-// ── Pdf-opslag in IndexedDB ─────────────────────────────────────────────────
+// ── Pdf- en bestandsopslag in IndexedDB ─────────────────────────────────────
 //
 // Pdf's zijn te groot voor localStorage (quota ±5 MB voor de héle app), dus
 // bewaren we ze als Blob in IndexedDB — daar is doorgaans honderden MB ruimte.
@@ -6,6 +6,12 @@
 // een geüploade pdf zit in dít toestel; via de draagbare link reist hij NIET
 // mee (te groot voor een URL). Wel mee: in het export-bestand (base64) als hij
 // klein genoeg is, of via een openbare URL als bron.
+//
+// Dezelfde database en object store bewaart óók ingeleverde bestanden van
+// leerlingen (upload-vraagtype), via saveStudentFile/getStudentFile/
+// deleteStudentFile. De records zijn identiek ({id, name, blob, size,
+// createdAt}) en de id's zijn uid()-uniek, dus pdf's en inzendingen kunnen
+// nooit botsen — geen versie-bump nodig.
 
 const DB_NAME = 'wf-files';
 const STORE = 'pdfs';
@@ -64,6 +70,22 @@ export async function deletePdf(id: string): Promise<void> {
   } catch {
     /* opruimen mag nooit iets blokkeren */
   }
+}
+
+// ── Ingeleverde bestanden (leerling-uploads) ────────────────────────────────
+// Zelfde store als de pdf's (zie kop van dit bestand); alleen de naamgeving
+// maakt duidelijk waarvoor de aanroep dient.
+
+export async function saveStudentFile(id: string, name: string, blob: Blob): Promise<void> {
+  await savePdf(id, name, blob);
+}
+
+export async function getStudentFile(id: string): Promise<{ name: string; blob: Blob } | null> {
+  return getPdf(id);
+}
+
+export async function deleteStudentFile(id: string): Promise<void> {
+  await deletePdf(id);
 }
 
 /** Voor export naar een widget-/cursusbestand: pdf als data-URL (base64). */

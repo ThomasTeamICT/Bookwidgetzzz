@@ -176,12 +176,6 @@ export function PdfViewer({
       }
     }, { root: host, rootMargin: '400px' });
 
-    const pageSpy = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        if (e.isIntersecting) setPageNow(Number((e.target as HTMLElement).dataset.page));
-      }
-    }, { root: host, threshold: 0.4 });
-
     for (let n = 1; n <= doc.numPages; n++) {
       const wrap = document.createElement('div');
       wrap.className = 'pdfv-page';
@@ -192,9 +186,46 @@ export function PdfViewer({
       host.appendChild(wrap);
       wraps.push(wrap);
       io.observe(wrap);
-      pageSpy.observe(wrap);
     }
-    return () => { disposed = true; io.disconnect(); pageSpy.disconnect(); };
+
+    // Paginateller: scroll-gebaseerd i.p.v. een threshold-observer — een sterk
+    // ingezoomde pagina kan ruim groter zijn dan de viewport en haalt dan
+    // nooit 40% zichtbaarheid, waardoor de teller op "p. 1" bleef hangen.
+    // We kiezen de pagina die de bovenrand van de scrollcontainer overlapt,
+    // of anders de pagina waarvan de bovenkant er het dichtst bij ligt.
+    let raf = 0;
+    const updatePageNow = () => {
+      raf = 0;
+      const topEdge = host.getBoundingClientRect().top;
+      let best = 1;
+      let bestDist = Infinity;
+      for (const wrap of wraps) {
+        const r = wrap.getBoundingClientRect();
+        if (r.top <= topEdge && r.bottom > topEdge) {
+          best = Number(wrap.dataset.page);
+          break;
+        }
+        const dist = Math.abs(r.top - topEdge);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = Number(wrap.dataset.page);
+        }
+      }
+      setPageNow(best);
+    };
+    const onScroll = () => {
+      // Throttlen met requestAnimationFrame: max. één meting per frame.
+      if (!raf) raf = requestAnimationFrame(updatePageNow);
+    };
+    host.addEventListener('scroll', onScroll, { passive: true });
+    updatePageNow();
+
+    return () => {
+      disposed = true;
+      io.disconnect();
+      host.removeEventListener('scroll', onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, zoom]);
 

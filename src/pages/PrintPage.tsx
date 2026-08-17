@@ -4,7 +4,7 @@ import { getWidget } from '../lib/storage';
 import type { GapQuestion, Question, QuizConfig } from '../lib/types';
 import { extractGaps, gapPreview, quizMaxScore } from '../lib/grading';
 import { CheckRow } from '../components/ui';
-import { markTokens as playerMarkTokens } from '../widgets/qtypes/interactTypes';
+import { markTokens as playerMarkTokens, ZoneCircle } from '../widgets/qtypes/interactTypes';
 
 /** Afdrukbare versie van quiz/werkblad/exit-ticket, met of zonder correctiesleutel. */
 export function PrintPage() {
@@ -253,11 +253,12 @@ function PrintAnswerArea({ q, withKey }: { q: Question; withKey: boolean }) {
             {rows.map((r, ri) => (
               <tr key={r.id ?? ri}>
                 {(r.cells ?? []).map((cell, ci) => {
-                  if (cell !== '') return <td key={ci} style={cellBase}>{cell}</td>;
-                  // lege cel = invulveld (juiste antwoord in r.answers[ci])
+                  // invulveld = er is een verwacht antwoord in r.answers[ci]; een lege vaste cel blijft gewoon leeg
+                  const accepted = r.answers?.[ci];
+                  if (accepted === null || accepted === undefined) return <td key={ci} style={cellBase}>{cell}</td>;
                   return (
                     <td key={ci} style={{ ...cellBase, border: '1.5px dashed #9ca3af', minWidth: 70 }}>
-                      {withKey ? <Key>{(r.answers?.[ci] ?? '').split('|')[0]}</Key> : ' '}
+                      {withKey ? <Key>{accepted.split('|')[0]}</Key> : ' '}
                     </td>
                   );
                 })}
@@ -329,20 +330,10 @@ function PrintAnswerArea({ q, withKey }: { q: Question; withKey: boolean }) {
             <span style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
               <img src={q.image} alt="" style={{ display: 'block', maxWidth: '100%', maxHeight: 320 }} />
               {withKey && targets.map((t, i) => (
-                <span
-                  key={t.id ?? i}
-                  title={t.label}
-                  style={{
-                    position: 'absolute', left: `${t.x}%`, top: `${t.y}%`,
-                    width: `${Math.max(4, (t.r ?? 4) * 2)}%`, aspectRatio: '1 / 1',
-                    transform: 'translate(-50%, -50%)',
-                    border: '2.5px solid #b91c1c', borderRadius: '50%',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#b91c1c', fontWeight: 700, fontSize: '0.75rem',
-                  }}
-                >
+                // zelfde meetkunde als de grader (matchMarkers): height r*2%, geen aspectRatio
+                <ZoneCircle key={t.id ?? i} x={t.x} y={t.y} r={t.r} color="#b91c1c">
                   {i + 1}
-                </span>
+                </ZoneCircle>
               ))}
             </span>
           ) : (

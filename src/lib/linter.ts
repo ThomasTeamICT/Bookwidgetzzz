@@ -43,7 +43,8 @@ export function lintQuiz(config: QuizConfig): LintWarning[] {
     if (q.type === 'gap' && extractGaps(q.text).length === 0) {
       add('Invuloefening zonder gaten — zet woorden tussen [vierkante haken].');
     }
-    if (q.points === 0) add('Deze vraag staat op 0 punten — bedoeling?');
+    // rating/likert staan per ontwerp op 0 punten (geen juist/fout) — daar is 0 geen fout.
+    if (q.points === 0 && q.type !== 'rating' && q.type !== 'likert') add('Deze vraag staat op 0 punten — bedoeling?');
   });
 
   // widget-brede signalen

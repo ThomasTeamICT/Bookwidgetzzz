@@ -1,7 +1,7 @@
 // Interactieve uitgebreide vraagtypes: marktext, sort, imagepoint, table.
 // Alles werkt met tikken/klikken (geen sleep-verplichting); zie contract.ts.
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import type {
   ImagePointQuestion, ItemScore, MarkTextQuestion, QuestionType, SortQuestion, TableQuestion,
 } from '../../lib/types';
@@ -20,6 +20,21 @@ function relPos(e: React.MouseEvent<HTMLElement>): { x: number; y: number } | nu
     x: round2(clamp(((e.clientX - rect.left) / rect.width) * 100, 0, 100)),
     y: round2(clamp(((e.clientY - rect.top) / rect.height) * 100, 0, 100)),
   };
+}
+
+/**
+ * Focus herstellen nadat een rij uit een editorlijst is verwijderd (het
+ * gefocuste element unmountte): de verwijderknop van de vorige rij krijgt
+ * focus, of de fallback-knop (bv. "+ toevoegen") als de lijst leeg wordt of
+ * die knop uitgeschakeld raakte.
+ */
+function refocusAfterRemove(list: HTMLElement | null, removedIndex: number, fallback?: HTMLElement | null) {
+  requestAnimationFrame(() => {
+    const knoppen = list?.querySelectorAll<HTMLButtonElement>('button[aria-label$="verwijderen"]') ?? [];
+    const doel = knoppen[Math.min(Math.max(removedIndex - 1, 0), knoppen.length - 1)];
+    if (doel && !doel.disabled) doel.focus();
+    else fallback?.focus();
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -148,7 +163,7 @@ function gradeMarkText(q: MarkTextQuestion, answer: unknown): ItemScore {
   const tokens = markTokens(q.text);
   const max = q.points;
   const total = tokens.filter((t) => t.correct).length;
-  if (total === 0) return { earned: 0, max, mode: 'auto' };
+  if (total === 0) return { earned: 0, max: 0, mode: 'auto' }; // geen doelwoorden = niets te verdienen
   const sel = Array.isArray(answer)
     ? [...new Set((answer as unknown[]).filter((i): i is number =>
         typeof i === 'number' && Number.isInteger(i) && i >= 0 && i < tokens.length))]
@@ -180,10 +195,14 @@ const marktext: ExtraQType<MarkTextQuestion> = {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function SortEditor({ q, onChange }: { q: SortQuestion; onChange: (q: SortQuestion) => void }) {
+  const catListRef = useRef<HTMLDivElement>(null);
+  const catAddRef = useRef<HTMLButtonElement>(null);
+  const itemListRef = useRef<HTMLDivElement>(null);
+  const itemAddRef = useRef<HTMLButtonElement>(null);
   return (
     <div>
       <Field label="Categorieën" hint="Bij het verwijderen van een categorie verhuizen haar items naar de eerste.">
-        <div>
+        <div ref={catListRef}>
           {q.categories.map((c, ci) => (
             <div className="option-row" key={c.id}>
               <input
@@ -208,18 +227,20 @@ function SortEditor({ q, onChange }: { q: SortQuestion; onChange: (q: SortQuesti
                     categories: rest,
                     items: q.items.map((it) => (it.categoryId === c.id ? { ...it, categoryId: eerste.id } : it)),
                   });
+                  refocusAfterRemove(catListRef.current, ci, catAddRef.current);
                 }}
               >✕</button>
             </div>
           ))}
           <button
+            ref={catAddRef}
             className="btn btn-sm btn-ghost"
             onClick={() => onChange({ ...q, categories: [...q.categories, { id: uid(), name: '' }] })}
           >+ Categorie toevoegen</button>
         </div>
       </Field>
       <Field label="Items" hint="Kies per item de juiste categorie. De leerling krijgt de items geschud te zien.">
-        <div>
+        <div ref={itemListRef}>
           {q.items.map((it, ii) => (
             <div className="option-row" key={it.id}>
               <input
@@ -250,11 +271,15 @@ function SortEditor({ q, onChange }: { q: SortQuestion; onChange: (q: SortQuesti
               <button
                 className="btn btn-quiet btn-icon btn-sm"
                 aria-label={`Item ${ii + 1} verwijderen`}
-                onClick={() => onChange({ ...q, items: q.items.filter((_, j) => j !== ii) })}
+                onClick={() => {
+                  onChange({ ...q, items: q.items.filter((_, j) => j !== ii) });
+                  refocusAfterRemove(itemListRef.current, ii, itemAddRef.current);
+                }}
               >✕</button>
             </div>
           ))}
           <button
+            ref={itemAddRef}
             className="btn btn-sm btn-ghost"
             disabled={q.categories.length === 0}
             onClick={() => onChange({ ...q, items: [...q.items, { id: uid(), text: '', categoryId: q.categories[0].id }] })}
@@ -268,6 +293,9 @@ function SortEditor({ q, onChange }: { q: SortQuestion; onChange: (q: SortQuesti
 function SortAnswer({ q, value, onChange, review }: AnswerProps<SortQuestion>) {
   const placed = (value && typeof value === 'object' && !Array.isArray(value) ? value : {}) as Record<string, string>;
   const [selected, setSelected] = useState<string | null>(null);
+  const [status, setStatus] = useState('');
+  const chipsRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef<HTMLParagraphElement>(null);
   const order = useMemo(() => shuffled(q.items.map((it) => it.id)), [q.id]);
   const byId = useMemo(() => new Map(q.items.map((it) => [it.id, it] as const)), [q.items]);
   const validCat = useMemo(() => new Set(q.categories.map((c) => c.id)), [q.categories]);
@@ -340,6 +368,7 @@ function SortAnswer({ q, value, onChange, review }: AnswerProps<SortQuestion>) {
         Klik een item en daarna de categorie waar het bij hoort. Klik een geplaatst item aan om het terug te nemen.
       </p>
       <div
+        ref={chipsRef}
         role="group"
         aria-label="Nog te plaatsen items"
         style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6, minHeight: 34, alignItems: 'center' }}
@@ -351,14 +380,18 @@ function SortAnswer({ q, value, onChange, review }: AnswerProps<SortQuestion>) {
             type="button"
             className={`chip ${selected === it.id ? 'placed' : ''}`}
             aria-pressed={selected === it.id}
-            onClick={() => setSelected(selected === it.id ? null : it.id)}
+            onClick={() => {
+              const next = selected === it.id ? null : it.id;
+              setSelected(next);
+              setStatus(next ? `"${it.text}" geselecteerd — klik nu een categorie.` : '');
+            }}
           >
             {it.text}
           </button>
         ))}
       </div>
-      <p className="hint" aria-live="polite" style={{ minHeight: '1.2em', margin: '0 0 8px' }}>
-        {selectedItem ? `"${selectedItem.text}" geselecteerd — klik nu een categorie.` : ''}
+      <p ref={statusRef} tabIndex={-1} className="hint" aria-live="polite" style={{ minHeight: '1.2em', margin: '0 0 8px' }}>
+        {status}
       </p>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'stretch' }}>
         {q.categories.map((cat, ci) => {
@@ -376,9 +409,18 @@ function SortAnswer({ q, value, onChange, review }: AnswerProps<SortQuestion>) {
                 disabled={!selectedItem}
                 aria-label={selectedItem ? `Plaats "${selectedItem.text}" in ${name}` : name}
                 onClick={() => {
-                  if (!selected) return;
-                  onChange({ ...placed, [selected]: cat.id });
+                  if (!selectedItem) return;
+                  const idx = unplaced.findIndex((u) => u.id === selectedItem.id);
+                  onChange({ ...placed, [selectedItem.id]: cat.id });
                   setSelected(null);
+                  setStatus(`"${selectedItem.text}" geplaatst bij ${name}.`);
+                  // Focus naar de eerstvolgende niet-geplaatste chip; anders naar de statusregel.
+                  requestAnimationFrame(() => {
+                    const chips = chipsRef.current?.querySelectorAll<HTMLButtonElement>('button') ?? [];
+                    const chip = chips[Math.min(Math.max(idx, 0), chips.length - 1)];
+                    if (chip) chip.focus();
+                    else statusRef.current?.focus();
+                  });
                 }}
               >
                 {name}{selectedItem ? ' ⬇' : ''}
@@ -395,6 +437,7 @@ function SortAnswer({ q, value, onChange, review }: AnswerProps<SortQuestion>) {
                       delete next[it.id];
                       onChange(next);
                       setSelected(it.id); // meteen klaar om opnieuw te plaatsen
+                      setStatus(`"${it.text}" geselecteerd — klik nu een categorie.`);
                     }}
                   >
                     {it.text} <span aria-hidden>✕</span>
@@ -412,7 +455,7 @@ function SortAnswer({ q, value, onChange, review }: AnswerProps<SortQuestion>) {
 function gradeSort(q: SortQuestion, answer: unknown): ItemScore {
   const max = q.points;
   const n = q.items.length;
-  if (n === 0) return { earned: 0, max, mode: 'auto' };
+  if (n === 0) return { earned: 0, max: 0, mode: 'auto' }; // geen items = niets te verdienen
   const placed = (answer && typeof answer === 'object' && !Array.isArray(answer) ? answer : {}) as Record<string, string>;
   let good = 0;
   for (const it of q.items) if (placed[it.id] === it.categoryId) good++; // onbeplaatst = fout
@@ -452,8 +495,14 @@ const sort: ExtraQType<SortQuestion> = {
 
 type PointMarker = { x: number; y: number };
 
-/** Cirkelzone als overlay (x/y/r in % van de afbeeldingsbreedte). */
-function ZoneCircle({
+/**
+ * Zone als overlay — exact dezelfde meetkunde als matchMarkers: x/r in % van de
+ * breedte, y in % van de hoogte, en de hoogte eveneens r·2% van de container-
+ * hoogte. In pixels is dat (bij niet-vierkante afbeeldingen) een ellips, zodat
+ * wat de gebruiker ziet precies het geaccepteerde gebied is.
+ * Ook gebruikt door ResultsPage.
+ */
+export function ZoneCircle({
   x, y, r, color, dashed, fill, children,
 }: {
   x: number; y: number; r: number; color: string; dashed?: boolean; fill?: boolean; children?: React.ReactNode;
@@ -463,7 +512,7 @@ function ZoneCircle({
       aria-hidden
       style={{
         position: 'absolute', left: `${x}%`, top: `${y}%`,
-        width: `${r * 2}%`, aspectRatio: '1',
+        width: `${r * 2}%`, height: `${r * 2}%`,
         transform: 'translate(-50%, -50%)', borderRadius: '50%',
         border: `2.5px ${dashed ? 'dashed' : 'solid'} ${color}`,
         background: fill ? `color-mix(in srgb, ${color} 22%, transparent)` : 'transparent',
@@ -497,9 +546,11 @@ function MarkerDot({ x, y, n, color }: { x: number; y: number; n: number; color:
 
 /**
  * Gulzige koppeling: elke marker (in klikvolgorde) claimt de dichtstbijzijnde
- * nog vrije zone binnen haar straal. Eén marker per zone.
+ * nog vrije zone binnen haar straal. Eén marker per zone. Afstanden in
+ * gemengde %-ruimte (x % van breedte, y % van hoogte) — ZoneCircle tekent
+ * exact diezelfde meetkunde. Ook gebruikt door ResultsPage.
  */
-function matchMarkers(targets: ImagePointQuestion['targets'], markers: PointMarker[]) {
+export function matchMarkers(targets: ImagePointQuestion['targets'], markers: PointMarker[]) {
   const claimed = new Map<string, number>(); // zone-id → markerindex
   const markerHit: (string | null)[] = markers.map(() => null);
   markers.forEach((m, mi) => {
@@ -522,9 +573,20 @@ function zoneLabel(t: ImagePointQuestion['targets'][number], i: number): string 
 }
 
 function ImagePointEditor({ q, onChange }: { q: ImagePointQuestion; onChange: (q: ImagePointQuestion) => void }) {
+  const zoneListRef = useRef<HTMLDivElement>(null);
+  const imageBtnRef = useRef<HTMLButtonElement>(null);
+
   /** Zones vervangen; maxClicks volgt automatisch het aantal zones. */
   const setTargets = (targets: ImagePointQuestion['targets']) =>
     onChange({ ...q, targets, maxClicks: Math.max(1, targets.length) });
+
+  /** Zone i met dx/dy (in %) verplaatsen, geklemd op 0–100. */
+  const nudgeZone = (i: number, dx: number, dy: number) => {
+    const targets = q.targets.slice();
+    const t = targets[i];
+    targets[i] = { ...t, x: round2(clamp(t.x + dx, 0, 100)), y: round2(clamp(t.y + dy, 0, 100)) };
+    onChange({ ...q, targets });
+  };
 
   return (
     <div>
@@ -533,9 +595,11 @@ function ImagePointEditor({ q, onChange }: { q: ImagePointQuestion; onChange: (q
       {q.image && (
         <>
           <p className="hint">
-            Klik op de afbeelding om een zone toe te voegen (met het toetsenbord komt de zone in het midden).
+            Klik op de afbeelding om een zone toe te voegen (met het toetsenbord komt de zone in het midden;
+            verplaats ze daarna met de pijlknoppen in de lijst).
           </p>
           <button
+            ref={imageBtnRef}
             type="button"
             aria-label="Zone toevoegen op de afbeelding"
             style={{
@@ -553,7 +617,7 @@ function ImagePointEditor({ q, onChange }: { q: ImagePointQuestion; onChange: (q
               <ZoneCircle key={t.id} x={t.x} y={t.y} r={t.r} color="var(--brand)" fill>{i + 1}</ZoneCircle>
             ))}
           </button>
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 8 }} ref={zoneListRef}>
             {q.targets.map((t, i) => (
               <div className="option-row" key={t.id}>
                 <span className="badge badge-brand">{i + 1}</span>
@@ -583,8 +647,31 @@ function ImagePointEditor({ q, onChange }: { q: ImagePointQuestion; onChange: (q
                 </label>
                 <button
                   className="btn btn-quiet btn-icon btn-sm"
+                  aria-label={`Zone ${i + 1} naar links`}
+                  onClick={() => nudgeZone(i, -2, 0)}
+                >◀</button>
+                <button
+                  className="btn btn-quiet btn-icon btn-sm"
+                  aria-label={`Zone ${i + 1} naar boven`}
+                  onClick={() => nudgeZone(i, 0, -2)}
+                >▲</button>
+                <button
+                  className="btn btn-quiet btn-icon btn-sm"
+                  aria-label={`Zone ${i + 1} naar onder`}
+                  onClick={() => nudgeZone(i, 0, 2)}
+                >▼</button>
+                <button
+                  className="btn btn-quiet btn-icon btn-sm"
+                  aria-label={`Zone ${i + 1} naar rechts`}
+                  onClick={() => nudgeZone(i, 2, 0)}
+                >▶</button>
+                <button
+                  className="btn btn-quiet btn-icon btn-sm"
                   aria-label={`Zone ${i + 1} verwijderen`}
-                  onClick={() => setTargets(q.targets.filter((_, j) => j !== i))}
+                  onClick={() => {
+                    setTargets(q.targets.filter((_, j) => j !== i));
+                    refocusAfterRemove(zoneListRef.current, i, imageBtnRef.current);
+                  }}
                 >✕</button>
               </div>
             ))}
@@ -651,10 +738,20 @@ function ImagePointAnswer({ q, value, onChange, review }: AnswerProps<ImagePoint
     );
   }
 
+  /** Markering i met dx/dy (in %) verplaatsen, geklemd op 0–100. */
+  const nudgeMarker = (i: number, dx: number, dy: number) => {
+    const m = markers[i];
+    const next = markers.slice();
+    next[i] = { x: round2(clamp(m.x + dx, 0, 100)), y: round2(clamp(m.y + dy, 0, 100)) };
+    onChange(next);
+    setStatus(`Markering ${i + 1}: x ${Math.round(next[i].x)}%, y ${Math.round(next[i].y)}%.`);
+  };
+
   return (
     <div>
       <p className="hint">
         Klik op de afbeelding om een markering te zetten (maximaal {maxClicks}; daarna vervangt een nieuwe klik de oudste).
+        Met het toetsenbord komt de markering in het midden; verplaats ze daarna met de pijlknoppen in de lijst.
       </p>
       <button
         type="button"
@@ -665,14 +762,18 @@ function ImagePointAnswer({ q, value, onChange, review }: AnswerProps<ImagePoint
           cursor: 'crosshair', position: 'relative',
         }}
         onClick={(e) => {
-          const p = relPos(e) ?? { x: 50, y: 50 };
-          let next = [...markers, p];
+          const p = relPos(e);
+          let next = [...markers, p ?? { x: 50, y: 50 }];
+          let msg: string;
           if (next.length > maxClicks) {
             next = next.slice(next.length - maxClicks); // oudste vervalt
-            setStatus(`Maximum van ${maxClicks} bereikt: de oudste markering is vervangen.`);
+            msg = `Maximum van ${maxClicks} bereikt: de oudste markering is vervangen.`;
           } else {
-            setStatus(`Markering ${next.length} geplaatst.`);
+            msg = `Markering ${next.length} geplaatst.`;
           }
+          // Toetsenbordactivatie: geen muiscoördinaten, dus midden + uitleg.
+          if (!p) msg = 'Markering geplaatst in het midden — verplaats hem met de pijlknoppen in de lijst.';
+          setStatus(msg);
           onChange(next);
         }}
       >
@@ -695,6 +796,26 @@ function ImagePointAnswer({ q, value, onChange, review }: AnswerProps<ImagePoint
                 </span>
                 <button
                   className="btn btn-quiet btn-icon btn-sm"
+                  aria-label={`Markering ${i + 1} naar links`}
+                  onClick={() => nudgeMarker(i, -2, 0)}
+                >◀</button>
+                <button
+                  className="btn btn-quiet btn-icon btn-sm"
+                  aria-label={`Markering ${i + 1} naar boven`}
+                  onClick={() => nudgeMarker(i, 0, -2)}
+                >▲</button>
+                <button
+                  className="btn btn-quiet btn-icon btn-sm"
+                  aria-label={`Markering ${i + 1} naar onder`}
+                  onClick={() => nudgeMarker(i, 0, 2)}
+                >▼</button>
+                <button
+                  className="btn btn-quiet btn-icon btn-sm"
+                  aria-label={`Markering ${i + 1} naar rechts`}
+                  onClick={() => nudgeMarker(i, 2, 0)}
+                >▶</button>
+                <button
+                  className="btn btn-quiet btn-icon btn-sm"
                   aria-label={`Markering ${i + 1} verwijderen`}
                   onClick={() => {
                     onChange(markers.filter((_, j) => j !== i));
@@ -714,7 +835,7 @@ function ImagePointAnswer({ q, value, onChange, review }: AnswerProps<ImagePoint
 function gradeImagePoint(q: ImagePointQuestion, answer: unknown): ItemScore {
   const max = q.points;
   const n = q.targets.length;
-  if (n === 0) return { earned: 0, max, mode: 'auto' };
+  if (n === 0) return { earned: 0, max: 0, mode: 'auto' }; // geen zones = niets te verdienen
   const markers: PointMarker[] = Array.isArray(answer)
     ? (answer as unknown[]).filter((m): m is PointMarker =>
         !!m && typeof m === 'object' && typeof (m as PointMarker).x === 'number' && typeof (m as PointMarker).y === 'number')
@@ -893,6 +1014,17 @@ function TableEditor({ q, onChange }: { q: TableQuestion; onChange: (q: TableQue
   );
 }
 
+/** "Brussel|Bruxelles" → alternatieven voor één invulcel (getrimd, lege eruit). */
+function answerAlts(ans: string, caseSensitive: boolean): string[] {
+  return ans.split('|').map((s) => s.trim()).filter((s) => normalizeAnswer(s, caseSensitive) !== '');
+}
+
+/** Zelfde vergelijking als gradeTable: elk |-alternatief telt als juist. */
+function matchesTableAnswer(v: string, ans: string, caseSensitive: boolean): boolean {
+  const nv = normalizeAnswer(v, caseSensitive);
+  return answerAlts(ans, caseSensitive).some((a) => normalizeAnswer(a, caseSensitive) === nv);
+}
+
 const thAnswerStyle: React.CSSProperties = {
   border: '1px solid var(--line)', padding: '8px 10px', textAlign: 'left',
   background: 'var(--bg-sunken)', fontSize: '0.88rem',
@@ -920,7 +1052,7 @@ function TableAnswer({ q, value, onChange, review }: AnswerProps<TableQuestion>)
                 const ans = row.answers[ci] ?? null;
                 if (ans === null) return <td key={ci} style={tdAnswerStyle}>{row.cells[ci] ?? ''}</td>;
                 const v = given[row.id]?.[ci] ?? '';
-                const ok = normalizeAnswer(v, q.caseSensitive) === normalizeAnswer(ans, q.caseSensitive);
+                const ok = matchesTableAnswer(v, ans, q.caseSensitive);
                 return (
                   <td key={ci} style={tdAnswerStyle}>
                     <input
@@ -941,7 +1073,7 @@ function TableAnswer({ q, value, onChange, review }: AnswerProps<TableQuestion>)
                     />
                     {review && (
                       <div style={{ fontSize: '0.8rem', fontWeight: 700, marginTop: 3, color: ok ? 'var(--ok)' : 'var(--err)' }}>
-                        {ok ? '✓ juist' : <>✗ <span style={{ color: 'var(--ok)' }}>juist: {ans}</span></>}
+                        {ok ? '✓ juist' : <>✗ <span style={{ color: 'var(--ok)' }}>juist: {answerAlts(ans, q.caseSensitive).join(' / ')}</span></>}
                       </div>
                     )}
                   </td>
@@ -963,15 +1095,14 @@ function gradeTable(q: TableQuestion, answer: unknown): ItemScore {
       if (a !== null && a !== undefined) cells.push({ rowId: r.id, ci, ans: a });
     });
   }
-  if (cells.length === 0) return { earned: 0, max, mode: 'auto' };
+  if (cells.length === 0) return { earned: 0, max: 0, mode: 'auto' }; // geen invulcellen = niets te verdienen
   const given = (answer && typeof answer === 'object' && !Array.isArray(answer) ? answer : {}) as
     Record<string, Record<number, string>>;
   let good = 0;
   for (const c of cells) {
     const v = given[c.rowId]?.[c.ci];
     // "Brussel|Bruxelles" = alternatieven; elk ervan telt als juist.
-    const alts = c.ans.split('|').map((s) => normalizeAnswer(s.trim(), q.caseSensitive)).filter(Boolean);
-    if (typeof v === 'string' && alts.includes(normalizeAnswer(v, q.caseSensitive))) good++;
+    if (typeof v === 'string' && matchesTableAnswer(v, c.ans, q.caseSensitive)) good++;
   }
   return { earned: round2((good / cells.length) * max), max, mode: 'auto' };
 }

@@ -10,7 +10,8 @@ import { gradeQuestion } from '../lib/grading';
 import { decodeSubmission } from '../lib/share';
 import { uid } from '../lib/utils';
 import { askAI, hasAIKey } from '../lib/ai';
-import { markTokens as playerMarkTokens } from '../widgets/qtypes/interactTypes';
+import { markTokens as playerMarkTokens, matchMarkers, ZoneCircle } from '../widgets/qtypes/interactTypes';
+import { getStudentFile } from '../lib/pdfStore';
 
 // widgets met een QuizConfig-achtige 'questions'-lijst → volledige beoordelings-UI
 const QUIZ_FAMILY = new Set(['quiz', 'worksheet', 'exitticket', 'splitworksheet']);
@@ -277,8 +278,9 @@ function formatAnswer(q: Question, answer: unknown): string {
       const parts: string[] = [];
       for (const row of q.rows ?? []) {
         const rowAns = asRecord(r[row.id]);
-        (row.cells ?? []).forEach((cell, ci) => {
-          if (cell !== '') return; // alleen invulcellen
+        (row.cells ?? []).forEach((_cell, ci) => {
+          // invulcel = er is een verwacht antwoord ingesteld; een lege vaste cel telt niet mee
+          if (row.answers?.[ci] === null || row.answers?.[ci] === undefined) return;
           parts.push(String(rowAns?.[String(ci)] ?? '—'));
         });
       }
@@ -304,15 +306,61 @@ function formatBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/** Upload-antwoord veilig uitlezen ({name,size,dataUrl}). */
-function uploadAnswer(v: unknown): { name: string; size: number | null; dataUrl: string | null } | null {
+/** Upload-antwoord veilig uitlezen ({name,size,fileId} of legacy {name,size,dataUrl}). */
+function uploadAnswer(v: unknown): { name: string; size: number | null; dataUrl: string | null; fileId: string | null } | null {
   const r = asRecord(v);
   if (!r || typeof r.name !== 'string') return null;
   return {
     name: r.name,
     size: typeof r.size === 'number' ? r.size : null,
     dataUrl: typeof r.dataUrl === 'string' && r.dataUrl.startsWith('data:') ? r.dataUrl : null,
+    fileId: typeof r.fileId === 'string' && r.fileId !== '' ? r.fileId : null,
   };
+}
+
+/**
+ * Downloadregel voor een ingeleverd bestand (detailmodal + nakijkcockpit).
+ * Legacy-antwoorden linken direct naar de dataUrl; nieuwe antwoorden halen de
+ * blob async uit IndexedDB (object-URL, opgeruimd bij unmount). Staat de blob
+ * niet op dit toestel (bv. inzending via resultaatcode), dan zeggen we dat.
+ */
+function UploadAnswerLine({ ans }: { ans: unknown }) {
+  const f = uploadAnswer(ans);
+  const fileId = f && !f.dataUrl ? f.fileId : null;
+  const [objUrl, setObjUrl] = useState<string | null>(null);
+  const [missing, setMissing] = useState(false);
+  React.useEffect(() => {
+    setObjUrl(null);
+    setMissing(false);
+    if (!fileId) return;
+    let cancelled = false;
+    let url: string | null = null;
+    getStudentFile(fileId).then((rec) => {
+      if (cancelled) return;
+      if (!rec) { setMissing(true); return; }
+      url = URL.createObjectURL(rec.blob);
+      setObjUrl(url);
+    });
+    return () => {
+      cancelled = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [fileId]);
+
+  if (!f) return <em className="hint">(geen bestand ingeleverd)</em>;
+  const href = f.dataUrl ?? objUrl;
+  const notFound = missing || (!f.dataUrl && !f.fileId);
+  return (
+    <p style={{ margin: 0 }}>
+      📎 <strong>{f.name}</strong>
+      {f.size !== null && <span className="hint"> ({formatBytes(f.size)})</span>}
+      {href
+        ? <> · <a href={href} download={f.name}>⬇ Bestand downloaden</a></>
+        : notFound
+          ? <span className="hint"> — het bestand staat op het toestel van de leerling (kwam deze inzending via een resultaatcode?)</span>
+          : <span className="hint"> · bestand laden…</span>}
+    </p>
+  );
 }
 
 /** Dropdown-tekst splitsen: "De {Brussel|Gent} …" → tekst- en gat-segmenten (eerste optie = juist). */
@@ -402,19 +450,8 @@ function ExtraAnswerView({ q, ans }: { q: Question; ans: unknown }) {
         </div>
       );
     }
-    case 'upload': {
-      const f = uploadAnswer(ans);
-      if (!f) return <em className="hint">(geen bestand ingeleverd)</em>;
-      return (
-        <p style={{ margin: 0 }}>
-          📎 <strong>{f.name}</strong>
-          {f.size !== null && <span className="hint"> · {formatBytes(f.size)}</span>}
-          {f.dataUrl
-            ? <> · <a href={f.dataUrl} download={f.name}>⬇ Bestand downloaden</a></>
-            : <span className="hint"> · (bestandsinhoud niet beschikbaar)</span>}
-        </p>
-      );
-    }
+    case 'upload':
+      return <UploadAnswerLine ans={ans} />;
     case 'marktext': {
       const tokens = markTokens(q.text ?? '');
       const marked = Array.isArray(ans) ? (ans as unknown[]).filter((n): n is number => typeof n === 'number') : [];
@@ -465,9 +502,9 @@ function ExtraAnswerView({ q, ans }: { q: Question; ans: unknown }) {
             typeof (p as { x?: unknown }).x === 'number' && typeof (p as { y?: unknown }).y === 'number')
         : [];
       const targets = q.targets ?? [];
-      const hitBy = (t: { x: number; y: number; r: number }) =>
-        clicks.some((c) => Math.hypot(c.x - t.x, c.y - t.y) <= (t.r ?? 0));
-      const hits = targets.filter(hitBy).length;
+      // zelfde greedy zone-matching als de grader: één klik claimt hoogstens één zone
+      const { claimed, markerHit } = matchMarkers(targets, clicks);
+      const hits = claimed.size;
       return (
         <div>
           <p style={{ margin: '0 0 4px' }}>
@@ -480,15 +517,10 @@ function ExtraAnswerView({ q, ans }: { q: Question; ans: unknown }) {
             <span style={{ position: 'relative', display: 'inline-block', maxWidth: 280 }}>
               <img src={q.image} alt="" style={{ display: 'block', maxWidth: '100%', borderRadius: 8, border: '1px solid var(--line)' }} />
               {targets.map((t, i) => (
-                <span key={t.id ?? i} title={t.label} style={{
-                  position: 'absolute', left: `${t.x}%`, top: `${t.y}%`,
-                  width: `${Math.max(4, (t.r ?? 4) * 2)}%`, aspectRatio: '1 / 1',
-                  transform: 'translate(-50%, -50%)',
-                  border: '2px dashed var(--ok)', borderRadius: '50%', opacity: 0.9,
-                }} />
+                <ZoneCircle key={t.id ?? i} x={t.x} y={t.y} r={t.r} color="var(--ok)" dashed />
               ))}
               {clicks.map((c, i) => {
-                const ok = targets.some((t) => Math.hypot(c.x - t.x, c.y - t.y) <= (t.r ?? 0));
+                const ok = markerHit[i] !== null;
                 return (
                   <span key={i} style={{
                     position: 'absolute', left: `${c.x}%`, top: `${c.y}%`,
@@ -526,8 +558,9 @@ function ExtraAnswerView({ q, ans }: { q: Question; ans: unknown }) {
                 return (
                   <tr key={row.id ?? ri}>
                     {(row.cells ?? []).map((cell, ci) => {
-                      if (cell !== '') return <td key={ci} style={cellStyle}>{cell}</td>;
-                      const accepted = row.answers?.[ci] ?? '';
+                      const accepted = row.answers?.[ci];
+                      // vaste cel (ook een lege): geen verwacht antwoord ingesteld
+                      if (accepted === null || accepted === undefined) return <td key={ci} style={cellStyle}>{cell}</td>;
                       const given = typeof rowAns?.[String(ci)] === 'string' ? (rowAns[String(ci)] as string) : '';
                       const ok = isOk(accepted, given);
                       return (

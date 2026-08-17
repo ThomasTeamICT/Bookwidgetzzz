@@ -6,7 +6,7 @@ import type {
   Course, CourseBlock, CourseBlockType, CourseChapter, CourseProgress,
   CourseSection, SectionProgress,
 } from './courseTypes';
-import { referencedPdfIds, referencedWidgetIds } from './courseTypes';
+import { allSections, referencedPdfIds, referencedWidgetIds } from './courseTypes';
 import { deletePdf } from './pdfStore';
 import { makeCode, uid } from './utils';
 import { getWidget, getWidgets, notifyChange, saveWidget } from './storage';
@@ -91,6 +91,32 @@ function cleanupCoursePdfs(course: Course) {
     // fire-and-forget: opruimen mag het verwijderen nooit blokkeren
     if (!inUse.has(pid)) void deletePdf(pid);
   }
+}
+
+/**
+ * Aantal verwijzingen naar dit pdfId over álle cursussen én álle widgets met
+ * een pdf-bron (config.source.pdfId). Elk blok telt apart mee: dupliceren
+ * (van een blok, cursus of widget) kopieert bewust dezelfde verwijzing, dus
+ * hetzelfde id kan op meerdere plaatsen voorkomen. Editors gebruiken dit bij
+ * "Vervangen"/"Verwijderen": de blob mag pas uit IndexedDB weg als de eigen
+ * verwijzing de laatste is (teller ≤ 1).
+ */
+export function pdfReferenceCount(pdfId: string): number {
+  if (!pdfId) return 0;
+  let count = 0;
+  for (const course of getCourses()) {
+    for (const { section } of allSections(course)) {
+      for (const b of section.blocks) {
+        if (b.type === 'pdf' && b.pdfId === pdfId) count++;
+      }
+    }
+  }
+  // Widgets kunnen ook een pdf als bron hebben (bv. splitwidgets: source.pdfId).
+  for (const w of getWidgets()) {
+    const src = (w.config as unknown as { source?: unknown }).source;
+    if (src && typeof src === 'object' && (src as Record<string, unknown>).pdfId === pdfId) count++;
+  }
+  return count;
 }
 
 export function createCourse(title: string, author = ''): Course {
