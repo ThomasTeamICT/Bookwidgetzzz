@@ -12,6 +12,7 @@ import { clearProgress, loadProgress, saveProgress } from '../lib/autosave';
 import { getWidgets } from '../lib/storage';
 import { loadA11y } from '../components/A11yMenu';
 import type { Widget } from '../lib/types';
+import { EXTRA_QTYPES, extraQType } from './qtypes';
 
 // ── Voorlezen (tekst-naar-spraak) met meeleesmarkering ──────────────────────
 
@@ -28,6 +29,8 @@ function speakQuestion(q: Question, onWord?: (range: [number, number] | null) =>
   if (q.type === 'mc' || q.type === 'multi') {
     q.options.forEach((o, i) => rest.push(`Optie ${String.fromCharCode(65 + i)}: ${o}`));
   }
+  const extraTts = extraQType(q.type)?.tts;
+  if (extraTts) rest.push(...extraTts(q));
   if (q.type === 'tf') rest.push('Juist, of onjuist?');
   if (q.type === 'order') rest.push(...q.items);
 
@@ -211,10 +214,14 @@ export const QUESTION_TYPES: { type: QuestionType; name: string; icon: string; d
   { type: 'number', name: 'Getal', icon: '🔢', desc: 'Numeriek antwoord met tolerantie' },
   { type: 'slider', name: 'Schuiver', icon: '🎚️', desc: 'Waarde op een schaal kiezen' },
   { type: 'info', name: 'Infoblok', icon: 'ℹ️', desc: 'Tekst of afbeelding zonder vraag' },
+  // uitgebreide types uit src/widgets/qtypes/
+  ...Object.values(EXTRA_QTYPES).map((t) => ({ type: t.type, name: t.name, icon: t.icon, desc: t.desc })),
 ];
 
 export function makeQuestion(type: QuestionType): Question {
   const base = { id: uid(), prompt: '', points: 1, explanation: '' };
+  const extra = extraQType(type);
+  if (extra) return { explanation: '', ...extra.make(base) };
   switch (type) {
     case 'mc': return { ...base, type, options: ['', ''], correctIndex: 0 };
     case 'multi': return { ...base, type, options: ['', '', ''], correctIndices: [] };
@@ -227,6 +234,7 @@ export function makeQuestion(type: QuestionType): Question {
     case 'number': return { ...base, type, answer: 0, tolerance: 0 };
     case 'slider': return { ...base, type, min: 0, max: 100, step: 1, answer: 50, tolerance: 0 };
     case 'info': return { ...base, type, points: 0 };
+    default: throw new Error('Onbekend vraagtype: ' + type);
   }
 }
 
@@ -466,6 +474,11 @@ function QuestionBodyEditor({ q, onChange }: { q: Question; onChange: (q: Questi
       );
     case 'info':
       return <p className="hint">Een infoblok toont alleen de tekst/afbeelding hierboven. Handig voor instructies of een leestekst.</p>;
+    default: {
+      const extra = extraQType(q.type);
+      if (extra) { const E = extra.Editor; return <E q={q} onChange={onChange} />; }
+      return null;
+    }
   }
 }
 
@@ -1525,6 +1538,12 @@ export function QuestionView({
       {q.type === 'order' && <OrderAnswer q={q} value={value} onChange={onChange} review={review} />}
       {q.type === 'number' && <NumberAnswer q={q} value={value} onChange={onChange} review={review} />}
       {q.type === 'slider' && <SliderAnswer q={q} value={value} onChange={onChange} review={review} />}
+      {(() => {
+        const extra = extraQType(q.type);
+        if (!extra) return null;
+        const A = extra.Answer;
+        return <A q={q} value={value} onChange={onChange} review={review} />;
+      })()}
       {!review && hints.length > 0 && q.type !== 'info' && (
         <div style={{ marginTop: 12 }}>
           {hints.slice(0, hintLevel).map((h, i) => (

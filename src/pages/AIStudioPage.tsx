@@ -10,6 +10,7 @@ import { askAI, extractJson } from '../lib/ai';
 import { AI_GEN_TYPES, buildWidgetGenPrompt, sanitizeGeneratedWidgets } from '../lib/aiWidgetGen';
 import type { GeneratedResult } from '../lib/aiWidgetGen';
 import { AIErrorBox, AIGate, AIReviewNote, AIWorkingBox } from '../components/aiCommon';
+import { PdfImportButton } from '../components/PdfImportButton';
 import { CheckRow, Field, useToast } from '../components/ui';
 import { getFolders, saveFolder, saveWidget } from '../lib/storage';
 import { getTypeDef } from '../widgets/registry';
@@ -188,6 +189,11 @@ export function AIStudioPage() {
     reader.readAsText(f);
   }
 
+  function pastePdfText(text: string) {
+    if (source.trim().length > 200 && !window.confirm('Het bronveld bevat al tekst. Vervangen door de tekst uit de pdf?')) return;
+    setSource(text);
+  }
+
   function generate() {
     if (!canGenerate || phase === 'busy') return;
     const ctrl = new AbortController();
@@ -313,6 +319,7 @@ export function AIStudioPage() {
                   <button type="button" className="btn btn-sm btn-ghost" onClick={() => fileRef.current?.click()}>
                     📄 Bestand laden (.txt/.md)
                   </button>
+                  <PdfImportButton onText={pastePdfText} />
                   <input
                     ref={fileRef}
                     type="file"
@@ -334,6 +341,9 @@ export function AIStudioPage() {
                     {sourceTooLong && ' — ⚠️ erg lang: knip in kleinere stukken voor een beter resultaat'}
                   </span>
                 </div>
+                <span className="hint">
+                  Werkt met tekst-pdf's; een gescande pdf (foto's) bevat geen leesbare tekst.
+                </span>
               </Field>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0 14px' }}>

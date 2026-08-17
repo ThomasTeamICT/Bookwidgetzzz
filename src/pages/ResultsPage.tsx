@@ -2,14 +2,15 @@ import React, { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { deleteSubmission, getLiveEntries, getSubmissions, getWidget, onStorageChange, saveSubmission } from '../lib/storage';
 import { getTypeDef } from '../widgets/registry';
-import type { LongAnswerValue, Question, QuizConfig, SplitWorksheetConfig, Submission, Widget } from '../lib/types';
+import type { LongAnswerValue, LongQuestion, Question, QuizConfig, SplitWorksheetConfig, Submission, UploadQuestion, Widget } from '../lib/types';
 import type { PdfHighlight } from '../components/pdf/PdfViewer';
-import { csvCell, downloadFile, formatDate, formatDuration, pct } from '../lib/utils';
+import { csvCell, downloadFile, formatDate, formatDuration, normalizeAnswer, pct } from '../lib/utils';
 import { ConfirmModal, EmptyState, Modal, ScoreRing, useToast } from '../components/ui';
 import { gradeQuestion } from '../lib/grading';
 import { decodeSubmission } from '../lib/share';
 import { uid } from '../lib/utils';
 import { askAI, hasAIKey } from '../lib/ai';
+import { markTokens as playerMarkTokens } from '../widgets/qtypes/interactTypes';
 
 // widgets met een QuizConfig-achtige 'questions'-lijst → volledige beoordelings-UI
 const QUIZ_FAMILY = new Set(['quiz', 'worksheet', 'exitticket', 'splitworksheet']);
@@ -133,7 +134,7 @@ export function ResultsPage() {
           <button className={`btn btn-sm ${tab === 'questions' ? 'btn-primary' : 'btn-ghost'}`} role="tab" aria-selected={tab === 'questions'} onClick={() => setTab('questions')}>
             ❓ Per vraag
           </button>
-          {(widget.config as QuizConfig).questions.some((q) => q.type === 'long') && (
+          {(widget.config as QuizConfig).questions.some((q) => q.type === 'long' || q.type === 'upload') && (
             <button className={`btn btn-sm ${tab === 'grade' ? 'btn-primary' : 'btn-ghost'}`} role="tab" aria-selected={tab === 'grade'} onClick={() => setTab('grade')}>
               ✍️ Nakijken {subs.filter((s) => s.status === 'submitted').length > 0 && `(${subs.filter((s) => s.status === 'submitted').length})`}
             </button>
@@ -230,7 +231,322 @@ function formatAnswer(q: Question, answer: unknown): string {
     }
     case 'order': return Array.isArray(answer) ? (answer as number[]).map((i) => q.items[i]).join(' → ') : '—';
     case 'gap': return Array.isArray(answer) ? (answer as string[]).join(' / ') : '—';
+    // ── uitgebreide vraagtypes ──
+    case 'dropdown': {
+      const r = asRecord(answer);
+      if (!r) return '—';
+      const gaps = splitBraces(q.text ?? '').filter((p) => p.type === 'gap');
+      return gaps.map((_, i) => String(r[String(i)] ?? '—')).join(' / ') || '—';
+    }
+    case 'rating': return typeof answer === 'number' ? `${answer}/${q.scale}` : '—';
+    case 'likert': {
+      const r = asRecord(answer);
+      if (!r) return '—';
+      return (q.statements ?? [])
+        .map((st) => `${st.text}: ${typeof r[st.id] === 'number' ? (q.options ?? [])[r[st.id] as number] ?? '?' : '—'}`)
+        .join('; ') || '—';
+    }
+    case 'upload': {
+      const f = uploadAnswer(answer);
+      return f ? `📎 ${f.name}${f.size !== null ? ` (${formatBytes(f.size)})` : ''}` : '—';
+    }
+    case 'marktext': {
+      if (!Array.isArray(answer)) return '—';
+      const tokens = markTokens(q.text ?? '');
+      const words = (answer as unknown[])
+        .filter((i): i is number => typeof i === 'number')
+        .map((i) => tokens[i]?.word ?? '?');
+      return words.length > 0 ? words.join(', ') : '(niets gemarkeerd)';
+    }
+    case 'sort': {
+      const r = asRecord(answer);
+      if (!r) return '—';
+      const catName = (id: unknown) => (q.categories ?? []).find((c) => c.id === id)?.name ?? '?';
+      return (q.items ?? [])
+        .map((it) => `${it.text} → ${it.id in r ? catName(r[it.id]) : '—'}`)
+        .join('; ') || '—';
+    }
+    case 'imagepoint': {
+      if (!Array.isArray(answer)) return '—';
+      const n = (answer as unknown[]).length;
+      return `${n} ${n === 1 ? 'klik' : 'klikken'}`;
+    }
+    case 'table': {
+      const r = asRecord(answer);
+      if (!r) return '—';
+      const parts: string[] = [];
+      for (const row of q.rows ?? []) {
+        const rowAns = asRecord(r[row.id]);
+        (row.cells ?? []).forEach((cell, ci) => {
+          if (cell !== '') return; // alleen invulcellen
+          parts.push(String(rowAns?.[String(ci)] ?? '—'));
+        });
+      }
+      return parts.join(' / ') || '—';
+    }
     default: return String(answer);
+  }
+}
+
+// ── Hulpjes + detailweergave voor de uitgebreide vraagtypes ─────────────────
+
+/** Nieuwe vraagtypes met een eigen rijke weergave in het inzendingsdetail. */
+const RICH_TYPES = new Set<Question['type']>(['dropdown', 'rating', 'likert', 'upload', 'marktext', 'sort', 'imagepoint', 'table']);
+
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return v !== null && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+}
+
+function formatBytes(n: number): string {
+  if (!Number.isFinite(n) || n < 0) return '';
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} kB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Upload-antwoord veilig uitlezen ({name,size,dataUrl}). */
+function uploadAnswer(v: unknown): { name: string; size: number | null; dataUrl: string | null } | null {
+  const r = asRecord(v);
+  if (!r || typeof r.name !== 'string') return null;
+  return {
+    name: r.name,
+    size: typeof r.size === 'number' ? r.size : null,
+    dataUrl: typeof r.dataUrl === 'string' && r.dataUrl.startsWith('data:') ? r.dataUrl : null,
+  };
+}
+
+/** Dropdown-tekst splitsen: "De {Brussel|Gent} …" → tekst- en gat-segmenten (eerste optie = juist). */
+function splitBraces(text: string): ({ type: 'text'; value: string } | { type: 'gap'; options: string[] })[] {
+  const out: ({ type: 'text'; value: string } | { type: 'gap'; options: string[] })[] = [];
+  const re = /\{([^}]+)\}/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    if (m.index > last) out.push({ type: 'text', value: text.slice(last, m.index) });
+    out.push({ type: 'gap', options: m[1].split('|').map((s) => s.trim()).filter(Boolean) });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push({ type: 'text', value: text.slice(last) });
+  return out;
+}
+
+/** Markeertekst opdelen in woord-tokens; woorden tussen [haken] zijn de doelwoorden. */
+// Zelfde tokenizer als de speler (qtypes) — identieke woordindexen gegarandeerd.
+function markTokens(text: string): { word: string; correct: boolean }[] {
+  return playerMarkTokens(text).map((t) => ({ word: t.text, correct: t.correct }));
+}
+
+const CHIP_BASE: React.CSSProperties = {
+  display: 'inline-block', padding: '1px 9px', borderRadius: 999,
+  fontWeight: 600, fontSize: '0.85rem', margin: '2px 6px 2px 0',
+};
+const OK_CHIP: React.CSSProperties = { ...CHIP_BASE, background: 'var(--ok-soft)', color: 'var(--ok)' };
+const ERR_CHIP: React.CSSProperties = { ...CHIP_BASE, background: 'var(--err-soft)', color: 'var(--err)' };
+
+/** Nette weergave van de antwoordvormen van de uitgebreide vraagtypes (detailmodal + cockpit). */
+function ExtraAnswerView({ q, ans }: { q: Question; ans: unknown }) {
+  switch (q.type) {
+    case 'dropdown': {
+      const r = asRecord(ans);
+      const gaps = splitBraces(q.text ?? '').filter((p): p is { type: 'gap'; options: string[] } => p.type === 'gap');
+      if (gaps.length === 0) return <em className="hint">—</em>;
+      return (
+        <div>
+          {gaps.map((g, i) => {
+            const raw = r?.[String(i)];
+            const chosen = typeof raw === 'string' ? raw : null;
+            const correct = g.options[0] ?? '';
+            const ok = chosen !== null && chosen === correct;
+            return (
+              <p key={i} style={{ margin: '2px 0' }}>
+                <span className="hint">gat {i + 1}:</span>{' '}
+                <span style={{ color: ok ? 'var(--ok)' : 'var(--err)', fontWeight: 600 }}>
+                  {ok ? '✓' : '✗'} {chosen ?? '(geen keuze)'}
+                </span>
+                {!ok && <span className="hint"> · juist: {correct}</span>}
+              </p>
+            );
+          })}
+        </div>
+      );
+    }
+    case 'rating': {
+      const scale = Math.max(1, Math.min(10, Math.round(q.scale) || 5));
+      const n = typeof ans === 'number' ? Math.max(0, Math.min(scale, Math.round(ans))) : null;
+      if (n === null) return <em className="hint">(geen beoordeling)</em>;
+      return (
+        <p style={{ margin: 0 }}>
+          <span style={{ color: 'var(--warn)', letterSpacing: 2 }}>{'★'.repeat(n)}{'☆'.repeat(scale - n)}</span>{' '}
+          <strong>{n}/{scale}</strong>
+        </p>
+      );
+    }
+    case 'likert': {
+      const r = asRecord(ans);
+      const sts = q.statements ?? [];
+      if (sts.length === 0) return <em className="hint">—</em>;
+      return (
+        <div>
+          {sts.map((st, i) => {
+            const raw = r?.[st.id];
+            const oi = typeof raw === 'number' ? raw : null;
+            return (
+              <p key={st.id ?? i} style={{ margin: '2px 0' }}>
+                {st.text}:{' '}
+                {oi === null
+                  ? <span className="hint">—</span>
+                  : <strong>{(q.options ?? [])[oi] ?? `optie ${oi + 1}`}</strong>}
+              </p>
+            );
+          })}
+        </div>
+      );
+    }
+    case 'upload': {
+      const f = uploadAnswer(ans);
+      if (!f) return <em className="hint">(geen bestand ingeleverd)</em>;
+      return (
+        <p style={{ margin: 0 }}>
+          📎 <strong>{f.name}</strong>
+          {f.size !== null && <span className="hint"> · {formatBytes(f.size)}</span>}
+          {f.dataUrl
+            ? <> · <a href={f.dataUrl} download={f.name}>⬇ Bestand downloaden</a></>
+            : <span className="hint"> · (bestandsinhoud niet beschikbaar)</span>}
+        </p>
+      );
+    }
+    case 'marktext': {
+      const tokens = markTokens(q.text ?? '');
+      const marked = Array.isArray(ans) ? (ans as unknown[]).filter((n): n is number => typeof n === 'number') : [];
+      const missed = tokens.filter((t, i) => t.correct && !marked.includes(i));
+      return (
+        <div>
+          {marked.length === 0
+            ? <em className="hint">(niets gemarkeerd)</em>
+            : marked.map((mi, k) => {
+                const t = tokens[mi];
+                const ok = !!t?.correct;
+                return <span key={k} style={ok ? OK_CHIP : ERR_CHIP}>{ok ? '✓' : '✗'} {t?.word ?? '?'}</span>;
+              })}
+          {missed.length > 0 && (
+            <p className="hint" style={{ margin: '4px 0 0' }}>gemist: {missed.map((t) => t.word).join(', ')}</p>
+          )}
+        </div>
+      );
+    }
+    case 'sort': {
+      const r = asRecord(ans);
+      const cats = q.categories ?? [];
+      const nameOf = (cid: unknown) => cats.find((c) => c.id === cid)?.name ?? '?';
+      const items = q.items ?? [];
+      if (items.length === 0) return <em className="hint">—</em>;
+      return (
+        <div>
+          {items.map((it, i) => {
+            const chosen = r?.[it.id];
+            const ok = chosen === it.categoryId;
+            return (
+              <p key={it.id ?? i} style={{ margin: '2px 0' }}>
+                {it.text}:{' '}
+                <span style={{ color: ok ? 'var(--ok)' : 'var(--err)', fontWeight: 600 }}>
+                  {ok ? '✓' : '✗'} {typeof chosen === 'string' ? nameOf(chosen) : '(niet geplaatst)'}
+                </span>
+                {!ok && <span className="hint"> · juist: {nameOf(it.categoryId)}</span>}
+              </p>
+            );
+          })}
+        </div>
+      );
+    }
+    case 'imagepoint': {
+      const clicks = Array.isArray(ans)
+        ? (ans as unknown[]).filter((p): p is { x: number; y: number } =>
+            p !== null && typeof p === 'object' &&
+            typeof (p as { x?: unknown }).x === 'number' && typeof (p as { y?: unknown }).y === 'number')
+        : [];
+      const targets = q.targets ?? [];
+      const hitBy = (t: { x: number; y: number; r: number }) =>
+        clicks.some((c) => Math.hypot(c.x - t.x, c.y - t.y) <= (t.r ?? 0));
+      const hits = targets.filter(hitBy).length;
+      return (
+        <div>
+          <p style={{ margin: '0 0 4px' }}>
+            <span style={{ fontWeight: 600, color: targets.length > 0 && hits === targets.length ? 'var(--ok)' : 'var(--text-soft)' }}>
+              {hits} van {targets.length} zones geraakt
+            </span>
+            <span className="hint"> · {clicks.length} {clicks.length === 1 ? 'klik' : 'klikken'}</span>
+          </p>
+          {q.image && (
+            <span style={{ position: 'relative', display: 'inline-block', maxWidth: 280 }}>
+              <img src={q.image} alt="" style={{ display: 'block', maxWidth: '100%', borderRadius: 8, border: '1px solid var(--line)' }} />
+              {targets.map((t, i) => (
+                <span key={t.id ?? i} title={t.label} style={{
+                  position: 'absolute', left: `${t.x}%`, top: `${t.y}%`,
+                  width: `${Math.max(4, (t.r ?? 4) * 2)}%`, aspectRatio: '1 / 1',
+                  transform: 'translate(-50%, -50%)',
+                  border: '2px dashed var(--ok)', borderRadius: '50%', opacity: 0.9,
+                }} />
+              ))}
+              {clicks.map((c, i) => {
+                const ok = targets.some((t) => Math.hypot(c.x - t.x, c.y - t.y) <= (t.r ?? 0));
+                return (
+                  <span key={i} style={{
+                    position: 'absolute', left: `${c.x}%`, top: `${c.y}%`,
+                    width: 11, height: 11, transform: 'translate(-50%, -50%)',
+                    background: ok ? 'var(--ok)' : 'var(--err)',
+                    border: '2px solid #fff', borderRadius: '50%',
+                  }} />
+                );
+              })}
+            </span>
+          )}
+        </div>
+      );
+    }
+    case 'table': {
+      const r = asRecord(ans);
+      const cols = q.columns ?? [];
+      const rows = q.rows ?? [];
+      const cellStyle: React.CSSProperties = { border: '1px solid var(--line)', padding: '3px 8px', fontSize: '0.88rem' };
+      const isOk = (accepted: string, given: string) => {
+        if (normalizeAnswer(given) === '') return false;
+        return accepted.split('|').some((a) => normalizeAnswer(a, q.caseSensitive) === normalizeAnswer(given, q.caseSensitive));
+      };
+      return (
+        <div className="table-wrap">
+          <table style={{ borderCollapse: 'collapse' }}>
+            {cols.length > 0 && (
+              <thead>
+                <tr>{cols.map((c, i) => <th key={i} style={{ ...cellStyle, background: 'var(--bg-sunken)', textAlign: 'left' }}>{c}</th>)}</tr>
+              </thead>
+            )}
+            <tbody>
+              {rows.map((row, ri) => {
+                const rowAns = asRecord(r?.[row.id]);
+                return (
+                  <tr key={row.id ?? ri}>
+                    {(row.cells ?? []).map((cell, ci) => {
+                      if (cell !== '') return <td key={ci} style={cellStyle}>{cell}</td>;
+                      const accepted = row.answers?.[ci] ?? '';
+                      const given = typeof rowAns?.[String(ci)] === 'string' ? (rowAns[String(ci)] as string) : '';
+                      const ok = isOk(accepted, given);
+                      return (
+                        <td key={ci} style={{ ...cellStyle, color: ok ? 'var(--ok)' : 'var(--err)', fontWeight: 600 }}>
+                          {ok ? '✓' : '✗'} {given || '—'}
+                          {!ok && accepted && <span className="hint" style={{ fontWeight: 400 }}> ({accepted.split('|')[0]})</span>}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+    default:
+      return <span>{formatAnswer(q, ans)}</span>;
   }
 }
 
@@ -354,7 +670,8 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
             .map((q, i) => {
             const ans = submission.answers[q.id];
             const score = scores[q.id] ?? gradeQuestion(q, ans);
-            const isOpen = q.type === 'long';
+            // manueel te beoordelen types: open vragen én ingeleverde bestanden
+            const isOpen = q.type === 'long' || q.type === 'upload';
             const conf = (submission.answers['_zekerheid'] as Record<string, string> | undefined)?.[q.id];
             // "_hints"-vorm: "vraagid" (1 hint) of "vraagid:2" (twee treden)
             const hintEntry = Array.isArray(submission.answers['_hints'])
@@ -367,7 +684,9 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
               <div key={q.id} className="card" style={{ padding: '12px 14px', marginBottom: 10 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
                   <strong>V{i + 1}.</strong>
-                  <span style={{ flex: 1 }}>{q.prompt || (q.type === 'gap' ? 'Invuloefening' : '')}</span>
+                  <span style={{ flex: 1 }}>
+                    {q.prompt || (q.type === 'gap' || q.type === 'dropdown' ? 'Invuloefening' : q.type === 'marktext' ? 'Markeertekst' : '')}
+                  </span>
                   {hintLevel > 0 && (
                     <span className="badge" title="Aantal geopende hints (hintladder)">
                       💡 {hintLevel === 1 ? 'hint' : `${hintLevel} hints`}
@@ -388,9 +707,15 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
                     {score.mode === 'pending' ? 'te beoordelen' : `${score.earned}/${score.max}`}
                   </span>
                 </div>
-                <p style={{ margin: '6px 0 0', color: 'var(--text-soft)' }}>
-                  <strong>Antwoord:</strong> {formatAnswer(q, ans)}
-                </p>
+                {RICH_TYPES.has(q.type) ? (
+                  <div style={{ margin: '6px 0 0', color: 'var(--text-soft)' }}>
+                    <ExtraAnswerView q={q} ans={ans} />
+                  </div>
+                ) : (
+                  <p style={{ margin: '6px 0 0', color: 'var(--text-soft)' }}>
+                    <strong>Antwoord:</strong> {formatAnswer(q, ans)}
+                  </p>
+                )}
                 {q.type === 'long' && typeof ans === 'object' && ans !== null && (
                   <div style={{ marginTop: 6 }}>
                     {(ans as LongAnswerValue).tekening && (
@@ -902,16 +1227,18 @@ function saveFeedbackbank(list: string[]) {
 }
 
 function GradingCockpit({ widget, subs }: { widget: Widget; subs: Submission[] }) {
-  const openQuestions = (widget.config as QuizConfig).questions.filter((q) => q.type === 'long');
+  // manueel na te kijken: open vragen én inleveropdrachten (upload → 'pending')
+  const openQuestions = (widget.config as QuizConfig).questions
+    .filter((q): q is LongQuestion | UploadQuestion => q.type === 'long' || q.type === 'upload');
   const [qid, setQid] = useState(openQuestions[0]?.id ?? '');
   const [bank, setBank] = useState<string[]>(getFeedbackbank);
   const toast = useToast();
   const q = openQuestions.find((x) => x.id === qid);
 
-  if (!q) return <EmptyState icon="✅" title="Geen open vragen om na te kijken" />;
+  if (!q) return <EmptyState icon="✅" title="Geen open vragen of inleveropdrachten om na te kijken" />;
 
   const rows = subs.filter((s) => !s.itemScores || q.id in s.itemScores);
-  const rubric = (q.rubric ?? []).filter((r) => r.criterion.trim());
+  const rubric = q.type === 'long' ? (q.rubric ?? []).filter((r) => r.criterion.trim()) : [];
 
   return (
     <div>
@@ -920,15 +1247,15 @@ function GradingCockpit({ widget, subs }: { widget: Widget; subs: Submission[] }
         <div>Per <strong>vraag</strong> verbeteren houdt je beoordelingskader constant: sneller én consistenter dan per leerling.</div>
       </div>
       <div className="field" style={{ maxWidth: 520 }}>
-        <label>Open vraag</label>
+        <label>Na te kijken vraag</label>
         <select className="select" value={qid} onChange={(e) => setQid(e.target.value)}>
           {openQuestions.map((oq, i) => (
             <option key={oq.id} value={oq.id}>
-              {i + 1}. {oq.prompt.slice(0, 80)}
+              {i + 1}. {oq.type === 'upload' ? '📎 ' : ''}{oq.prompt.slice(0, 80)}
             </option>
           ))}
         </select>
-        {q.modelAnswer && (
+        {q.type === 'long' && q.modelAnswer && (
           <span className="hint">📖 Modelantwoord: {q.modelAnswer}</span>
         )}
       </div>
@@ -961,7 +1288,7 @@ function CockpitRow({
   submission, question, rubric, bank, onBankAdd, onSaved,
 }: {
   submission: Submission;
-  question: Question & { type: 'long' };
+  question: LongQuestion | UploadQuestion;
   rubric: { criterion: string; points: number }[];
   bank: string[];
   onBankAdd: (text: string) => void;
@@ -994,6 +1321,10 @@ function CockpitRow({
       </div>
       <div style={{ background: 'var(--bg-sunken)', borderRadius: 8, padding: '8px 12px', marginBottom: 8 }}>
         {(() => {
+          if (question.type === 'upload') {
+            // inleveropdracht: bestandsnaam + grootte + downloadlink
+            return <ExtraAnswerView q={question} ans={answer} />;
+          }
           const lv: LongAnswerValue = typeof answer === 'string' ? { tekst: answer } : ((answer as LongAnswerValue) ?? {});
           if (!lv.tekst?.trim() && !lv.tekening && !lv.audio) {
             return <em style={{ color: 'var(--text-faint)' }}>(geen antwoord)</em>;
@@ -1028,6 +1359,7 @@ function CockpitRow({
               onChange={(e) => setComment(e.target.value)}
             />
             {hasAIKey() && (() => {
+              if (question.type === 'upload') return null; // bestandsinhoud gaat niet naar de AI
               const lv: LongAnswerValue = typeof answer === 'string' ? { tekst: answer } : ((answer as LongAnswerValue) ?? {});
               if (!lv.tekst?.trim()) return null;
               return (

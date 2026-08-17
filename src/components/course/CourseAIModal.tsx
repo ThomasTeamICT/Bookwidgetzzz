@@ -9,6 +9,7 @@ import {
 } from '../../lib/aiCourse';
 import { askAI, extractJson } from '../../lib/ai';
 import { AIErrorBox, AIGate, AIReviewNote, AIWorkingBox } from '../aiCommon';
+import { PdfImportButton } from '../PdfImportButton';
 import { Field, Modal, useToast } from '../ui';
 import { downloadFile, uid } from '../../lib/utils';
 import { saveWidget } from '../../lib/storage';
@@ -212,6 +213,13 @@ export function CourseAIModal({
                 </Field>
                 <Field label="Bronmateriaal (optioneel)" hint="Plak je eigen cursustekst; de AI blijft er dan strikt bij.">
                   <textarea className="textarea" rows={5} value={source} onChange={(e) => setSource(e.target.value)} />
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
+                    <PdfImportButton onText={(t) => {
+                      if (source.trim().length > 200 && !window.confirm('Het bronveld bevat al tekst. Vervangen door de tekst uit de pdf?')) return;
+                      setSource(t);
+                    }} />
+                    <span className="hint">Werkt met tekst-pdf's; een gescande pdf (foto's) bevat geen leesbare tekst.</span>
+                  </div>
                 </Field>
               </>
             )}

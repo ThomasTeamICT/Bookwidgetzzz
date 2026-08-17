@@ -4,6 +4,7 @@ import { getWidget } from '../lib/storage';
 import type { GapQuestion, Question, QuizConfig } from '../lib/types';
 import { extractGaps, gapPreview, quizMaxScore } from '../lib/grading';
 import { CheckRow } from '../components/ui';
+import { markTokens as playerMarkTokens } from '../widgets/qtypes/interactTypes';
 
 /** Afdrukbare versie van quiz/werkblad/exit-ticket, met of zonder correctiesleutel. */
 export function PrintPage() {
@@ -156,7 +157,229 @@ function PrintAnswerArea({ q, withKey }: { q: Question; withKey: boolean }) {
       return withKey
         ? <p style={{ margin: '4px 0' }}><Key>{q.answer}{q.tolerance > 0 ? ` (± ${q.tolerance})` : ''}</Key> (schaal {q.min}–{q.max})</p>
         : <p style={{ margin: '4px 0' }}>Antwoord (tussen {q.min} en {q.max}): __________</p>;
+
+    // ── uitgebreide vraagtypes ──────────────────────────────────────────────
+    case 'dropdown': {
+      const parts = splitBraces(q.text ?? '');
+      if (parts.length === 0) return <div style={lineStyle} />;
+      return (
+        <p style={{ margin: '4px 0', whiteSpace: 'pre-wrap' }}>
+          {parts.map((part, i) => {
+            if (part.type === 'text') return <span key={i}>{part.value}</span>;
+            const correct = part.options[0] ?? '';
+            // vaste, alfabetische volgorde: verklapt niet dat de eerste optie juist is
+            const opts = part.options.slice().sort((a, b) => a.localeCompare(b, 'nl'));
+            return (
+              <span key={i}>
+                {'________ '}
+                <span style={{ fontSize: '0.88em', color: '#374151' }}>
+                  ({opts.map((o, j) => (
+                    <React.Fragment key={j}>
+                      {j > 0 && ' / '}
+                      {String.fromCharCode(97 + j)}.{' '}
+                      {withKey && o === correct
+                        ? <span style={{ color: '#b91c1c', fontWeight: 700, textDecoration: 'underline' }}>{o}</span>
+                        : o}
+                    </React.Fragment>
+                  ))})
+                </span>
+              </span>
+            );
+          })}
+        </p>
+      );
+    }
+    case 'marktext': {
+      const tokens = markTokens(q.text ?? '');
+      if (tokens.length === 0) return <div style={lineStyle} />;
+      return (
+        <div>
+          <p style={{ margin: '4px 0', fontStyle: 'italic', fontSize: '0.88rem', color: '#374151' }}>
+            Markeer of onderstreep de juiste woorden in de tekst.
+          </p>
+          <p style={{ margin: '4px 0', lineHeight: 2 }}>
+            {tokens.map((t, i) => (
+              <React.Fragment key={i}>
+                {withKey && t.correct
+                  ? <Key><span style={{ textDecoration: 'underline' }}>{t.word}</span></Key>
+                  : t.word}
+                {' '}
+              </React.Fragment>
+            ))}
+          </p>
+        </div>
+      );
+    }
+    case 'sort': {
+      const cats = q.categories ?? [];
+      const items = q.items ?? [];
+      const lines = Math.max(2, Math.ceil(items.length / Math.max(1, cats.length)) + 1);
+      return (
+        <div>
+          {items.length > 0 && (
+            <p style={{ margin: '4px 0' }}>
+              {items.map((it, i) => (
+                <span key={it.id ?? i} style={{ display: 'inline-block', border: '1px solid #9ca3af', borderRadius: 6, padding: '1px 8px', margin: '2px 6px 2px 0' }}>
+                  {it.text}
+                </span>
+              ))}
+            </p>
+          )}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
+            {cats.map((c, ci) => (
+              <div key={c.id ?? ci} style={{ flex: '1 1 150px', border: '1.5px solid #111', borderRadius: 8, padding: '6px 10px' }}>
+                <strong style={{ display: 'block', borderBottom: '1px solid #d1d5db', paddingBottom: 3, marginBottom: 5 }}>{c.name}</strong>
+                {withKey
+                  ? items.filter((it) => it.categoryId === c.id).map((it, ii) => <div key={ii}><Key>{it.text}</Key></div>)
+                  : Array.from({ length: lines }, (_, li) => <div key={li} style={lineStyle} />)}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    case 'table': {
+      const cols = q.columns ?? [];
+      const rows = q.rows ?? [];
+      const cellBase: React.CSSProperties = { border: '1px solid #9ca3af', padding: '4px 8px', verticalAlign: 'top' };
+      return (
+        <table style={{ borderCollapse: 'collapse', width: '100%', margin: '4px 0' }}>
+          {cols.length > 0 && (
+            <thead>
+              <tr>{cols.map((c, i) => <th key={i} style={{ ...cellBase, background: '#f3f4f6', textAlign: 'left' }}>{c}</th>)}</tr>
+            </thead>
+          )}
+          <tbody>
+            {rows.map((r, ri) => (
+              <tr key={r.id ?? ri}>
+                {(r.cells ?? []).map((cell, ci) => {
+                  if (cell !== '') return <td key={ci} style={cellBase}>{cell}</td>;
+                  // lege cel = invulveld (juiste antwoord in r.answers[ci])
+                  return (
+                    <td key={ci} style={{ ...cellBase, border: '1.5px dashed #9ca3af', minWidth: 70 }}>
+                      {withKey ? <Key>{(r.answers?.[ci] ?? '').split('|')[0]}</Key> : ' '}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+    }
+    case 'likert': {
+      const opts = q.options ?? [];
+      const sts = q.statements ?? [];
+      const cellBase: React.CSSProperties = { padding: '5px 8px', borderBottom: '1px solid #e5e7eb' };
+      return (
+        <div>
+          <table style={{ borderCollapse: 'collapse', width: '100%', margin: '4px 0' }}>
+            <thead>
+              <tr>
+                <th style={{ ...cellBase, textAlign: 'left' }} aria-hidden />
+                {opts.map((o, i) => (
+                  <th key={i} style={{ ...cellBase, fontSize: '0.78rem', fontWeight: 600, textAlign: 'center' }}>{o}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sts.map((st, si) => (
+                <tr key={st.id ?? si}>
+                  <td style={cellBase}>{st.text}</td>
+                  {opts.map((_, oi) => (
+                    <td key={oi} style={{ ...cellBase, textAlign: 'center' }}>
+                      <span style={{ display: 'inline-block', width: 13, height: 13, border: '1.5px solid #111', borderRadius: '50%' }} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {withKey && <p style={{ margin: '2px 0', fontSize: '0.8rem', color: '#6b7280' }}>Meningsvraag — geen correctiesleutel.</p>}
+        </div>
+      );
+    }
+    case 'rating': {
+      const scale = Math.max(1, Math.min(10, Math.round(q.scale) || 5));
+      return (
+        <p style={{ margin: '4px 0' }}>
+          {q.labelLow && <span style={{ fontSize: '0.85rem', marginRight: 8 }}>{q.labelLow}</span>}
+          <span style={{ fontSize: '1.35rem', letterSpacing: 5 }}>{'☆'.repeat(scale)}</span>
+          {q.labelHigh && <span style={{ fontSize: '0.85rem', marginLeft: 8 }}>{q.labelHigh}</span>}
+          {withKey && <span style={{ fontSize: '0.8rem', color: '#6b7280' }}> (meningsvraag — geen sleutel)</span>}
+        </p>
+      );
+    }
+    case 'upload':
+      return (
+        <p style={{ margin: '4px 0', fontStyle: 'italic' }}>
+          📎 In te leveren: {q.accept?.trim() ? `bestand (${q.accept.trim()})` : 'bestand'}
+          {q.maxMb ? `, max. ${q.maxMb} MB` : ''} — digitaal via de widget, niet op papier.
+        </p>
+      );
+    case 'imagepoint': {
+      const targets = q.targets ?? [];
+      return (
+        <div>
+          <p style={{ margin: '4px 0', fontStyle: 'italic', fontSize: '0.88rem', color: '#374151' }}>
+            Duid {targets.length === 1 ? 'de juiste plek' : targets.length > 1 ? `de ${targets.length} juiste plekken` : 'de juiste plekken'} aan
+            met een kruisje op de afbeelding{q.maxClicks ? ` (max. ${q.maxClicks} ${q.maxClicks === 1 ? 'kruisje' : 'kruisjes'})` : ''}.
+          </p>
+          {q.image ? (
+            <span style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
+              <img src={q.image} alt="" style={{ display: 'block', maxWidth: '100%', maxHeight: 320 }} />
+              {withKey && targets.map((t, i) => (
+                <span
+                  key={t.id ?? i}
+                  title={t.label}
+                  style={{
+                    position: 'absolute', left: `${t.x}%`, top: `${t.y}%`,
+                    width: `${Math.max(4, (t.r ?? 4) * 2)}%`, aspectRatio: '1 / 1',
+                    transform: 'translate(-50%, -50%)',
+                    border: '2.5px solid #b91c1c', borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#b91c1c', fontWeight: 700, fontSize: '0.75rem',
+                  }}
+                >
+                  {i + 1}
+                </span>
+              ))}
+            </span>
+          ) : (
+            <p style={{ margin: '4px 0', color: '#6b7280' }}>(geen afbeelding ingesteld)</p>
+          )}
+          {withKey && targets.some((t) => t.label) && (
+            <p style={{ margin: '4px 0' }}>
+              {targets.map((t, i) => (t.label ? <Key key={t.id ?? i}>{i + 1}. {t.label}&ensp;</Key> : null))}
+            </p>
+          )}
+        </div>
+      );
+    }
     default:
       return <div style={lineStyle} />;
   }
+}
+
+// ── Hulpjes voor de uitgebreide vraagtypes ──────────────────────────────────
+
+/** Dropdown-tekst splitsen: "De {Brussel|Gent} …" → tekst- en gat-segmenten (eerste optie = juist). */
+function splitBraces(text: string): ({ type: 'text'; value: string } | { type: 'gap'; options: string[] })[] {
+  const out: ({ type: 'text'; value: string } | { type: 'gap'; options: string[] })[] = [];
+  const re = /\{([^}]+)\}/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    if (m.index > last) out.push({ type: 'text', value: text.slice(last, m.index) });
+    out.push({ type: 'gap', options: m[1].split('|').map((s) => s.trim()).filter(Boolean) });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push({ type: 'text', value: text.slice(last) });
+  return out;
+}
+
+/** Markeertekst opdelen in woord-tokens; woorden tussen [haken] zijn de doelwoorden. */
+// Zelfde tokenizer als de speler (qtypes) — identieke woordindexen gegarandeerd.
+function markTokens(text: string): { word: string; correct: boolean }[] {
+  return playerMarkTokens(text).map((t) => ({ word: t.text, correct: t.correct }));
 }

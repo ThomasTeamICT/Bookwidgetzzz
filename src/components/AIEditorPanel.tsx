@@ -21,6 +21,7 @@ import { uid } from '../lib/utils';
 import { getTypeDef } from '../widgets/registry';
 import { Field, EmptyState, Modal, useToast } from './ui';
 import { AIErrorBox, AIGate, AIReviewNote, AIWorkingBox } from './aiCommon';
+import { PdfImportButton } from './PdfImportButton';
 
 // ── Hulpjes ─────────────────────────────────────────────────────────────────
 
@@ -944,6 +945,13 @@ ${source.trim()}
           hint="Plak hier leerstof; de AI baseert zich dan uitsluitend hierop."
         >
           <textarea className="textarea" rows={5} value={source} onChange={(e) => setSource(e.target.value)} placeholder="Plak hier je tekst, hoofdstuk of samenvatting…" />
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
+            <PdfImportButton onText={(t) => {
+              if (source.trim().length > 200 && !window.confirm('Het bronveld bevat al tekst. Vervangen door de tekst uit de pdf?')) return;
+              setSource(t);
+            }} />
+            <span className="hint">Werkt met tekst-pdf's; een gescande pdf (foto's) bevat geen leesbare tekst.</span>
+          </div>
         </Field>
         <div>
           <button className="btn btn-primary" onClick={forQuestions ? runAddQuestions : runAddItems}>

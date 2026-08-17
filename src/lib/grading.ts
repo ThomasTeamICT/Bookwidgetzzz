@@ -1,4 +1,5 @@
 import type { GapQuestion, ItemScore, Question, QuizConfig } from './types';
+import { EXTRA_QTYPES } from '../widgets/qtypes';
 import { normalizeAnswer } from './utils';
 
 /** Gaten uit een gap-tekst halen: "De [kat] slaapt" → ["kat"]. */
@@ -31,6 +32,10 @@ export function gradeQuestion(q: Question, answer: unknown): ItemScore {
   const max = q.type === 'info' ? 0 : q.points;
   const wrong: ItemScore = { earned: 0, max, mode: 'auto' };
   const right: ItemScore = { earned: max, max, mode: 'auto' };
+
+  // Uitgebreide vraagtypes scoren zichzelf; null = manueel na te kijken.
+  const extra = EXTRA_QTYPES[q.type];
+  if (extra) return extra.grade(q, answer) ?? { earned: 0, max, mode: 'pending' };
 
   switch (q.type) {
     case 'info':

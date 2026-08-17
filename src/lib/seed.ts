@@ -142,6 +142,36 @@ export function seedIfEmpty() {
   };
   widgets.push(mindmap);
 
+  // Proefwerkblad met de uitgebreide vraagtypes — zo ontdekt de leerkracht ze meteen.
+  const extra = createWidget('worksheet', 'Voorbeeld: alle nieuwe vraagtypes');
+  extra.settings.instructions = 'Proef van de nieuwste vraagtypes: keuzelijsten, markeren, sorteren, invultabel en meer.';
+  extra.config = {
+    layout: 'scroll',
+    questions: [
+      { id: uid(), type: 'dropdown', prompt: 'Kies telkens het juiste woord.', points: 2, shuffle: true,
+        text: 'Water {verdampt|bevriest|smelt} door de warmte van de zon en stijgt op als {waterdamp|regen|hagel}.' },
+      { id: uid(), type: 'marktext', prompt: 'Markeer alle werkwoorden in de zin.', points: 2, penalizeWrong: false,
+        text: 'De zon [schijnt] fel, de vogels [fluiten] in de bomen en wij [wandelen] naar school.' },
+      { id: uid(), type: 'sort', prompt: 'Sorteer de dieren in de juiste groep.', points: 3,
+        categories: [{ id: 'c1', name: 'Zoogdieren' }, { id: 'c2', name: 'Vogels' }],
+        items: [
+          { id: 'i1', text: 'walvis', categoryId: 'c1' }, { id: 'i2', text: 'merel', categoryId: 'c2' },
+          { id: 'i3', text: 'vleermuis', categoryId: 'c1' }, { id: 'i4', text: 'pinguïn', categoryId: 'c2' },
+        ] },
+      { id: uid(), type: 'table', prompt: 'Vul de tabel aan.', points: 2, caseSensitive: false,
+        columns: ['Land', 'Hoofdstad'],
+        rows: [
+          { id: 'r1', cells: ['België', ''], answers: [null, 'Brussel'] },
+          { id: 'r2', cells: ['Frankrijk', ''], answers: [null, 'Parijs'] },
+        ] },
+      { id: uid(), type: 'likert', prompt: 'Hoe kijk jij terug op deze les?', points: 0,
+        statements: [{ id: 's1', text: 'Ik begreep de leerstof goed.' }, { id: 's2', text: 'Het tempo lag goed.' }],
+        options: ['Helemaal oneens', 'Oneens', 'Neutraal', 'Eens', 'Helemaal eens'] },
+      { id: uid(), type: 'rating', prompt: 'Hoeveel sterren geef je deze oefening?', points: 0, scale: 5 },
+    ],
+  };
+  widgets.push(extra);
+
   for (const w of widgets) saveWidget(w);
   savePrefs({ ...prefs, seeded: true });
 }

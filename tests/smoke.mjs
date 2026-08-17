@@ -324,6 +324,39 @@ await page.locator('nav[aria-label="Inhoudstafel"] button').first().click().catc
 await page.waitForSelector('.pdfv-page canvas', { timeout: 15000 }).catch(() => {});
 check('pdf-blok rendert in cursus', (await page.locator('.pdfv-page canvas').count()) >= 1);
 
+// ── 18. Uitgebreide vraagtypes ──────────────────────────────────────────────
+console.log('18. Nieuwe vraagtypes');
+const extraCode = await page.evaluate(() =>
+  JSON.parse(localStorage.getItem('wf.widgets.v1')).find((w) => w.title.includes('nieuwe vraagtypes'))?.code);
+check('voorbeeldwerkblad geseed', !!extraCode);
+if (extraCode) {
+  await go(`/#/speel/${extraCode}`);
+  if (await page.locator('#student-name').isVisible().catch(() => false)) {
+    await page.fill('#student-name', 'Testleerling');
+    await page.getByRole('button', { name: /Starten/ }).click();
+    await sleep(700);
+  }
+  check('keuzelijst-in-zin rendert', (await page.locator('.question-card select').count()) >= 2);
+  check('markeerwoorden klikbaar', (await page.locator('.question-card button[aria-pressed]').count()) >= 3);
+  check('invultabel rendert', (await page.locator('.question-card table input').count()) >= 2);
+  check('sterren renderen', await page.locator('button[aria-label*="sterren"], button[aria-label*="ster"]').first().isVisible());
+  // minimaal invullen: eerste select + een tabelcel + een woord aanklikken
+  await page.locator('.question-card select').first().selectOption({ index: 1 }).catch(() => {});
+  await page.locator('.question-card table input').first().fill('Brussel').catch(() => {});
+  await page.locator('.question-card button[aria-pressed="false"]').first().click().catch(() => {});
+  await page.getByRole('button', { name: /Indienen/ }).click();
+  await sleep(700);
+  check('indienen met nieuwe types werkt', await page.locator('.result-hero').isVisible());
+  // editorpalet toont de nieuwe types
+  const extraId = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('wf.widgets.v1')).find((w) => w.title.includes('nieuwe vraagtypes')).id);
+  await go(`/#/bewerk/${extraId}`);
+  await page.getByRole('button', { name: /vraag toevoegen|Vraag toevoegen/i }).first().click().catch(() => {});
+  await sleep(300);
+  check('nieuwe types in vraagpalet', await page.locator('text=/Woorden markeren|Sorteren in categorie/i').first().isVisible());
+  await page.keyboard.press('Escape');
+}
+
 // ── Slot ────────────────────────────────────────────────────────────────────
 console.log('\n──────────');
 if (errors.length) {

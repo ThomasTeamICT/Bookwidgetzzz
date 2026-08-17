@@ -127,7 +127,16 @@ export type QuestionType =
   | 'order'     // rangschikken
   | 'number'    // numeriek antwoord
   | 'slider'    // schaal/schuiver
-  | 'info';     // infoblok (geen vraag)
+  | 'info'      // infoblok (geen vraag)
+  // ── uitgebreide vraagtypes (src/widgets/qtypes/) ──
+  | 'dropdown'  // zin(nen) met keuzelijstjes
+  | 'rating'    // beoordeling met sterren
+  | 'likert'    // stellingenmatrix (bv. oneens → eens)
+  | 'upload'    // bestand inleveren (manueel beoordeeld)
+  | 'marktext'  // markeer de juiste woorden in een tekst
+  | 'sort'      // sorteer items in de juiste categorie
+  | 'imagepoint'// klik de juiste plek(ken) aan op een afbeelding
+  | 'table';    // invultabel (cellen aanvullen)
 
 export interface QuestionBase {
   id: string;
@@ -225,10 +234,72 @@ export interface InfoBlock extends QuestionBase {
   type: 'info';
 }
 
+// ── Uitgebreide vraagtypes (implementatie in src/widgets/qtypes/) ───────────
+
+export interface DropdownQuestion extends QuestionBase {
+  type: 'dropdown';
+  /** Zin(nen) met keuzelijstjes: "De hoofdstad is {Brussel|Antwerpen|Gent}" — eerste optie is juist. */
+  text: string;
+  /** Afleiders per gat door elkaar tonen. */
+  shuffle: boolean;
+}
+export interface RatingQuestion extends QuestionBase {
+  type: 'rating';
+  /** Aantal sterren (3–10). Niet automatisch beoordeeld (mening). */
+  scale: number;
+  labelLow?: string;
+  labelHigh?: string;
+}
+export interface LikertQuestion extends QuestionBase {
+  type: 'likert';
+  /** Stellingen die elk op dezelfde schaal beoordeeld worden. */
+  statements: { id: string; text: string }[];
+  /** Schaalpunten, bv. ["Helemaal oneens", "Oneens", "Neutraal", "Eens", "Helemaal eens"]. */
+  options: string[];
+}
+export interface UploadQuestion extends QuestionBase {
+  type: 'upload';
+  /** Toegelaten extensies als hint, bv. ".pdf, .docx" (leeg = alles). */
+  accept?: string;
+  /** Maximale bestandsgrootte in MB (opslag is beperkt; standaard 2). */
+  maxMb: number;
+}
+export interface MarkTextQuestion extends QuestionBase {
+  type: 'marktext';
+  /** Tekst waarin de leerling woorden aanklikt; juiste woorden staan tussen [vierkante haken]. */
+  text: string;
+  /** Punten aftrekken voor fout gemarkeerde woorden. */
+  penalizeWrong: boolean;
+}
+export interface SortQuestion extends QuestionBase {
+  type: 'sort';
+  categories: { id: string; name: string }[];
+  items: { id: string; text: string; categoryId: string }[];
+}
+export interface ImagePointQuestion extends QuestionBase {
+  type: 'imagepoint';
+  /** Afbeelding waarop geklikt wordt (data-URL of extern adres). */
+  image: string;
+  /** Juiste zones als relatieve cirkels (x/y/r in % van de afbeelding). */
+  targets: { id: string; x: number; y: number; r: number; label?: string }[];
+  /** Hoeveel klikken de leerling mag zetten (meestal = aantal zones). */
+  maxClicks: number;
+}
+export interface TableQuestion extends QuestionBase {
+  type: 'table';
+  /** Kolomkoppen. */
+  columns: string[];
+  /** Rijen; lege cel ('') = invulveld voor de leerling, met het juiste antwoord in answers. */
+  rows: { id: string; cells: string[]; answers: (string | null)[] }[];
+  caseSensitive: boolean;
+}
+
 export type Question =
   | MCQuestion | MultiQuestion | TFQuestion | ShortQuestion | LongQuestion
   | GapQuestion | MatchQuestion | OrderQuestion | NumberQuestion
-  | SliderQuestion | InfoBlock;
+  | SliderQuestion | InfoBlock
+  | DropdownQuestion | RatingQuestion | LikertQuestion | UploadQuestion
+  | MarkTextQuestion | SortQuestion | ImagePointQuestion | TableQuestion;
 
 export interface QuizConfig {
   questions: Question[];

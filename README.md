@@ -15,7 +15,11 @@ en maximale opvolgbaarheid.
 - **AI in de editor**: vragen bijmaken, hints/uitleg/steuntaal aanvullen, glossarium
   destilleren, zwakke afleiders versterken, items bijmaken bij 20 widgettypes — en bij de
   **video-quiz**: plak het transcript (bv. van YouTube) en krijg kijkvragen op de juiste
-  tijdstippen.
+  tijdstippen. De AI genereert ook de uitgebreide vraagtypes (keuzelijsten, markeren,
+  sorteren, invultabellen, Likert).
+- **📄 Pdf inlezen als bron**: in de AI-studio, de AI-cursusbouwer en het editorpaneel
+  lees je een tekst-pdf met één knop in — de tekst verschijnt in het bronveld en de AI
+  gaat ermee aan de slag (volledig client-side, de pdf verlaat het toestel niet).
 - **AI-cursusbouwer**: een volledige cursus genereren **vanuit leerplandoelen** (of een
   bestaande cursus herwerken / een sectie vullen), optioneel met een oefenquiz per hoofdstuk.
 - **Feedbacksuggesties** bij het nakijken: taakgericht voorstel (wat lukt, wat nog niet,
@@ -59,8 +63,8 @@ en maximale opvolgbaarheid.
 | 🧮 **Rekenen & wiskunde** | Rekenoefening (sommen & maaltafels) · Actieve plot (functiegrafieken met parameter-schuivers, eigen veilige formule-parser) · Grafiek (staaf/lijn/taart, leerlingen kunnen data aanpassen) |
 | 🧑‍🏫 **Klashulpjes & projecten** | Rad van fortuin · Klastimer · Checklist · Planner · WebQuest · Mindmap (bekijken of zelf bouwen) · Piano (WebAudio) |
 
-### De quiz ondersteunt 11 vraagtypes
-Meerkeuze · meerdere antwoorden · juist/onjuist · kort antwoord · open vraag (manueel beoordeeld, met **rubrics**) · invuloefening met gaten `[zo|alternatief]` · koppelparen · rangschikken · getal met tolerantie · schuiver · infoblok. Per vraag: afbeelding, punten, uitleg bij feedback, **hint**, **leerdoel-tag** en **niveau** (voor routes), plus een **voorleesknop** (TTS, instelbaar tempo). Extra: **zekerheidsgraad** met kalibratiefeedback, **getrapte feedback** (controleren per vraag: fout → hint + tweede kans → oplossing), **niveauroutes** (leerling kiest route 1/2/3), **vragenpool**, **oefen-je-fouten**-ronde, **foutenanalyse door de leerling**, score **per leerdoel**, vraagbank-import en bulk-import via geplakte tekst. De editor bevat een **vraag-linter** die bekende constructiefouten signaleert; resultaten tonen **distractor-analyse** en een **doel-heatmap**, en open vragen kijk je na in een **nakijkcockpit** met herbruikbare feedbackbank. Nieuw materiaal start je vanuit een **sjabloonbibliotheek** (3-2-1 exit-ticket, diagnostische instap, herhaalquiz met pool, …).
+### De quiz ondersteunt 19 vraagtypes
+Meerkeuze · meerdere antwoorden · juist/onjuist · kort antwoord · open vraag (manueel beoordeeld, met **rubrics**) · invuloefening met gaten `[zo|alternatief]` · koppelparen · rangschikken · getal met tolerantie · schuiver · infoblok — plus de uitgebreide familie: **keuzelijst-in-zin** `{juist|afleider}` · **woorden markeren** in een tekst (klikbaar, met of zonder puntenaftrek) · **sorteren in categorieën** (tikken, geen slepen nodig) · **invultabel** (per cel vast of invulbaar, `|`-alternatieven) · **aanduiden op afbeelding** (zones met straal) · **stellingenmatrix** (Likert, met presets) · **beoordeling met sterren** · **bestand inleveren** (komt in de nakijkcockpit). Vijftien types worden automatisch verbeterd; open vragen, audio-/tekenantwoorden en ingeleverde bestanden kijk je na in de cockpit. Per vraag: afbeelding, punten, uitleg bij feedback, **hint**, **leerdoel-tag** en **niveau** (voor routes), plus een **voorleesknop** (TTS, instelbaar tempo). Extra: **zekerheidsgraad** met kalibratiefeedback, **getrapte feedback** (controleren per vraag: fout → hint + tweede kans → oplossing), **niveauroutes** (leerling kiest route 1/2/3), **vragenpool**, **oefen-je-fouten**-ronde, **foutenanalyse door de leerling**, score **per leerdoel**, vraagbank-import en bulk-import via geplakte tekst. De editor bevat een **vraag-linter** die bekende constructiefouten signaleert; resultaten tonen **distractor-analyse** en een **doel-heatmap**, en open vragen kijk je na in een **nakijkcockpit** met herbruikbare feedbackbank. Nieuw materiaal start je vanuit een **sjabloonbibliotheek** (3-2-1 exit-ticket, diagnostische instap, herhaalquiz met pool, …).
 
 ### Voor de leerkracht
 - **Dashboard** met mappen (kleuren), zoeken, dupliceren, omzetten (quiz ↔ werkblad ↔ exit-ticket), verwijderen

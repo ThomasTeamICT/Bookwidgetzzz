@@ -39,6 +39,12 @@ const QUESTION_DOC = `Een "vraag" is een JSON-object met "type" en "prompt" plus
 - "order": {"items":["eerste","tweede","derde"]} — in de JUISTE volgorde
 - "number": {"answer":12.5,"tolerance":0}
 - "info": alleen "prompt" — leerstof-/instructieblok tussen de vragen
+- "dropdown": {"type":"dropdown","prompt":"Kies telkens het juiste antwoord.","text":"De hoofdstad van Frankrijk is {Parijs|Lyon|Marseille}.","points":1} — keuzelijstje(s) tussen {accolades}, opties gescheiden met |, de EERSTE optie in elk {…} is de juiste (wordt voor de leerling geschud); meerdere {…} in één tekst mag
+- "marktext": {"type":"marktext","prompt":"Markeer alle werkwoorden.","text":"De zon [schijnt] en de vogels [fluiten].","points":1} — de juist te markeren woorden staan tussen [vierkante haken]
+- "sort": {"type":"sort","prompt":"Sorteer de dieren in de juiste groep.","categories":[{"name":"Zoogdier"},{"name":"Vogel"}],"items":[{"text":"walvis","category":"Zoogdier"},{"text":"merel","category":"Vogel"}]} — 2 à 4 categorieën, 4 à 10 items; "category" is exact de naam van één categorie
+- "table": {"type":"table","prompt":"Vul de tabel aan.","columns":["Land","Hoofdstad"],"rows":[{"cells":["België",""],"answers":[null,"Brussel"]},{"cells":["Frankrijk",""],"answers":[null,"Parijs"]}]} — lege cel ("") = invulveld; het juiste antwoord staat op dezelfde positie in "answers", elders null
+- "likert": {"type":"likert","prompt":"Hoe kijk je terug op deze les?","statements":["Ik begrijp de leerstof.","Ik kan dit aan iemand anders uitleggen."],"options":["Helemaal oneens","Oneens","Neutraal","Eens","Helemaal eens"]} — ALLEEN voor reflectie of exit-tickets; er is geen juist/fout
+Genereer NOOIT vragen van het type "rating", "upload" of "imagepoint": die vereisen een mening, een ingeleverd bestand of een afbeelding en kunnen niet zinvol door jou ingevuld worden.
 Elke vraag mag ook hebben: "points" (getal, standaard 1), "explanation" (uitleg bij feedback),
 "hints" (oplopende hulpstapjes: eerst strategie, dan aanwijzing, max 3),
 "goal" (kort leerdoel), "level" ("basis"|"kern"|"uitbreiding"), "support" (eenvoudiger geformuleerde versie van de vraag).`;
@@ -120,7 +126,12 @@ Kwaliteitsregels:
 
 // ── Sanering van vragen ─────────────────────────────────────────────────────
 
-const QUESTION_TYPES: QuestionType[] = ['mc', 'multi', 'tf', 'short', 'long', 'gap', 'match', 'order', 'number', 'slider', 'info'];
+// rating/upload/imagepoint staan hier bewust NIET in: die vereisen een mening,
+// een ingeleverd bestand of een afbeelding en kan de AI niet zinvol genereren.
+const QUESTION_TYPES: QuestionType[] = [
+  'mc', 'multi', 'tf', 'short', 'long', 'gap', 'match', 'order', 'number', 'slider', 'info',
+  'dropdown', 'marktext', 'sort', 'table', 'likert',
+];
 
 function str(v: unknown, fallback = ''): string {
   return typeof v === 'string' ? v : fallback;
@@ -154,7 +165,8 @@ export function sanitizeQuestion(raw: unknown): Question | null {
   const type = str(q.type) as QuestionType;
   if (!QUESTION_TYPES.includes(type)) return null;
   const prompt = str(q.prompt).trim();
-  if (!prompt && type !== 'gap') return null;
+  // Bij tekstdragende types zit de inhoud in "text"; de prompt krijgt dan een standaardje.
+  if (!prompt && type !== 'gap' && type !== 'dropdown' && type !== 'marktext') return null;
 
   const base = {
     id: uid(),
@@ -251,6 +263,75 @@ export function sanitizeQuestion(raw: unknown): Question | null {
     }
     case 'info':
       return { ...base, type, points: 0 };
+    case 'dropdown': {
+      const text = str(q.text ?? q.prompt);
+      // Minstens één {…}-groep met minstens 2 opties, anders valt er niets te kiezen.
+      if (!/\{[^{}|]+(\|[^{}|]+)+\}/.test(text)) return null;
+      // shuffle altijd aan: de AI zet de juiste optie vooraan, dus zonder
+      // schudden zou het antwoord altijd bovenaan het lijstje staan.
+      return { ...base, prompt: prompt || 'Kies telkens het juiste antwoord.', type, text, shuffle: true };
+    }
+    case 'marktext': {
+      const text = str(q.text);
+      if (!/\[[^\]]+\]/.test(text)) return null;
+      return { ...base, prompt: prompt || 'Markeer de juiste woorden.', type, text, penalizeWrong: q.penalizeWrong === true };
+    }
+    case 'sort': {
+      // Categorienamen → id's; items verwijzen per naam (case-ongevoelig).
+      const byName = new Map<string, { id: string; name: string }>();
+      for (const cRaw of Array.isArray(q.categories) ? q.categories : []) {
+        const name = (typeof cRaw === 'string' ? cRaw : str((cRaw as Record<string, unknown>)?.name)).trim();
+        if (name && !byName.has(name.toLowerCase())) byName.set(name.toLowerCase(), { id: uid(), name });
+      }
+      const categories = [...byName.values()];
+      if (categories.length < 2) return null;
+      const items = (Array.isArray(q.items) ? q.items : [])
+        .map((iRaw) => {
+          const ii = iRaw as Record<string, unknown>;
+          const text = str(ii?.text).trim();
+          const cat = byName.get(str(ii?.category ?? ii?.categoryId).trim().toLowerCase());
+          // Item met onbekende categorie stilzwijgend juist rekenen kan niet → weglaten.
+          return text && cat ? { id: uid(), text, categoryId: cat.id } : null;
+        })
+        .filter((x): x is { id: string; text: string; categoryId: string } => x !== null);
+      if (items.length < 2) return null;
+      return { ...base, type, categories, items };
+    }
+    case 'table': {
+      const columns = strArr(q.columns);
+      if (columns.length < 2) return null;
+      const rows = (Array.isArray(q.rows) ? q.rows : [])
+        .map((rRaw) => {
+          const rr = rRaw as Record<string, unknown>;
+          const cellsRaw = Array.isArray(rr?.cells) ? rr.cells : [];
+          const answersRaw = Array.isArray(rr?.answers) ? rr.answers : [];
+          // Lengtes gelijktrekken aan de kolommen; alleen lege cellen (invulvelden)
+          // houden hun antwoord, elders wordt het antwoord genegeerd.
+          const cells = columns.map((_, i) => (typeof cellsRaw[i] === 'string' ? (cellsRaw[i] as string).trim() : ''));
+          const answers = columns.map((_, i): string | null => {
+            const a = answersRaw[i];
+            const s = (typeof a === 'string' ? a : typeof a === 'number' ? String(a) : '').trim();
+            return cells[i] === '' && s ? s : null;
+          });
+          const empty = cells.every((cl) => cl === '') && answers.every((a) => a === null);
+          return empty ? null : { id: uid(), cells, answers };
+        })
+        .filter((x): x is { id: string; cells: string[]; answers: (string | null)[] } => x !== null);
+      // Zonder minstens één invulveld met antwoord valt er niets te oefenen.
+      if (rows.length === 0 || !rows.some((r) => r.answers.some((a) => a !== null))) return null;
+      return { ...base, type, columns, rows, caseSensitive: false };
+    }
+    case 'likert': {
+      const statements = (Array.isArray(q.statements) ? q.statements : [])
+        .map((sRaw) => (typeof sRaw === 'string' ? sRaw : str((sRaw as Record<string, unknown>)?.text)).trim())
+        .filter((t) => t !== '')
+        .map((text) => ({ id: uid(), text }));
+      if (statements.length === 0) return null;
+      let options = strArr(q.options).slice(0, 7);
+      if (options.length < 3) options = ['Helemaal oneens', 'Oneens', 'Neutraal', 'Eens', 'Helemaal eens'];
+      // Reflectie zonder juist/fout → nooit punten.
+      return { ...base, type, points: 0, statements, options };
+    }
     default:
       return null;
   }
