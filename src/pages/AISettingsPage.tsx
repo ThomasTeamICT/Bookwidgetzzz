@@ -201,7 +201,15 @@ export function AISettingsPage() {
                 <strong>Gratis Gemini-sleutel?</strong> Op de gratis laag van Google AI Studio mag
                 Google je invoer gebruiken om zijn producten te verbeteren. Voor schoolgebruik:
                 koppel facturatie aan je sleutel (betaalde laag = geen training op je data), of
-                stuur alleen materiaal in dat publiek mag zijn.
+                stuur alleen materiaal in dat publiek mag zijn. Facturatie koppel je op{' '}
+                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">
+                  aistudio.google.com/apikey
+                </a>{' '}
+                via <em>"Set up billing"</em> naast je project (stel daar ook meteen een budget met
+                waarschuwingen in); de kolom <em>Plan</em> toont daarna "Paid". Details:{' '}
+                <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer">
+                  Gemini API-voorwaarden
+                </a>.
               </div>
             </div>
           )}
