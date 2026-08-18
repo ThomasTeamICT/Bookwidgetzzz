@@ -175,7 +175,7 @@ export function AISettingsPage() {
                 type={showKey ? 'text' : 'password'}
                 value={form.apiKey}
                 onChange={(e) => patch({ apiKey: e.target.value })}
-                placeholder={form.provider === 'anthropic' ? 'sk-ant-…' : 'sk-…'}
+                placeholder={form.provider === 'anthropic' ? 'sk-ant-…' : form.provider === 'gemini' ? 'AIza…' : 'sk-…'}
                 autoComplete="off"
                 spellCheck={false}
                 style={{ flex: 1 }}
@@ -193,6 +193,18 @@ export function AISettingsPage() {
               </button>
             </div>
           </Field>
+
+          {form.provider === 'gemini' && (
+            <div className="callout warn">
+              <span aria-hidden>⚠️</span>
+              <div>
+                <strong>Gratis Gemini-sleutel?</strong> Op de gratis laag van Google AI Studio mag
+                Google je invoer gebruiken om zijn producten te verbeteren. Voor schoolgebruik:
+                koppel facturatie aan je sleutel (betaalde laag = geen training op je data), of
+                stuur alleen materiaal in dat publiek mag zijn.
+              </div>
+            </div>
+          )}
 
           {form.provider === 'custom' ? (
             <>
@@ -265,7 +277,11 @@ export function AISettingsPage() {
             <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">
               console.anthropic.com
             </a>{' '}
-            (Anthropic) of{' '}
+            (Anthropic),{' '}
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">
+              aistudio.google.com/apikey
+            </a>{' '}
+            (Google Gemini) of{' '}
             <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">
               platform.openai.com/api-keys
             </a>{' '}

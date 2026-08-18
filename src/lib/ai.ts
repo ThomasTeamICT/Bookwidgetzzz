@@ -7,7 +7,7 @@
 const SETTINGS_KEY = 'wf.ai.v1';
 const USAGE_KEY = 'wf.aiusage.v1';
 
-export type AIProviderId = 'anthropic' | 'openai' | 'custom';
+export type AIProviderId = 'anthropic' | 'openai' | 'gemini' | 'custom';
 
 export interface AISettings {
   provider: AIProviderId;
@@ -41,6 +41,14 @@ export const PROVIDER_INFO: Record<AIProviderId, { name: string; models: { id: s
       { id: 'gpt-4o-mini', label: 'GPT-4o mini — voordelig' },
     ],
   },
+  gemini: {
+    name: 'Google (Gemini)',
+    models: [
+      { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash — beste prijs-kwaliteit (aanbevolen)' },
+      { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite — zuinigst' },
+      { id: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro — hoogste kwaliteit, duurder' },
+    ],
+  },
   custom: {
     name: 'Eigen aanbieder (OpenAI-compatibel)',
     models: [],
@@ -55,7 +63,7 @@ export function getAISettings(): AISettings {
     if (!raw) return { ...DEFAULT_SETTINGS };
     const s = JSON.parse(raw) as Partial<AISettings>;
     return {
-      provider: s.provider === 'openai' || s.provider === 'custom' ? s.provider : 'anthropic',
+      provider: s.provider === 'openai' || s.provider === 'gemini' || s.provider === 'custom' ? s.provider : 'anthropic',
       apiKey: typeof s.apiKey === 'string' ? s.apiKey : '',
       model: typeof s.model === 'string' && s.model ? s.model : DEFAULT_SETTINGS.model,
       baseUrl: typeof s.baseUrl === 'string' ? s.baseUrl : undefined,
@@ -215,10 +223,17 @@ async function askAnthropic(s: AISettings, opts: AskAIOptions): Promise<string> 
 }
 
 async function askOpenAICompatible(s: AISettings, opts: AskAIOptions): Promise<string> {
-  const base = (s.provider === 'custom' && s.baseUrl ? s.baseUrl : 'https://api.openai.com').replace(/\/+$/, '');
+  // Gemini spreekt hetzelfde OpenAI-compatibele protocol, maar op een eigen pad
+  // (…/v1beta/openai/chat/completions — zonder extra /v1 ervoor).
+  const base = (
+    s.provider === 'gemini'
+      ? 'https://generativelanguage.googleapis.com/v1beta/openai'
+      : s.provider === 'custom' && s.baseUrl ? s.baseUrl : 'https://api.openai.com'
+  ).replace(/\/+$/, '');
+  const url = s.provider === 'gemini' ? `${base}/chat/completions` : `${base}/v1/chat/completions`;
   let res: Response;
   try {
-    res = await fetch(`${base}/v1/chat/completions`, {
+    res = await fetch(url, {
       method: 'POST',
       signal: opts.signal,
       headers: {
