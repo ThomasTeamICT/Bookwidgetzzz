@@ -13,8 +13,9 @@ export function AIGate({ children }: { children: React.ReactNode }) {
       <div style={{ fontSize: '1.8rem' }} aria-hidden>✨</div>
       <strong>AI-assistent nog niet ingesteld</strong>
       <p className="hint" style={{ maxWidth: 420, margin: 0 }}>
-        Voeg één keer een API-sleutel toe (Anthropic of OpenAI) en maak daarna in enkele
-        seconden widgets en cursussen uit je eigen bronmateriaal. De sleutel blijft op dit toestel.
+        Voeg één keer een API-sleutel toe (Google Gemini, Anthropic of OpenAI) — of open de
+        instel-link die je van je beheerder kreeg — en maak daarna in enkele seconden widgets
+        en cursussen uit je eigen bronmateriaal. De sleutel blijft op dit toestel.
       </p>
       <Link to="/ai-instellingen" className="btn btn-primary">⚙️ AI instellen</Link>
     </div>

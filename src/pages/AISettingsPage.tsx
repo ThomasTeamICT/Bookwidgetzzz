@@ -12,7 +12,7 @@ import {
   usageTotals,
 } from '../lib/ai';
 import { AIErrorBox } from '../components/aiCommon';
-import { ConfirmModal, CopyButton, Field, useToast } from '../components/ui';
+import { CheckRow, ConfirmModal, CopyButton, Field, useToast } from '../components/ui';
 import { formatDate } from '../lib/utils';
 
 // ── Instel-links: instellingen (incl. sleutel) delen met een testgroep ──────
@@ -83,21 +83,32 @@ export function AISettingsPage() {
   // Instel-link geopend? Formulier voorinvullen (níét bewaren — dat blijft een
   // bewuste klik) en de sleutel meteen uit de adresbalk halen.
   const [searchParams, setSearchParams] = useSearchParams();
-  const [fromLink, setFromLink] = useState(false);
+  const [fromLink, setFromLink] = useState<false | 'prefill' | 'saved'>(false);
+  const [autoLink, setAutoLink] = useState(true);
   useEffect(() => {
     const raw = searchParams.get('setup');
     if (!raw) return;
+    const auto = searchParams.get('auto') === '1';
     setSearchParams({}, { replace: true });
     const s = decodeSetup(raw);
     if (!s || typeof s.apiKey !== 'string' || !s.apiKey || !s.provider || !(s.provider in PROVIDER_INFO)) return;
     const provider = s.provider as AIProviderId;
-    setForm((f) => ({
+    const next: AISettings = {
       provider,
       apiKey: (s.apiKey as string).trim(),
-      model: typeof s.model === 'string' && s.model ? s.model : (PROVIDER_INFO[provider].models[0]?.id ?? f.model),
+      model: typeof s.model === 'string' && s.model ? s.model : (PROVIDER_INFO[provider].models[0]?.id ?? ''),
       baseUrl: typeof s.baseUrl === 'string' ? s.baseUrl : undefined,
-    }));
-    setFromLink(true);
+    };
+    if (auto) {
+      // Auto-link: meteen bewaren — de ontvanger hoeft niets te doen.
+      saveAISettings(next);
+      setSaved(next);
+      setForm(next);
+      toast('✨ AI-instellingen automatisch bewaard — je kan meteen aan de slag', 'ok');
+    } else {
+      setForm((f) => ({ ...f, ...next }));
+    }
+    setFromLink(auto ? 'saved' : 'prefill');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -196,9 +207,19 @@ export function AISettingsPage() {
             <div className="callout">
               <span aria-hidden>🔗</span>
               <div>
-                <strong>Instellingen ontvangen via een instel-link.</strong> Alles staat al
-                ingevuld — controleer even en klik <em>Bewaren</em> (en daarna gerust{' '}
-                <em>Test de verbinding</em>).
+                {fromLink === 'saved' ? (
+                  <>
+                    <strong>Klaar!</strong> De instellingen uit je instel-link zijn bewaard — de
+                    AI-assistent werkt nu overal in de app. Probeer gerust de{' '}
+                    <em>Test de verbinding</em>-knop, of ga meteen naar de ✨ AI-studio.
+                  </>
+                ) : (
+                  <>
+                    <strong>Instellingen ontvangen via een instel-link.</strong> Alles staat al
+                    ingevuld — controleer even en klik <em>Bewaren</em> (en daarna gerust{' '}
+                    <em>Test de verbinding</em>).
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -352,23 +373,30 @@ export function AISettingsPage() {
               <h3>🔗 Instel-link voor je testgroep</h3>
               <p style={{ marginTop: 0 }}>
                 Wil je collega's laten meetesten zonder dat ze zelf iets moeten instellen? Deel
-                deze link: wie hem opent, krijgt deze aanbieder, dit model én deze sleutel al
-                ingevuld en hoeft alleen op <em>Bewaren</em> te klikken.
+                deze link: wie hem opent, krijgt deze aanbieder, dit model én deze sleutel
+                {autoLink ? ' — meteen bewaard, niets te klikken.' : ' al ingevuld, en klikt alleen nog op Bewaren.'}
               </p>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input
-                  className="input input-sm"
-                  readOnly
-                  value={`${window.location.origin}${window.location.pathname}#/ai-instellingen?setup=${encodeSetup(saved)}`}
-                  aria-label="Instel-link met sleutel"
-                  onFocus={(e) => e.target.select()}
-                  style={{ flex: 1 }}
-                />
-                <CopyButton
-                  text={`${window.location.origin}${window.location.pathname}#/ai-instellingen?setup=${encodeSetup(saved)}`}
-                  label="Kopiëren"
-                />
-              </div>
+              <CheckRow
+                checked={autoLink}
+                onChange={setAutoLink}
+                label="Meteen bewaren bij openen (ontvanger hoeft niets te doen)"
+              />
+              {(() => {
+                const link = `${window.location.origin}${window.location.pathname}#/ai-instellingen?setup=${encodeSetup(saved)}${autoLink ? '&auto=1' : ''}`;
+                return (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                    <input
+                      className="input input-sm"
+                      readOnly
+                      value={link}
+                      aria-label="Instel-link met sleutel"
+                      onFocus={(e) => e.target.select()}
+                      style={{ flex: 1 }}
+                    />
+                    <CopyButton text={link} label="Kopiëren" />
+                  </div>
+                );
+              })()}
               <div className="callout warn" style={{ marginTop: 10 }}>
                 <span aria-hidden>🔒</span>
                 <div>
@@ -400,6 +428,52 @@ export function AISettingsPage() {
             <StatBox label="Invoertokens" value={totals.inputTokens} />
             <StatBox label="Uitvoertokens" value={totals.outputTokens} />
           </div>
+
+          {(() => {
+            // Verbruik per (gemaskeerde) sleutel — handig wanneer je met een
+            // testgroep meerdere sleutels rond laat gaan.
+            const m = new Map<string, { calls: number; inTok: number; outTok: number }>();
+            for (const u of getAIUsage()) {
+              const k = u.keyLabel ?? 'onbekend';
+              const cur = m.get(k) ?? { calls: 0, inTok: 0, outTok: 0 };
+              cur.calls++; cur.inTok += u.inputTokens; cur.outTok += u.outputTokens;
+              m.set(k, cur);
+            }
+            const rows = [...m.entries()];
+            if (rows.length < 2 && !rows.some(([k]) => k !== 'onbekend')) return null;
+            return (
+              <div style={{ marginTop: 14 }}>
+                <h4 style={{ margin: '0 0 6px' }}>Per sleutel (op dit toestel)</h4>
+                <div className="table-wrap">
+                  <table className="data">
+                    <thead>
+                      <tr>
+                        <th>Sleutel</th>
+                        <th style={{ textAlign: 'right' }}>Aanvragen</th>
+                        <th style={{ textAlign: 'right' }}>In</th>
+                        <th style={{ textAlign: 'right' }}>Uit</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map(([k, v]) => (
+                        <tr key={k} style={{ cursor: 'default' }}>
+                          <td style={{ fontFamily: 'monospace' }}>{k}</td>
+                          <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{num(v.calls)}</td>
+                          <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{num(v.inTok)}</td>
+                          <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{num(v.outTok)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="hint" style={{ margin: '6px 0 0' }}>
+                  Dit telt alleen dít toestel. Het totaalverbruik per sleutel (alle testers samen)
+                  zie je bij Google zelf: elke sleutel hoort bij een eigen project in{' '}
+                  <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">AI Studio</a>.
+                </p>
+              </div>
+            );
+          })()}
 
           {usage.length === 0 ? (
             <p className="hint" style={{ marginTop: 14, marginBottom: 0 }}>

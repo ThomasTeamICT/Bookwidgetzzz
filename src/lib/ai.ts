@@ -24,6 +24,16 @@ export interface AIUsageEntry {
   model: string;
   inputTokens: number;
   outputTokens: number;
+  /** Gemaskeerde sleutel (bv. "AQ.…2NhQ") — zo zie je per sleutel het verbruik op dit toestel. */
+  keyLabel?: string;
+}
+
+/** Maskeert een sleutel tot een herkenbaar maar onbruikbaar label. */
+export function maskAIKey(key: string): string {
+  const k = key.trim();
+  if (!k) return '';
+  if (k.length <= 8) return '••••••';
+  return `${k.slice(0, 3)}…${k.slice(-4)}`;
 }
 
 export const PROVIDER_INFO: Record<AIProviderId, { name: string; models: { id: string; label: string }[] }> = {
@@ -217,7 +227,7 @@ async function askAnthropic(s: AISettings, opts: AskAIOptions): Promise<string> 
     // Ook geannuleerde of halverwege mislukte aanvragen loggen: de
     // invoertokens zijn dan al aangerekend door de aanbieder.
     if (outputTokens === 0 && full) outputTokens = Math.round(full.length / 4);
-    logUsage({ at: Date.now(), task: opts.task, model: s.model, inputTokens, outputTokens });
+    logUsage({ at: Date.now(), task: opts.task, model: s.model, inputTokens, outputTokens, keyLabel: maskAIKey(s.apiKey) });
   }
   return full;
 }
@@ -282,7 +292,7 @@ async function askOpenAICompatible(s: AISettings, opts: AskAIOptions): Promise<s
     // Aanbieders zonder usage in de stream (of afgebroken streams): ruw
     // schatten op tekstlengte, zodat het logboek nooit stil onderrapporteert.
     if (outputTokens === 0 && full) outputTokens = Math.round(full.length / 4);
-    logUsage({ at: Date.now(), task: opts.task, model: s.model, inputTokens, outputTokens });
+    logUsage({ at: Date.now(), task: opts.task, model: s.model, inputTokens, outputTokens, keyLabel: maskAIKey(s.apiKey) });
   }
   return full;
 }
