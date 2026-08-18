@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   AIProviderId,
   AISettings,
@@ -11,8 +12,25 @@ import {
   usageTotals,
 } from '../lib/ai';
 import { AIErrorBox } from '../components/aiCommon';
-import { ConfirmModal, Field, useToast } from '../components/ui';
+import { ConfirmModal, CopyButton, Field, useToast } from '../components/ui';
 import { formatDate } from '../lib/utils';
+
+// ── Instel-links: instellingen (incl. sleutel) delen met een testgroep ──────
+// De link gebruikt het hash-fragment, dus de sleutel bereikt nooit een server;
+// bij het openen wordt hij meteen uit de adresbalk verwijderd.
+
+function encodeSetup(s: AISettings): string {
+  return btoa(unescape(encodeURIComponent(JSON.stringify(s))))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function decodeSetup(v: string): Partial<AISettings> | null {
+  try {
+    return JSON.parse(decodeURIComponent(escape(atob(v.replace(/-/g, '+').replace(/_/g, '/')))));
+  } catch {
+    return null;
+  }
+}
 
 /** Maskeert een API-sleutel tot bv. "sk-…af3k". */
 function maskKey(key: string): string {
@@ -61,6 +79,27 @@ export function AISettingsPage() {
   const bump = () => setTick((x) => x + 1);
 
   const providerModels = PROVIDER_INFO[form.provider].models;
+
+  // Instel-link geopend? Formulier voorinvullen (níét bewaren — dat blijft een
+  // bewuste klik) en de sleutel meteen uit de adresbalk halen.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [fromLink, setFromLink] = useState(false);
+  useEffect(() => {
+    const raw = searchParams.get('setup');
+    if (!raw) return;
+    setSearchParams({}, { replace: true });
+    const s = decodeSetup(raw);
+    if (!s || typeof s.apiKey !== 'string' || !s.apiKey || !s.provider || !(s.provider in PROVIDER_INFO)) return;
+    const provider = s.provider as AIProviderId;
+    setForm((f) => ({
+      provider,
+      apiKey: (s.apiKey as string).trim(),
+      model: typeof s.model === 'string' && s.model ? s.model : (PROVIDER_INFO[provider].models[0]?.id ?? f.model),
+      baseUrl: typeof s.baseUrl === 'string' ? s.baseUrl : undefined,
+    }));
+    setFromLink(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const patch = (p: Partial<AISettings>) => {
     setForm((f) => ({ ...f, ...p }));
@@ -152,6 +191,17 @@ export function AISettingsPage() {
             toestel bewaard. Aanvragen gaan <strong>rechtstreeks van je browser naar de gekozen
             aanbieder</strong> — er zit geen server van WidgetFabriek tussen.
           </p>
+
+          {fromLink && (
+            <div className="callout">
+              <span aria-hidden>🔗</span>
+              <div>
+                <strong>Instellingen ontvangen via een instel-link.</strong> Alles staat al
+                ingevuld — controleer even en klik <em>Bewaren</em> (en daarna gerust{' '}
+                <em>Test de verbinding</em>).
+              </div>
+            </div>
+          )}
 
           <Field label="Aanbieder">
             <select
@@ -295,6 +345,41 @@ export function AISettingsPage() {
             </a>{' '}
             (OpenAI). Je hebt er een account met wat tegoed nodig.
           </p>
+
+          {saved.apiKey && (
+            <>
+              <hr className="divider" />
+              <h3>🔗 Instel-link voor je testgroep</h3>
+              <p style={{ marginTop: 0 }}>
+                Wil je collega's laten meetesten zonder dat ze zelf iets moeten instellen? Deel
+                deze link: wie hem opent, krijgt deze aanbieder, dit model én deze sleutel al
+                ingevuld en hoeft alleen op <em>Bewaren</em> te klikken.
+              </p>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  className="input input-sm"
+                  readOnly
+                  value={`${window.location.origin}${window.location.pathname}#/ai-instellingen?setup=${encodeSetup(saved)}`}
+                  aria-label="Instel-link met sleutel"
+                  onFocus={(e) => e.target.select()}
+                  style={{ flex: 1 }}
+                />
+                <CopyButton
+                  text={`${window.location.origin}${window.location.pathname}#/ai-instellingen?setup=${encodeSetup(saved)}`}
+                  label="Kopiëren"
+                />
+              </div>
+              <div className="callout warn" style={{ marginTop: 10 }}>
+                <span aria-hidden>🔒</span>
+                <div>
+                  <strong>Deze link bevat je API-sleutel.</strong> Deel hem alleen rechtstreeks met
+                  mensen die je vertrouwt (je testgroep), nooit in openbare kanalen of chats met
+                  veel leden. Uitgetest en klaar? Trek de sleutel dan in bij je aanbieder — dan
+                  werkt ook elke gedeelde link niet meer.
+                </div>
+              </div>
+            </>
+          )}
         </section>
 
         {/* ── 2. Gebruik & kosten ───────────────────────────────────────── */}
