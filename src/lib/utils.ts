@@ -54,31 +54,97 @@ export function pct(earned: number, max: number): number {
   return max <= 0 ? 0 : Math.round((earned / max) * 100);
 }
 
-/** Bestand naar data-URL lezen (voor afbeeldingen in widgets). */
-export function fileToDataUrl(file: File, maxDim = 1400): Promise<string> {
+function readAsDataUrl(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('Bestand kon niet gelezen worden'));
-    reader.onload = () => {
-      const url = String(reader.result);
-      if (!file.type.startsWith('image/')) return resolve(url);
-      // Afbeeldingen verkleinen zodat localStorage niet volloopt.
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-        if (scale >= 1) return resolve(url);
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
-      };
-      img.onerror = () => resolve(url);
-      img.src = url;
-    };
+    reader.onload = () => resolve(String(reader.result));
     reader.readAsDataURL(file);
   });
+}
+
+function loadImage(url: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+function canvasBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    try {
+      canvas.toBlob((b) => resolve(b && b.type === type ? b : null), type, quality);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+/** Grens waaronder we een afbeelding niet meer proberen te verkleinen. */
+const KEEP_ORIGINAL_BYTES = 200 * 1024;
+
+/**
+ * Afbeelding klaarmaken voor opslag: verkleinen tot `maxDim` en hercoderen
+ * als dat kleiner uitkomt. Vroeger gebeurde dat alleen boven 1400 px, zodat
+ * een schermafbeelding van 1200 px als png van 2 MB gewoon bleef staan; nu
+ * proberen we WebP (behoudt transparantie) en JPEG (op wit) en houden we het
+ * kleinste. Gif (animatie) en svg (vector) blijven altijd origineel.
+ * Geen afbeelding, of niets kleiner gevonden? Dan het bestand zelf.
+ */
+export async function fileToBlob(file: File, maxDim = 1400): Promise<Blob> {
+  if (!file.type.startsWith('image/')) return file;
+  if (file.type === 'image/svg+xml' || file.type === 'image/gif') return file;
+  const img = await loadImage(URL.createObjectURL(file));
+  if (!img) return file;
+  try {
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    if (scale >= 1 && file.size <= KEEP_ORIGINAL_BYTES) return file;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.width * scale));
+    canvas.height = Math.max(1, Math.round(img.height * scale));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const candidates: Blob[] = [];
+    const webp = await canvasBlob(canvas, 'image/webp', 0.82);
+    if (webp) candidates.push(webp);
+    // JPEG kent geen transparantie: doorschijnende delen worden zwart, tenzij
+    // we eerst wit invullen.
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const jpeg = await canvasBlob(canvas, 'image/jpeg', 0.85);
+    // Een png-origineel kan transparantie hebben; dan enkel WebP als vervanger.
+    if (jpeg && (file.type === 'image/jpeg' || !webp)) candidates.push(jpeg);
+    if (scale >= 1) candidates.push(file);
+    if (candidates.length === 0) return file;
+    return candidates.reduce((best, b) => (b.size < best.size ? b : best));
+  } finally {
+    URL.revokeObjectURL(img.src);
+  }
+}
+
+/** Bestand naar data-URL lezen (afbeeldingen worden verkleind). */
+export async function fileToDataUrl(file: File, maxDim = 1400): Promise<string> {
+  return readAsDataUrl(await fileToBlob(file, maxDim));
+}
+
+/**
+ * Bestand naar een URL die in een widget- of cursusconfig mag staan: de bytes
+ * gaan naar IndexedDB (lib/mediaStore) en de config krijgt een blob:-URL die
+ * bij het bewaren automatisch een verwijzing wordt. Lukt dat niet (IndexedDB
+ * geblokkeerd), dan een data-URL zoals vroeger.
+ */
+export async function fileToMediaUrl(file: File, maxDim = 1400): Promise<string> {
+  const blob = await fileToBlob(file, maxDim);
+  try {
+    const { storeMedia } = await import('./mediaStore');
+    return await storeMedia(blob, file.name);
+  } catch {
+    return readAsDataUrl(blob);
+  }
 }
 
 export function downloadFile(name: string, content: string, mime = 'application/json') {

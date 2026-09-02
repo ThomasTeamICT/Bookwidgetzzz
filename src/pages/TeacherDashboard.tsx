@@ -92,7 +92,7 @@ export function TeacherDashboard() {
     toast(`“${w.title}” geïmporteerd`, 'ok');
   };
 
-  const exportActiveFolderPack = () => {
+  const exportActiveFolderPack = async () => {
     if (activeFolder === 'all' || activeFolder === null) return;
     const folder = folders.find((f) => f.id === activeFolder);
     if (!folder) return;
@@ -101,7 +101,8 @@ export function TeacherDashboard() {
       toast('Deze map bevat geen widgets om te delen', 'err');
       return;
     }
-    const json = exportFolderPack(folder.name, inFolder, getPrefs().teacherName);
+    // async: afbeeldingen uit IndexedDB gaan als data-URL mee in het pakket
+    const json = await exportFolderPack(folder.name, inFolder, getPrefs().teacherName);
     const safeName = folder.name.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '-') || 'map';
     downloadFile(`${safeName}.widgetpak.json`, json);
     toast(`Map “${folder.name}” gedownload als pakket (${inFolder.length} widget${inFolder.length === 1 ? '' : 's'})`, 'ok');
@@ -154,7 +155,7 @@ export function TeacherDashboard() {
           <button className="btn btn-sm btn-quiet" onClick={() => setFolderModal('new')}>+ Map</button>
           {activeFolder !== 'all' && activeFolder !== null && (
             <>
-              <button className="btn btn-sm btn-quiet" onClick={exportActiveFolderPack}
+              <button className="btn btn-sm btn-quiet" onClick={() => { void exportActiveFolderPack(); }}
                 title="Download deze map als pakket voor je vakgroep">
                 📦 Map delen
               </button>

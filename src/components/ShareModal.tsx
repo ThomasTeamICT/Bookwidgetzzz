@@ -1,13 +1,32 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import type { Widget } from '../lib/types';
-import { encodeWidgetToUrl, exportWidgetJson, playUrlForCode } from '../lib/share';
+import { encodeWidgetToUrl, exportWidgetJsonWithMedia, playUrlForCode } from '../lib/share';
+import { inlineMedia } from '../lib/mediaStore';
 import { downloadFile } from '../lib/utils';
-import { CheckRow, CopyButton, Modal } from './ui';
+import { CheckRow, CopyButton, Modal, useToast } from './ui';
+
+/**
+ * Draagbare link, async: de media van de widget staan in IndexedDB en moeten
+ * eerst als data-URL ingevoegd worden (lib/mediaStore). Leeg zolang dat loopt.
+ */
+function usePortableUrl(widget: Widget, transform?: (w: Widget) => Widget): string {
+  const [url, setUrl] = useState('');
+  useEffect(() => {
+    let alive = true;
+    setUrl('');
+    inlineMedia(widget)
+      .then((w) => { if (alive) setUrl(encodeWidgetToUrl(transform ? transform(w) : w)); })
+      .catch(() => { if (alive) setUrl(encodeWidgetToUrl(transform ? transform(widget) : widget)); });
+    return () => { alive = false; };
+  }, [widget, transform]);
+  return url;
+}
 
 export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () => void }) {
+  const toast = useToast();
   const codeUrl = playUrlForCode(widget.code);
-  const portableUrl = encodeWidgetToUrl(widget);
+  const portableUrl = usePortableUrl(widget);
   const [qr, setQr] = useState<string>('');
   const embedCode = `<iframe src="${portableUrl}" width="100%" height="640" style="border:0;border-radius:12px" allowfullscreen title="${widget.title.replace(/"/g, '&quot;')}"></iframe>`;
   const classroomUrl = `https://classroom.google.com/share?url=${encodeURIComponent(portableUrl)}`;
@@ -15,11 +34,21 @@ export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () =>
 
   useEffect(() => {
     let alive = true;
+    if (!portableUrl) { setQr(''); return; }
     QRCode.toDataURL(portableUrl, { width: 240, margin: 1 })
       .then((url) => { if (alive) setQr(url); })
-      .catch(() => { /* QR is optioneel */ });
+      .catch(() => { if (alive) setQr(''); /* te lang voor een QR (grote afbeeldingen) */ });
     return () => { alive = false; };
   }, [portableUrl]);
+
+  const exportJson = async () => {
+    try {
+      const json = await exportWidgetJsonWithMedia(widget);
+      downloadFile(`${widget.title.replace(/[^\w\dà-ÿ -]/gi, '')}.widget.json`, json);
+    } catch {
+      toast('Exporteren mislukt', 'err');
+    }
+  };
 
   return (
     <Modal title={`“${widget.title}” delen`} onClose={onClose} wide>
@@ -50,7 +79,14 @@ export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () =>
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 12 }}>
         <div style={{ flex: '1 1 300px' }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-            <input className="input input-sm" readOnly value={portableUrl} aria-label="Draagbare deellink" onFocus={(e) => e.target.select()} />
+            <input
+              className="input input-sm"
+              readOnly
+              value={portableUrl || 'Link wordt klaargemaakt…'}
+              aria-label="Draagbare deellink"
+              aria-busy={!portableUrl}
+              onFocus={(e) => e.target.select()}
+            />
             <CopyButton text={portableUrl} label="Kopiëren" />
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -94,10 +130,7 @@ export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () =>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         <strong>Bestand:</strong>
-        <button
-          className="btn btn-sm btn-ghost"
-          onClick={() => downloadFile(`${widget.title.replace(/[^\w\dà-ÿ -]/gi, '')}.widget.json`, exportWidgetJson(widget))}
-        >
+        <button className="btn btn-sm btn-ghost" onClick={() => { void exportJson(); }}>
           💾 Exporteren (.json)
         </button>
         <span className="hint">Importeer dit bestand op een ander toestel of geef het aan een collega.</span>
@@ -116,13 +149,14 @@ function AdaptedLinkSection({ widget }: { widget: Widget }) {
   const [noLimit, setNoLimit] = useState(false);
   const [extraAttempt, setExtraAttempt] = useState(false);
 
-  const adaptedUrl = useMemo(() => {
-    const w: Widget = JSON.parse(JSON.stringify(widget));
+  const adapt = useCallback((src: Widget) => {
+    const w: Widget = JSON.parse(JSON.stringify(src));
     if (noLimit) w.settings.timeLimitMin = 0;
     else if (extraTime && w.settings.timeLimitMin > 0) w.settings.timeLimitMin = Math.ceil(w.settings.timeLimitMin * 1.5);
     if (extraAttempt && w.settings.maxAttempts > 0) w.settings.maxAttempts += 1;
-    return encodeWidgetToUrl(w);
-  }, [widget, extraTime, noLimit, extraAttempt]);
+    return w;
+  }, [extraTime, noLimit, extraAttempt]);
+  const adaptedUrl = usePortableUrl(widget, adapt);
 
   const hasEffect = noLimit || (extraTime && widget.settings.timeLimitMin > 0) || (extraAttempt && widget.settings.maxAttempts > 0);
 
@@ -141,7 +175,7 @@ function AdaptedLinkSection({ widget }: { widget: Widget }) {
         <CheckRow checked={extraAttempt} onChange={setExtraAttempt} label={`Eén extra poging${widget.settings.maxAttempts > 0 ? ` (${widget.settings.maxAttempts} → ${widget.settings.maxAttempts + 1})` : ' (onbeperkt ingesteld)'}`} />
         {hasEffect ? (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
-            <input className="input input-sm" readOnly value={adaptedUrl} aria-label="Aangepaste deellink" onFocus={(e) => e.target.select()} />
+            <input className="input input-sm" readOnly value={adaptedUrl || 'Link wordt klaargemaakt…'} aria-label="Aangepaste deellink" aria-busy={!adaptedUrl} onFocus={(e) => e.target.select()} />
             <CopyButton text={adaptedUrl} label="Kopiëren" />
           </div>
         ) : (

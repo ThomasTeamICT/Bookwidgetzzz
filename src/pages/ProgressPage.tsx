@@ -73,7 +73,7 @@ export function ProgressPage() {
     const safe =
       actieveNaam.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '-').toLowerCase() ||
       'leerling';
-    downloadFile(`voortgang-${safe}.json`, exportProgress(actieveNaam));
+    void exportProgress(actieveNaam).then((json) => downloadFile(`voortgang-${safe}.json`, json));
     toast(`Voortgang van ${actieveNaam} gedownload`, 'ok');
   };
 

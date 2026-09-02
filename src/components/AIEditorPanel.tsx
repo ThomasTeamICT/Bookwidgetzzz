@@ -13,6 +13,7 @@ import type {
   GapQuestion, MCQuestion, MultiQuestion, Question, VideoCheckpoint, Widget, WidgetTypeId,
 } from '../lib/types';
 import { AIError, askAI, extractJson } from '../lib/ai';
+import { isMediaUrl } from '../lib/mediaStore';
 import {
   AI_GEN_TYPES, buildWidgetGenPrompt, quizSchemaText, sanitizeGeneratedWidgets,
   sanitizeQuestion, sanitizeQuestions,
@@ -406,12 +407,12 @@ export function AIEditorPanel({ widget, onClose, onApply }: {
       toast('Alle vragen hebben al uitleg, hints en steuntaal.', 'info');
       return;
     }
-    // Afbeeldingen (data-URL's) niet meesturen: scheelt veel tokens.
+    // Afbeeldingen niet meesturen: scheelt veel tokens en zegt het model niets.
     // "imageUrl" (o.a. splitworksheet) én "image" (o.a. imagepoint) strippen,
-    // plus defensief elke andere data-URL vervangen door een placeholder.
+    // plus defensief elke andere data-/blob-URL vervangen door een placeholder.
     const payload = JSON.stringify({ questions: targets }, (key, value) => {
       if (key === 'imageUrl' || key === 'image') return undefined;
-      if (typeof value === 'string' && value.startsWith('data:')) return '[afbeelding]';
+      if (isMediaUrl(value)) return '[afbeelding]';
       return value;
     });
     const system = `Je bent een ervaren Vlaamse leerkracht die leerhulp toevoegt aan bestaande quizvragen.

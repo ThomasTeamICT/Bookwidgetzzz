@@ -6,6 +6,8 @@ import { Landing } from './pages/Landing';
 import { PlayerPage } from './pages/PlayerPage';
 import { OpenSharedPage } from './pages/OpenSharedPage';
 import { JoinPage } from './pages/JoinPage';
+import { migrateDataUrls, pruneOrphanMedia } from './lib/mediaStore';
+import { onStorageChange } from './lib/storage';
 
 // ── Code-splitting: zwaardere pagina's laden pas wanneer ze nodig zijn ──────
 // (De leerlingroutes /speel, /open en /meedoen blijven in de hoofdbundel:
@@ -122,6 +124,36 @@ export default function App() {
     // code binnenkomt heeft ze nooit nodig. Lui laden houdt ~3 kB gzip uit de
     // hoofdbundel die iedereen op /speel/:code binnenhaalt.
     void import('./lib/seed').then((m) => m.seedIfEmpty());
+  }, []);
+
+  useEffect(() => {
+    // Media-onderhoud, altijd buiten het kritieke pad:
+    //  – data-URL's die nog in localStorage staan (oude opslag, import, link,
+    //    resultaatcode, AI) verhuizen naar IndexedDB — kort na elke wijziging,
+    //    ontdubbeld, zodat de opslag nooit meer volloopt met base64;
+    //  – bij het opstarten één keer wezen opruimen (blobs zonder verwijzing).
+    let timer: number | null = null;
+    const schedule = (delay: number) => {
+      if (timer !== null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = null;
+        void migrateDataUrls().catch(() => { /* best-effort */ });
+      }, delay);
+    };
+    const idle = (fn: () => void) => {
+      if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(fn);
+      else window.setTimeout(fn, 800);
+    };
+    idle(() => {
+      void migrateDataUrls()
+        .then(() => pruneOrphanMedia())
+        .catch(() => { /* best-effort */ });
+    });
+    const off = onStorageChange(() => schedule(2500));
+    return () => {
+      off();
+      if (timer !== null) window.clearTimeout(timer);
+    };
   }, []);
   return (
     <ToastProvider>

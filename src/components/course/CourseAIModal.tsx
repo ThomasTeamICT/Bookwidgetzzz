@@ -199,7 +199,7 @@ export function CourseAIModal({
                 <button
                   className="btn btn-sm btn-ghost"
                   style={{ justifySelf: 'start' }}
-                  onClick={() => downloadFile(`${course.title || 'cursus'} (backup).json`, exportCourseJson(course))}
+                  onClick={() => { void exportCourseJson(course).then((json) => downloadFile(`${course.title || 'cursus'} (backup).json`, json)); }}
                 >
                   💾 Eerst back-up downloaden
                 </button>

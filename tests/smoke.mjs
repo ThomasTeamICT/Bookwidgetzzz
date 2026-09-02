@@ -7,6 +7,8 @@
 // Faalt hard (exit 1) bij een mislukte check of bij console-/paginafouten.
 
 import { chromium } from 'playwright-core';
+import zlib from 'node:zlib';
+import LZString from 'lz-string';
 
 const BASE = process.env.SMOKE_BASE || 'http://localhost:4173';
 const errors = [];
@@ -356,6 +358,136 @@ if (extraCode) {
   check('nieuwe types in vraagpalet', await page.locator('text=/Woorden markeren|Sorteren in categorie/i').first().isVisible());
   await page.keyboard.press('Escape');
 }
+
+// ── 19. Media-opslag (afbeeldingen in IndexedDB) ────────────────────────────
+console.log('19. Media-opslag');
+// Een echte png van 600×400 (zlib) — groot genoeg om verhuisd te worden.
+function buildPng(width, height, rgb) {
+  const crcTable = [];
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    crcTable.push(c >>> 0);
+  }
+  const crc32 = (buf) => {
+    let c = 0xffffffff;
+    for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type, data) => {
+    const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
+    const td = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(td));
+    return Buffer.concat([len, td, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8; ihdr[9] = 2; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+  const raw = Buffer.alloc((width * 3 + 1) * height);
+  for (let y = 0; y < height; y++) {
+    raw[y * (width * 3 + 1)] = 0;
+    for (let x = 0; x < width; x++) {
+      const o = y * (width * 3 + 1) + 1 + x * 3;
+      // ruis zodat de png niet tot niets comprimeert
+      raw[o] = (rgb[0] + x * 7 + y * 3) & 0xff; raw[o + 1] = (rgb[1] + x * 5) & 0xff; raw[o + 2] = (rgb[2] + y * 11) & 0xff;
+    }
+  }
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+const png = buildPng(600, 400, [40, 120, 200]);
+check(`test-png is groot genoeg (${Math.round(png.length / 1024)} kB)`, png.length > 20000);
+
+// a) uploaden via de afbeeldingskiezer in de editor van een beeldwidget
+const ivId = await page.evaluate(() => {
+  const ws = JSON.parse(localStorage.getItem('wf.widgets.v1'));
+  const w = {
+    id: 'smokemediawidget', type: 'imageviewer', title: 'Smoke media', folderId: null,
+    config: { imageUrl: '', description: 'test' },
+    settings: { accentColor: '#4f46e5', shuffle: false, showFeedback: true, showScore: true, timeLimitMin: 0, maxAttempts: 0, requireName: false, instructions: '' },
+    code: 'SMKMED', createdAt: Date.now(), updatedAt: Date.now(),
+  };
+  ws.unshift(w);
+  localStorage.setItem('wf.widgets.v1', JSON.stringify(ws));
+  return w.id;
+});
+// Via het dashboard: /bewerk/:id → /bewerk/:id is anders een hash-wissel
+// binnen dezelfde pagina; we willen hier een verse editor testen.
+await go('/#/widgets');
+await go(`/#/bewerk/${ivId}`);
+check('editor van de mediawidget geopend', await page.locator('h1, .editor-title, input[value="Smoke media"]').filter({ hasText: /Smoke media/ }).first().isVisible().catch(() => false) || (await page.locator('input[value="Smoke media"]').count()) > 0);
+await page.locator('input[type=file][accept="image/*"]').first().setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: png });
+await sleep(2500); // verkleinen + IndexedDB + autosave
+const afterUpload = await page.evaluate(() => {
+  const raw = localStorage.getItem('wf.widgets.v1');
+  const w = JSON.parse(raw).find((x) => x.id === 'smokemediawidget');
+  const img = document.querySelector('.field img');
+  return {
+    ref: String(w.config.imageUrl),
+    rawHasData: raw.includes('data:image'),
+    imgSrc: img ? img.getAttribute('src') : '',
+    natural: img ? img.naturalWidth : 0,
+  };
+});
+check('config bevat een wfmedia-verwijzing i.p.v. data-URL', afterUpload.ref.startsWith('wfmedia:m_'));
+check('geen data-URL in localStorage na upload', !afterUpload.rawHasData);
+check('editor toont de afbeelding via blob:-URL', afterUpload.imgSrc.startsWith('blob:') && afterUpload.natural > 0);
+
+// b) na herladen komt de afbeelding uit IndexedDB terug
+await go(`/#/speel/SMKMED`);
+await sleep(600);
+const afterReload = await page.evaluate(() => {
+  const img = document.querySelector('.player-shell img');
+  return { src: img ? img.getAttribute('src') : '', natural: img ? img.naturalWidth : 0 };
+});
+check('speler toont de afbeelding na herladen (blob:)', afterReload.src.startsWith('blob:') && afterReload.natural > 0);
+
+// c) draagbare link bevat de afbeelding als data-URL (deelvenster in de editor)
+await go('/#/widgets');
+await go(`/#/bewerk/${ivId}`);
+await page.getByRole('button', { name: /^📤 Delen$/ }).first().click();
+await page.waitForFunction(() => {
+  const el = document.querySelector('input[aria-label="Draagbare deellink"]');
+  return el && el.value.startsWith('http');
+}, null, { timeout: 8000 }).catch(() => {});
+const portable = await page.evaluate(() => document.querySelector('input[aria-label="Draagbare deellink"]')?.value ?? '');
+const dParam = portable.split('?d=')[1] ?? '';
+const decodedPortable = dParam ? (LZString.decompressFromEncodedURIComponent(dParam) ?? '') : '';
+check('draagbare link bevat de afbeelding als data-URL', decodedPortable.includes('"data:image/'));
+check('draagbare link bevat geen blob:/wfmedia:', !decodedPortable.includes('blob:') && !decodedPortable.includes('wfmedia:'));
+await page.keyboard.press('Escape');
+
+// d) migratie: een oude widget met data-URL wordt na het laden verhuisd
+const legacyDataUrl = 'data:image/png;base64,' + png.toString('base64');
+await page.evaluate((dataUrl) => {
+  const ws = JSON.parse(localStorage.getItem('wf.widgets.v1'));
+  ws.unshift({
+    id: 'smokelegacy', type: 'imageviewer', title: 'Smoke legacy', folderId: null,
+    config: { imageUrl: dataUrl, description: 'oud' },
+    settings: { accentColor: '#4f46e5', shuffle: false, showFeedback: true, showScore: true, timeLimitMin: 0, maxAttempts: 0, requireName: false, instructions: '' },
+    code: 'SMKLEG', createdAt: Date.now(), updatedAt: Date.now(),
+  });
+  localStorage.setItem('wf.widgets.v1', JSON.stringify(ws));
+}, legacyDataUrl);
+await go(`/#/speel/SMKLEG`);
+await sleep(2500);
+const migrated = await page.evaluate(() => {
+  const raw = localStorage.getItem('wf.widgets.v1');
+  const w = JSON.parse(raw).find((x) => x.id === 'smokelegacy');
+  const img = document.querySelector('.player-shell img');
+  return { ref: String(w.config.imageUrl), hasData: raw.includes('data:image'), natural: img ? img.naturalWidth : 0 };
+});
+check('oude data-URL is naar IndexedDB verhuisd', migrated.ref.startsWith('wfmedia:m_') && !migrated.hasData);
+check('speler toont de verhuisde afbeelding', migrated.natural > 0);
+await page.reload({ waitUntil: 'networkidle' });
+await sleep(600);
+check('… ook na herladen', (await page.evaluate(() => document.querySelector('.player-shell img')?.naturalWidth ?? 0)) > 0);
+
+// e) privacypagina telt de media
+await go('/#/privacy');
+check('privacypagina toont mediateller', await page.locator('text=/Afbeeldingen, audio en bijlagen/').first().isVisible());
 
 // ── Slot ────────────────────────────────────────────────────────────────────
 console.log('\n──────────');

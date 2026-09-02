@@ -153,7 +153,9 @@ src/
 Elk widgettype registreert zich in `src/widgets/registry.tsx` met metadata, standaardconfiguratie, een **Editor**-component (leerkracht) en een **Player**-component (leerling). Een nieuw widgettype toevoegen = één module schrijven + één registratie.
 
 ### Gegevensopslag
-Alles staat in `localStorage` (`wf.*`-sleutels): widgets, mappen, inzendingen, pogingen, cursussen, leesvoortgang, AI-instellingen en voorkeuren. Afbeeldingen worden bij het uploaden verkleind en als data-URL opgeslagen. Bij het eerste bezoek worden voorbeeldwidgets en een voorbeeldcursus geplaatst zodat je meteen kan verkennen.
+Alles staat in `localStorage` (`wf.*`-sleutels): widgets, mappen, inzendingen, pogingen, cursussen, leesvoortgang, AI-instellingen en voorkeuren. Bij het eerste bezoek worden voorbeeldwidgets en een voorbeeldcursus geplaatst zodat je meteen kan verkennen.
+
+**Afbeeldingen, audio en bijlagen** staan niet in `localStorage` (dat biedt ±5 MB voor de hele app) maar als blob in IndexedDB (`lib/mediaStore.ts`, zelfde database als de pdf's). In de opgeslagen JSON staat alleen een verwijzing `wfmedia:m_…`; bij het lezen wordt die (via een JSON-reviver in de opslaglaag) een `blob:`-URL, zodat geen enkele widget iets van de opslag hoeft te weten. Uploads worden verkleind (max. 1400 px) en hergecodeerd als WebP/JPEG wanneer dat kleiner is. Draagbare links en exportbestanden krijgen de media weer als data-URL ingebed (`inlineMedia`), en data-URL's die binnenkomen via import, link, AI of resultaatcode worden na het bewaren automatisch verhuisd — dat is meteen de migratie van oudere opslag. Blobs waar niets meer naar verwijst worden bij het opstarten opgeruimd (met een leeftijdsgrens van 10 minuten).
 
 ### Beperkingen (bewust, door de serverloze opzet)
 - Inzendingen en leesvoortgang komen alleen bij de leerkracht terecht als leerling en leerkracht **dezelfde browseropslag** delen (klascode-scenario) — bij de draagbare link blijven resultaten op het toestel van de leerling. Daarvoor zijn er **resultaatcodes** en **voortgangscodes**.

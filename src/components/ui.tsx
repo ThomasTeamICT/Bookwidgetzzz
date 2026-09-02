@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { fileToDataUrl } from '../lib/utils';
+import { fileToMediaUrl } from '../lib/utils';
 
 // ── Toasts ──────────────────────────────────────────────────────────────────
 
@@ -195,7 +195,7 @@ export function ScoreRing({ percent, color }: { percent: number; color?: string 
   );
 }
 
-// ── Afbeelding-kiezer (upload → data-URL) ───────────────────────────────────
+// ── Afbeelding-kiezer (upload → verkleind → IndexedDB, blob:-URL) ───────────────────────────────────
 
 export function ImagePicker({
   value, onChange, label = 'Afbeelding',
@@ -224,7 +224,7 @@ export function ImagePicker({
         onChange={async (e) => {
           const f = e.target.files?.[0];
           if (!f) return;
-          onChange(await fileToDataUrl(f));
+          onChange(await fileToMediaUrl(f));
           e.target.value = '';
         }}
       />

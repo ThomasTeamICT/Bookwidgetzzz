@@ -1,6 +1,7 @@
 import LZString from 'lz-string';
 import type { Submission, Widget, WidgetSettings } from './types';
 import { makeCode, uid } from './utils';
+import { inlineMedia } from './mediaStore';
 import { WIDGET_TYPES } from '../widgets/registry';
 
 /**
@@ -15,6 +16,15 @@ export function encodeWidgetToUrl(widget: Widget): string {
   const compressed = LZString.compressToEncodedURIComponent(payload);
   const base = location.origin + location.pathname;
   return `${base}#/open?d=${compressed}`;
+}
+
+/**
+ * Draagbare link mét media: afbeeldingen, audio en bijlagen staan op dit
+ * toestel in IndexedDB (lib/mediaStore) en moeten als data-URL in de link,
+ * anders ziet de leerling thuis een leeg vak.
+ */
+export async function encodeWidgetToUrlWithMedia(widget: Widget): Promise<string> {
+  return encodeWidgetToUrl(await inlineMedia(widget));
 }
 
 const KNOWN_TYPES = new Set(WIDGET_TYPES.map((t) => t.id));
@@ -85,6 +95,11 @@ export function exportWidgetJson(widget: Widget): string {
   return JSON.stringify({ app: 'widgetfabriek', v: 1, widget }, null, 2);
 }
 
+/** Exportbestand mét media als data-URL (zie encodeWidgetToUrlWithMedia). */
+export async function exportWidgetJsonWithMedia(widget: Widget): Promise<string> {
+  return exportWidgetJson(await inlineMedia(widget));
+}
+
 const FALLBACK_SETTINGS = {
   accentColor: '#4f46e5',
   shuffle: false,
@@ -133,8 +148,9 @@ export interface FolderPack {
  * Exporteert een map als vakgroeppakket (JSON). Het pakket bevat diepe kopieën
  * van de widgets, zodat latere wijzigingen het pakket niet meer beïnvloeden.
  */
-export function exportFolderPack(folderName: string, widgets: Widget[], author: string): string {
-  const copies = JSON.parse(JSON.stringify(widgets)) as Widget[];
+export async function exportFolderPack(folderName: string, widgets: Widget[], author: string): Promise<string> {
+  // inlineMedia maakt zelf een diepe kopie, met de media als data-URL.
+  const copies = await inlineMedia(widgets);
   return JSON.stringify(
     {
       app: 'widgetfabriek',

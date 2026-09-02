@@ -51,7 +51,7 @@ export function CoursesPage() {
       // Bestaat er al een (andere) versie van deze cursus? Dan is een
       // stille overschrijving of een stille no-op allebei fout: vraag het.
       // Dit maakt ook "back-up terugzetten" betrouwbaar.
-      if (getCourse(res.course.id) && sharedCourseDiffers(res.course)) {
+      if (getCourse(res.course.id) && (await sharedCourseDiffers(res.course))) {
         setImportConflict(res);
         return;
       }
@@ -124,7 +124,7 @@ export function CoursesPage() {
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     <button className="btn btn-sm btn-quiet" onClick={() => duplicate(course)}>📄 Dupliceren</button>
                     <a className="btn btn-sm btn-quiet" href={`#/cursus/print/${course.id}`} target="_blank" rel="noopener">🖨️ Afdrukken</a>
-                    <button className="btn btn-sm btn-quiet" onClick={() => downloadFile(`${course.title || 'cursus'}.json`, exportCourseJson(course))}>💾 Exporteren</button>
+                    <button className="btn btn-sm btn-quiet" onClick={() => { void exportCourseJson(course).then((json) => downloadFile(`${course.title || 'cursus'}.json`, json)); }}>💾 Exporteren</button>
                     <button
                       className="btn btn-sm btn-quiet"
                       aria-label={`Cursus "${course.title}" verwijderen`}

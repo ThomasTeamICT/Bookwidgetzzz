@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import type { Course } from '../../lib/courseTypes';
 import { courseReadUrl, encodeCourseToUrl, exportCourseJson } from '../../lib/courses';
@@ -11,10 +11,29 @@ export function CourseShareModal({ course, onClose }: { course: Course; onClose:
   const [qr, setQr] = useState('');
 
   const partial = selected.length > 0 && selected.length < course.chapters.length;
-  const portableUrl = useMemo(
-    () => (selected.length ? encodeCourseToUrl(course, partial ? selected : undefined) : ''),
-    [course, selected, partial]
-  );
+  // Async: media staan in IndexedDB en gaan als data-URL in de link (lib/mediaStore).
+  const [portableUrl, setPortableUrl] = useState('');
+  const [preparing, setPreparing] = useState(false);
+  const selectedKey = selected.join(',');
+  useEffect(() => {
+    let alive = true;
+    if (!selected.length) { setPortableUrl(''); setPreparing(false); return; }
+    setPreparing(true);
+    encodeCourseToUrl(course, partial ? selected : undefined)
+      .then((url) => { if (alive) setPortableUrl(url); })
+      .catch(() => { if (alive) setPortableUrl(''); })
+      .finally(() => { if (alive) setPreparing(false); });
+    return () => { alive = false; };
+    // selectedKey vat de selectie samen; `selected` zelf is elke render een nieuw array
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [course, selectedKey, partial]);
+  const exportJson = async () => {
+    try {
+      downloadFile(`${course.title || 'cursus'}.json`, await exportCourseJson(course));
+    } catch {
+      /* downloadFile faalt niet; inlineMedia hoogstens bij een kapotte blob */
+    }
+  };
   const readUrl = courseReadUrl(course.code);
   const widgetCount = referencedWidgetIds({ ...course, chapters: course.chapters.filter((c) => selected.includes(c.id)) }).length;
   const mailUrl = `mailto:?subject=${encodeURIComponent(`Cursus: ${course.title}`)}&body=${encodeURIComponent(`Dag!\n\nHier vind je de cursus "${course.title}": ${portableUrl}\n\nVeel leesplezier!`)}`;
@@ -69,7 +88,7 @@ export function CourseShareModal({ course, onClose }: { course: Course; onClose:
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', margin: '10px 0 14px' }}>
           <div style={{ flex: '1 1 300px' }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-              <input className="input input-sm" readOnly value={portableUrl} aria-label="Draagbare cursuslink" onFocus={(e) => e.target.select()} />
+              <input className="input input-sm" readOnly value={preparing && !portableUrl ? 'Link wordt klaargemaakt…' : portableUrl} aria-label="Draagbare cursuslink" aria-busy={preparing} onFocus={(e) => e.target.select()} />
               <CopyButton text={portableUrl} label="Kopiëren" />
             </div>
             <p className="hint" style={{ margin: '0 0 8px' }}>Linklengte: {portableUrl.length.toLocaleString('nl-BE')} tekens.</p>
@@ -155,7 +174,7 @@ export function CourseShareModal({ course, onClose }: { course: Course; onClose:
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <button
           className="btn btn-sm btn-ghost"
-          onClick={() => downloadFile(`${course.title || 'cursus'}.json`, exportCourseJson(course))}
+          onClick={() => { void exportJson(); }}
         >
           💾 Cursusbestand (.json)
         </button>

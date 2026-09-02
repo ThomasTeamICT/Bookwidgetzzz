@@ -54,6 +54,12 @@ export function CourseEditorPage() {
   const toast = useToast();
   const initial = useMemo(() => (id ? getCourse(id) : undefined), [id]);
   const [course, setCourse] = useState<Course | undefined>(initial);
+  // Zelfde route, andere cursus (terug/vooruit tussen twee editors): de pagina
+  // blijft gemonteerd en useState zou anders de vorige cursus vasthouden.
+  useEffect(() => {
+    if (initial && course?.id !== initial.id) setCourse(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial]);
   const [selectedSectionId, setSelectedSectionId] = useState<string | undefined>(
     () => initial?.chapters[0]?.sections[0]?.id
   );

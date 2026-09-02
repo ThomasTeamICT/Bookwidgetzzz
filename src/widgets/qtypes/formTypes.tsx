@@ -591,8 +591,9 @@ interface UploadAnswerValue { name: string; size: number; fileId?: string; dataU
 function isUploadAnswer(v: unknown): v is UploadAnswerValue {
   if (!isRecord(v)) return false;
   if (typeof v.name !== 'string' || typeof v.size !== 'number') return false;
+  // dataUrl: data-URL (legacy) of, na de mediamigratie, een blob:-URL/verwijzing
   return (typeof v.fileId === 'string' && v.fileId !== '')
-    || (typeof v.dataUrl === 'string' && v.dataUrl.startsWith('data:'));
+    || (typeof v.dataUrl === 'string' && /^(data|blob|wfmedia):/.test(v.dataUrl));
 }
 
 function UploadEditor({ q, onChange }: { q: UploadQuestion; onChange: (q: UploadQuestion) => void }) {

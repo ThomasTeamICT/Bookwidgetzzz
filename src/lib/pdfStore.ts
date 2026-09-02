@@ -7,48 +7,17 @@
 // mee (te groot voor een URL). Wel mee: in het export-bestand (base64) als hij
 // klein genoeg is, of via een openbare URL als bron.
 //
-// Dezelfde database en object store bewaart óók ingeleverde bestanden van
-// leerlingen (upload-vraagtype), via saveStudentFile/getStudentFile/
-// deleteStudentFile. De records zijn identiek ({id, name, blob, size,
-// createdAt}) en de id's zijn uid()-uniek, dus pdf's en inzendingen kunnen
-// nooit botsen — geen versie-bump nodig.
+// Dezelfde database en object store (zie lib/idb.ts) bewaart óók ingeleverde
+// bestanden van leerlingen (upload-vraagtype), via saveStudentFile/
+// getStudentFile/deleteStudentFile, én de media van widgets en cursussen
+// (lib/mediaStore.ts). De records zijn identiek ({id, name, blob, size,
+// createdAt}) en de id's zijn uniek per soort, dus niets kan botsen.
 
-const DB_NAME = 'wf-files';
-const STORE = 'pdfs';
+import { filesTx, type FileRecord } from './idb';
 
-interface PdfRecord {
-  id: string;
-  name: string;
-  blob: Blob;
-  size: number;
-  createdAt: number;
-}
+type PdfRecord = FileRecord;
 
-function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => {
-      if (!req.result.objectStoreNames.contains(STORE)) {
-        req.result.createObjectStore(STORE, { keyPath: 'id' });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-function tx<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
-  return openDb().then(
-    (db) =>
-      new Promise<T>((resolve, reject) => {
-        const t = db.transaction(STORE, mode);
-        const req = run(t.objectStore(STORE));
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-        t.oncomplete = () => db.close();
-      })
-  );
-}
+const tx = filesTx;
 
 export async function savePdf(id: string, name: string, blob: Blob): Promise<void> {
   const rec: PdfRecord = { id, name, blob, size: blob.size, createdAt: Date.now() };

@@ -76,7 +76,7 @@ export function HelpPage() {
           },
           {
             q: '🧹 De opslag zit vol — wat nu?',
-            a: 'Grote afbeeldingen en audio-opnames zijn meestal de boosdoener. Verklein of verwijder ze, wis oude inzendingen via de privacypagina, of exporteer oude widgets naar een bestand en verwijder ze uit de app.',
+            a: 'Afbeeldingen, audio en bijlagen staan sinds kort apart in de bestandsopslag van de browser (IndexedDB, honderden MB), dus die vullen de kleine tekstopslag niet meer. Zit ze toch vol, dan zijn oude inzendingen (met tekeningen en audio-antwoorden) meestal de boosdoener: wis ze via de privacypagina, of exporteer oude widgets naar een bestand en verwijder ze uit de app.',
           },
         ].map((item) => (
           <details key={item.q} className="card" style={{ padding: '12px 16px' }}>

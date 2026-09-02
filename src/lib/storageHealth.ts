@@ -172,7 +172,7 @@ export function storageBreakdown(): StorageSlice[] {
       if (!key || !key.startsWith('wf.')) continue;
       const value = localStorage.getItem(key);
       const bytes = (key.length + (value ? value.length : 0)) * 2;
-      if (key === 'wf.widgets.v1') add('Widgets (met afbeeldingen)', bytes);
+      if (key === 'wf.widgets.v1') add('Widgets', bytes);
       else if (key === 'wf.courses.v1') add('Cursussen', bytes);
       else if (key === 'wf.submissions.v1') add('Inzendingen', bytes);
       else if (key === 'wf.courseprogress.v1' || key === 'wf.attempts.v1' || key === 'wf.live.v1') add('Voortgang en pogingen', bytes);

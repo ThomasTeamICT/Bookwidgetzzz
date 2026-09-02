@@ -30,23 +30,26 @@ export function CourseOpenPage() {
       setInvalid(true);
       return;
     }
+    let alive = true;
     const existing = getCourse(decoded.course.id);
-    const wouldChange = existing
-      ? decoded.partial
-        ? decoded.course.chapters.some((ch) => {
-            const local = existing.chapters.find((x) => x.id === ch.id);
-            return !local || JSON.stringify(local) !== JSON.stringify(ch);
-          })
-        : sharedCourseDiffers(decoded.course)
-      : false;
-    if (existing && wouldChange) {
-      setPending(decoded);
-      return;
-    }
-    // Ook bij identieke inhoud adopteren: zo reizen ontbrekende widgets mee
-    // (bv. een lokaal verwijderde oefening wordt hersteld).
-    adoptSharedCourse(decoded.course, decoded.widgets, { partial: decoded.partial });
-    navigate('/cursus/lees/' + decoded.course.code, { replace: true });
+    // Vergelijken is async: lokale media staan als blob:-URL, die in de link
+    // als data-URL (lib/mediaStore). Bij een gedeeltelijke link tellen alleen
+    // de meegestuurde hoofdstukken.
+    const wouldChange: Promise<boolean> = existing
+      ? sharedCourseDiffers(decoded.course, decoded.partial ? decoded.course.chapters.map((ch) => ch.id) : undefined)
+      : Promise.resolve(false);
+    void wouldChange.catch(() => true).then((differs) => {
+      if (!alive) return;
+      if (existing && differs) {
+        setPending(decoded);
+        return;
+      }
+      // Ook bij identieke inhoud adopteren: zo reizen ontbrekende widgets mee
+      // (bv. een lokaal verwijderde oefening wordt hersteld).
+      adoptSharedCourse(decoded.course, decoded.widgets, { partial: decoded.partial });
+      navigate('/cursus/lees/' + decoded.course.code, { replace: true });
+    });
+    return () => { alive = false; };
   }, [params, navigate]);
 
   const accept = () => {

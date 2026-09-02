@@ -1,6 +1,7 @@
 import type { ItemScore, Submission } from './types';
 import { getSubmissions, saveSubmission } from './storage';
 import { uid } from './utils';
+import { inlineMedia } from './mediaStore';
 
 /**
  * Voortgang meenemen naar een ander toestel (klas-pc ↔ thuis).
@@ -22,8 +23,12 @@ interface ProgressFile {
   submissions: Submission[];
 }
 
-/** Alle inzendingen van deze naam (hoofdletterongevoelig) als downloadbaar JSON. */
-export function exportProgress(studentName: string): string {
+/**
+ * Alle inzendingen van deze naam (hoofdletterongevoelig) als downloadbaar JSON.
+ * Async: tekeningen en ingeleverde afbeeldingen staan in IndexedDB en gaan als
+ * data-URL mee (lib/mediaStore), anders zijn ze op het andere toestel weg.
+ */
+export async function exportProgress(studentName: string): Promise<string> {
   const naam = studentName.trim();
   const key = naam.toLowerCase();
   const submissions = getSubmissions().filter(
@@ -35,7 +40,7 @@ export function exportProgress(studentName: string): string {
     v: 1,
     naam,
     datum: new Date().toISOString(),
-    submissions,
+    submissions: await inlineMedia(submissions),
   };
   return JSON.stringify(file, null, 2);
 }

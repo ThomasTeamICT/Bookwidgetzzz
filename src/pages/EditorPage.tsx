@@ -17,6 +17,13 @@ export function EditorPage() {
   const toast = useToast();
   const initial = useMemo(() => (id ? getWidget(id) : undefined), [id]);
   const [widget, setWidget] = useState<Widget | undefined>(initial);
+  // Zelfde route, andere widget (terug/vooruit in de browser tussen twee
+  // editors): de pagina blijft gemonteerd en useState houdt anders de vorige
+  // widget vast — met als gevolg de verkeerde inhoud op het scherm.
+  useEffect(() => {
+    if (initial && widget?.id !== initial.id) setWidget(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial]);
   const [tab, setTab] = useState<'content' | 'settings'>('content');
   const [previewMode, setPreviewMode] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);

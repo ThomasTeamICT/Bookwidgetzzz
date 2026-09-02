@@ -2,6 +2,7 @@ import type { Folder, Submission, Widget } from './types';
 import {
   askPersistenceOnce, emitStorageNotice, hasStorageNoticeListeners, markBackupHint, pendingBackupHint,
 } from './storageHealth';
+import { collectMediaRefs, onMediaChange, parseWithMedia, pruneOrphanMedia, stringifyWithMedia } from './mediaStore';
 
 // ── Eenvoudige localStorage-laag met change-events ──────────────────────────
 
@@ -37,11 +38,17 @@ if (typeof window !== 'undefined') {
     if (e.key && e.key.startsWith('wf.')) emit();
   });
 }
+// Media die op de achtergrond bijgeladen of verhuisd is (zie lib/mediaStore):
+// dan leest de UI opnieuw en krijgt ze blob:-URL's in plaats van verwijzingen.
+onMediaChange(emit);
 
+// Lezen en schrijven lopen door de medialaag: afbeeldingen, audio en bijlagen
+// staan als "wfmedia:…"-verwijzing in localStorage en als blob:-URL in het
+// geheugen (zie lib/mediaStore.ts). Voor de rest van de app is dat onzichtbaar.
 function read<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
+    return raw ? parseWithMedia<T>(raw) : fallback;
   } catch {
     return fallback;
   }
@@ -99,7 +106,7 @@ export function reportWriteFailure(key: string, e: unknown) {
 function write(key: string, value: unknown): boolean {
   let ok = true;
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(key, stringifyWithMedia(value));
   } catch (e) {
     ok = false;
     reportWriteFailure(key, e);
@@ -167,9 +174,26 @@ export function deleteWidget(id: string) {
     src && typeof src === 'object' && typeof (src as Record<string, unknown>).pdfId === 'string'
       ? ((src as Record<string, unknown>).pdfId as string)
       : null;
+  const mediaIds = widget ? collectMediaRefs(stringifyWithMedia(widget)) : new Set<string>();
+  const subs = getSubmissions();
+  for (const sub of subs) {
+    if (sub.widgetId === id) for (const m of collectMediaRefs(stringifyWithMedia(sub))) mediaIds.add(m);
+  }
   write(KEYS.widgets, getWidgets().filter((w) => w.id !== id));
-  write(KEYS.submissions, getSubmissions().filter((s) => s.widgetId !== id));
+  write(KEYS.submissions, subs.filter((s) => s.widgetId !== id));
   if (pdfId) cleanupOrphanPdf(pdfId);
+  cleanupOrphanMedia(mediaIds);
+}
+
+/**
+ * Afbeeldingen/audio/bijlagen van iets wat net verwijderd is uit IndexedDB
+ * opruimen — alleen wat nergens anders meer voorkomt (dupliceren en sjablonen
+ * delen dezelfde verwijzing) en alleen wat niet gloednieuw is.
+ */
+export function cleanupOrphanMedia(ids: Iterable<string>) {
+  const list = [...ids];
+  if (list.length === 0) return;
+  void pruneOrphanMedia({ only: list }).catch(() => { /* best-effort */ });
 }
 
 /**
@@ -229,7 +253,10 @@ export function saveSubmission(sub: Submission) {
   write(KEYS.submissions, all);
 }
 export function deleteSubmission(id: string) {
-  write(KEYS.submissions, getSubmissions().filter((s) => s.id !== id));
+  const all = getSubmissions();
+  const gone = all.find((s) => s.id === id);
+  write(KEYS.submissions, all.filter((s) => s.id !== id));
+  if (gone) cleanupOrphanMedia(collectMediaRefs(stringifyWithMedia(gone)));
 }
 
 // ── Pogingen (per browser) ──────────────────────────────────────────────────

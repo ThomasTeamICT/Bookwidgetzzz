@@ -1,5 +1,6 @@
 import type { Widget, WidgetTypeId } from './types';
 import { makeCode, uid } from './utils';
+import { parseWithMedia, stringifyWithMedia } from './mediaStore';
 
 // ── Eigen sjablonen: een widget bewaren als herbruikbaar startpunt ──────────
 //
@@ -22,7 +23,7 @@ export function getCustomTemplates(): CustomTemplate[] {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
+    const parsed: unknown = parseWithMedia(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
       (t): t is CustomTemplate => {
@@ -46,11 +47,12 @@ export function getCustomTemplates(): CustomTemplate[] {
 }
 
 /**
- * Schrijft de volledige lijst weg. Kan een quota-fout gooien (sjablonen kunnen
- * grote afbeeldingen als data-URL bevatten) — de aanroeper vangt die netjes af.
+ * Schrijft de volledige lijst weg. Kan een quota-fout gooien — de aanroeper
+ * vangt die netjes af. Afbeeldingen gaan als verwijzing mee (lib/mediaStore),
+ * dus een sjabloon weegt zelden meer dan een paar kB.
  */
 function writeAll(templates: CustomTemplate[]): void {
-  localStorage.setItem(KEY, JSON.stringify(templates));
+  localStorage.setItem(KEY, stringifyWithMedia(templates));
 }
 
 /**

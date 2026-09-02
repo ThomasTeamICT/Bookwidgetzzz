@@ -13,7 +13,7 @@ import type {
 } from '../../lib/courseTypes';
 import { getWidgets, onStorageChange } from '../../lib/storage';
 import { getTypeDef } from '../../widgets/registry';
-import { fileToDataUrl, uid } from '../../lib/utils';
+import { fileToMediaUrl, uid } from '../../lib/utils';
 import { pickAndStorePdf } from '../pdf/PdfViewer';
 import { deletePdf, formatBytes, getPdf } from '../../lib/pdfStore';
 import { pdfReferenceCount } from '../../lib/courses';
@@ -252,10 +252,10 @@ function AudioEditor({ b, onChange }: { b: AudioBlock; onChange: OnChange }) {
         onChange={async (e) => {
           const f = e.target.files?.[0];
           if (!f) return;
-          if (f.size > 1024 * 1024) {
-            toast('Let op: dit audiobestand is groter dan 1 MB. Grote bestanden maken de lokale opslag snel vol.', 'err');
+          if (f.size > 8 * 1024 * 1024) {
+            toast('Let op: dit audiobestand is groter dan 8 MB. Het past wel, maar de draagbare link wordt er onbruikbaar groot van.', 'err');
           }
-          onChange({ ...b, url: await fileToDataUrl(f) });
+          onChange({ ...b, url: await fileToMediaUrl(f) });
           e.target.value = '';
         }}
       />
@@ -521,10 +521,10 @@ function AttachmentEditor({ b, onChange }: { b: AttachmentBlock; onChange: OnCha
         onChange={async (e) => {
           const f = e.target.files?.[0];
           if (!f) return;
-          if (f.size > 300 * 1024) {
-            toast('Let op: dit bestand is groter dan 300 KB. Een link naar het bestand werkt vaak beter dan een bijlage.', 'err');
+          if (f.size > 4 * 1024 * 1024) {
+            toast('Let op: dit bestand is groter dan 4 MB. Het past wel, maar in een draagbare link of exportbestand weegt het zwaar.', 'err');
           }
-          onChange({ ...b, dataUrl: await fileToDataUrl(f), name: b.name.trim() || f.name });
+          onChange({ ...b, dataUrl: await fileToMediaUrl(f), name: b.name.trim() || f.name });
           e.target.value = '';
         }}
       />

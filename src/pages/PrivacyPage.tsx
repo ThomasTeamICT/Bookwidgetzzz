@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { getSubmissions, getWidgets, onStorageChange } from '../lib/storage';
 import { ConfirmModal, useToast } from '../components/ui';
+import { clearAllFiles, mediaStats, pruneOrphanMedia } from '../lib/mediaStore';
 import {
   formatBytes, formatPct, LOCALSTORAGE_BUDGET_BYTES, readStorageHealth,
   rememberPersistenceResult, requestPersistence, storageBreakdown, type StorageHealth,
@@ -44,6 +45,7 @@ export function PrivacyPage() {
   const widgets = getWidgets();
   const subs = getSubmissions();
   const breakdown = storageBreakdown();
+  const media = mediaStats();
   const names = new Set(subs.map((s) => s.studentName));
 
   const wipeSubmissions = () => {
@@ -55,6 +57,8 @@ export function PrivacyPage() {
       .filter((k) => k.startsWith('wf.autosave.') || k.startsWith('wf.coursename.')
         || k.startsWith('wf.coursenotes.') || k.startsWith('wf.deadline.'))
       .forEach((k) => localStorage.removeItem(k));
+    // tekeningen/foto's van de gewiste inzendingen mogen ook weg (best-effort)
+    void pruneOrphanMedia().catch(() => { /* genegeerd */ }).finally(refreshHealth);
     // storage-laag opnieuw laten emitten
     localStorage.setItem('wf.submissions.v1', '[]');
     refreshHealth();
@@ -81,6 +85,8 @@ export function PrivacyPage() {
       .filter((k) => k.startsWith('wf.'))
       .forEach((k) => localStorage.removeItem(k));
     localStorage.setItem('wf.prefs.v1', JSON.stringify({ theme: 'auto', teacherName: '', seeded: true }));
+    // Ook de bestandsdatabase (afbeeldingen, audio, bijlagen, pdf's, inzendingen).
+    void clearAllFiles().finally(refreshHealth);
     refreshHealth();
     toast('Alles gewist', 'ok');
   };
@@ -107,7 +113,8 @@ export function PrivacyPage() {
         </p>
         <h3>Wat wordt bewaard?</h3>
         <ul style={{ paddingLeft: 20 }}>
-          <li><strong>Widgets</strong> ({widgets.length}): jouw oefeningen, inclusief afbeeldingen.</li>
+          <li><strong>Widgets</strong> ({widgets.length}): jouw oefeningen.</li>
+          <li><strong>Afbeeldingen, audio en bijlagen</strong> ({media.count}, {formatBytes(media.bytes)}): apart bewaard in de bestandsopslag van de browser (IndexedDB), samen met geüploade pdf's en ingeleverde bestanden.</li>
           <li><strong>Cursussen &amp; leesvoortgang</strong>: je cursusinhoud en, per leerling(naam), welke secties gelezen zijn en hoelang.</li>
           <li><strong>Inzendingen</strong> ({subs.length}, van {names.size} {names.size === 1 ? 'naam' : 'verschillende namen'}): naam, antwoorden, score, tijdstip en duur.</li>
           <li><strong>Tussentijds werk</strong>: automatisch opgeslagen antwoorden zodat leerlingen kunnen hervatten.</li>
@@ -154,11 +161,13 @@ export function PrivacyPage() {
               />
             </div>
             <p className="hint" style={{ marginTop: 8, color: 'var(--text-soft)', fontSize: '0.88rem' }}>
-              Widgets, cursussen en inzendingen staan als tekst in de browseropslag; afbeeldingen zitten
-              daar mee in en wegen het zwaarst. Die opslag is klein — ongeveer 5 MB voor de hele app, hoeveel
-              plaats je toestel verder ook heeft.{' '}
+              Widgets, cursussen en inzendingen staan als tekst in de browseropslag. Die is klein — ongeveer
+              5 MB voor de hele app, hoeveel plaats je toestel verder ook heeft. Afbeeldingen, audio, bijlagen
+              en pdf's staan daarom apart in de bestandsopslag (IndexedDB), waar doorgaans honderden MB
+              ruimte is
+              {media.count > 0 ? ` (nu ${media.count} ${media.count === 1 ? 'bestand' : 'bestanden'}, ${formatBytes(media.bytes)})` : ''}.{' '}
               {health.estimate
-                ? `Alles samen (inclusief geüploade pdf's, die apart bewaard worden): ${formatBytes(health.estimate.usedBytes)} van ${formatBytes(health.estimate.quotaBytes)} (${formatPct(health.estimate.pct)}).`
+                ? `Alles samen: ${formatBytes(health.estimate.usedBytes)} van ${formatBytes(health.estimate.quotaBytes)} (${formatPct(health.estimate.pct)}).`
                 : 'Deze browser geeft het totale quotum niet vrij, dus hierboven staat enkel wat de app in de browseropslag gebruikt.'}
             </p>
 

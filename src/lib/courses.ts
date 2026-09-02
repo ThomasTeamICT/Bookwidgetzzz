@@ -9,16 +9,19 @@ import type {
 import { allSections, referencedPdfIds, referencedWidgetIds } from './courseTypes';
 import { deletePdf } from './pdfStore';
 import { makeCode, uid } from './utils';
-import { getWidget, getWidgets, notifyChange, reportWriteFailure, saveWidget } from './storage';
+import { cleanupOrphanMedia, getWidget, getWidgets, notifyChange, reportWriteFailure, saveWidget } from './storage';
+import { collectMediaRefs, inlineMedia, parseWithMedia, stringifyWithMedia } from './mediaStore';
 import { defaultSettings, getTypeDef, WIDGET_TYPES } from '../widgets/registry';
 
 const COURSES_KEY = 'wf.courses.v1';
 const PROGRESS_KEY = 'wf.courseprogress.v1';
 
+// Zelfde medialaag als lib/storage.ts: verwijzingen in de opslag, blob:-URL's
+// in het geheugen (zie lib/mediaStore.ts).
 function read<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
+    return raw ? parseWithMedia<T>(raw) : fallback;
   } catch {
     return fallback;
   }
@@ -26,7 +29,7 @@ function read<T>(key: string, fallback: T): T {
 function write(key: string, value: unknown): boolean {
   let ok = true;
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(key, stringifyWithMedia(value));
   } catch (e) {
     ok = false;
     // Zelfde meldweg als de widgetopslag: een nette balk in de app in plaats
@@ -67,7 +70,10 @@ export function deleteCourse(id: string) {
   } catch {
     // genegeerd: notities opruimen mag verwijderen nooit blokkeren
   }
-  if (course) cleanupCoursePdfs(course);
+  if (course) {
+    cleanupCoursePdfs(course);
+    cleanupOrphanMedia(collectMediaRefs(stringifyWithMedia(course)));
+  }
 }
 
 /**
@@ -278,7 +284,11 @@ interface CoursePayload {
  * Maakt een draagbare cursuslink. Optioneel enkel bepaalde hoofdstukken
  * (deel van de cursus delen). Ingebedde widgets reizen mee in de link.
  */
-export function encodeCourseToUrl(course: Course, chapterIds?: string[]): string {
+/**
+ * Draagbare cursuslink. Async: afbeeldingen, audio en bijlagen staan op dit
+ * toestel in IndexedDB en moeten als data-URL in de link (zie lib/mediaStore).
+ */
+export async function encodeCourseToUrl(course: Course, chapterIds?: string[]): Promise<string> {
   const partial = Boolean(chapterIds && chapterIds.length && chapterIds.length < course.chapters.length);
   const c: Course = {
     ...course,
@@ -289,7 +299,7 @@ export function encodeCourseToUrl(course: Course, chapterIds?: string[]): string
   const w = referencedWidgetIds(c)
     .map((id) => getWidget(id))
     .filter((x): x is Widget => Boolean(x));
-  const payload: CoursePayload = { v: 1, kind: 'cursus', c, w, ...(partial ? { partial: true } : {}) };
+  const payload: CoursePayload = await inlineMedia({ v: 1, kind: 'cursus', c, w, ...(partial ? { partial: true } : {}) });
   const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(payload));
   const base = location.origin + location.pathname;
   return `${base}#/cursus/open?d=${compressed}`;
@@ -378,11 +388,27 @@ export function adoptSharedCourse(course: Course, widgets: Widget[], opts: { par
  * eerlijke bevestigingsvraag vóór overschrijven — een gedeelde link kan
  * door iedereen met de link nagemaakt worden.)
  */
-export function sharedCourseDiffers(course: Course): boolean {
+/**
+ * Verschilt de binnengekomen cursus (link of bestand) van de lokale versie?
+ * Async: lokaal staan de media als blob:-URL, in de binnengekomen versie als
+ * data-URL — vergelijken kan pas als de lokale media weer inline staan.
+ * Met `chapterIds` (gedeeltelijke link) worden alleen die hoofdstukken
+ * vergeleken; een hoofdstuk dat lokaal ontbreekt telt als verschil.
+ */
+export async function sharedCourseDiffers(course: Course, chapterIds?: string[]): Promise<boolean> {
   const existing = getCourse(course.id);
   if (!existing) return false;
+  const local = await inlineMedia(existing);
+  if (chapterIds) {
+    return course.chapters
+      .filter((ch) => chapterIds.includes(ch.id))
+      .some((ch) => {
+        const mine = local.chapters.find((x) => x.id === ch.id);
+        return !mine || JSON.stringify(mine) !== JSON.stringify(ch);
+      });
+  }
   const strip = (c: Course) => JSON.stringify({ ...c, updatedAt: 0, createdAt: 0 });
-  return strip(existing) !== strip(course);
+  return strip(local) !== strip(course);
 }
 
 export function courseReadUrl(code: string): string {
@@ -451,11 +477,13 @@ export function importProgressCode(p: CourseProgress) {
 
 // ── JSON-export/-import & defensieve sanering ───────────────────────────────
 
-export function exportCourseJson(course: Course): string {
+/** Cursusbestand mét ingebedde widgets; media gaan als data-URL mee (async). */
+export async function exportCourseJson(course: Course): Promise<string> {
   const widgets = referencedWidgetIds(course)
     .map((id) => getWidget(id))
     .filter((x): x is Widget => Boolean(x));
-  return JSON.stringify({ app: 'widgetfabriek', kind: 'cursus', v: 1, course, widgets }, null, 2);
+  const payload = await inlineMedia({ app: 'widgetfabriek', kind: 'cursus', v: 1, course, widgets });
+  return JSON.stringify(payload, null, 2);
 }
 
 export function importCourseJson(json: string): { course: Course; widgets: Widget[] } | null {
