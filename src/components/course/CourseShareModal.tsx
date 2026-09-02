@@ -13,6 +13,7 @@ export function CourseShareModal({ course, onClose }: { course: Course; onClose:
   const partial = selected.length > 0 && selected.length < course.chapters.length;
   // Async: media staan in IndexedDB en gaan als data-URL in de link (lib/mediaStore).
   const [portableUrl, setPortableUrl] = useState('');
+  const [unresolved, setUnresolved] = useState(0);
   const [preparing, setPreparing] = useState(false);
   const selectedKey = selected.join(',');
   useEffect(() => {
@@ -20,7 +21,7 @@ export function CourseShareModal({ course, onClose }: { course: Course; onClose:
     if (!selected.length) { setPortableUrl(''); setPreparing(false); return; }
     setPreparing(true);
     encodeCourseToUrl(course, partial ? selected : undefined)
-      .then((url) => { if (alive) setPortableUrl(url); })
+      .then((res) => { if (alive) { setPortableUrl(res.url); setUnresolved(res.unresolved); } })
       .catch(() => { if (alive) setPortableUrl(''); })
       .finally(() => { if (alive) setPreparing(false); });
     return () => { alive = false; };
@@ -92,6 +93,15 @@ export function CourseShareModal({ course, onClose }: { course: Course; onClose:
               <CopyButton text={portableUrl} label="Kopiëren" />
             </div>
             <p className="hint" style={{ margin: '0 0 8px' }}>Linklengte: {portableUrl.length.toLocaleString('nl-BE')} tekens.</p>
+            {unresolved > 0 && (
+              <div className="callout warn" style={{ marginBottom: 8 }}>
+                <span aria-hidden>⚠️</span>
+                <div>
+                  {unresolved === 1 ? 'Eén afbeelding of bijlage' : `${unresolved} afbeeldingen of bijlagen`} staan niet (meer) op dit
+                  toestel en reizen dus niet mee in deze link.
+                </div>
+              </div>
+            )}
             {portableUrl.length > 8000 && (
               <div className="callout warn" style={{ marginBottom: 8 }}>
                 <span aria-hidden>⚠️</span>

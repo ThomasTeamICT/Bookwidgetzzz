@@ -54,12 +54,6 @@ export function CourseEditorPage() {
   const toast = useToast();
   const initial = useMemo(() => (id ? getCourse(id) : undefined), [id]);
   const [course, setCourse] = useState<Course | undefined>(initial);
-  // Zelfde route, andere cursus (terug/vooruit tussen twee editors): de pagina
-  // blijft gemonteerd en useState zou anders de vorige cursus vasthouden.
-  useEffect(() => {
-    if (initial && course?.id !== initial.id) setCourse(initial);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initial]);
   const [selectedSectionId, setSelectedSectionId] = useState<string | undefined>(
     () => initial?.chapters[0]?.sections[0]?.id
   );
@@ -74,6 +68,22 @@ export function CourseEditorPage() {
   // van een cursus mag updatedAt niet aanraken).
   const firstRun = useRef(true);
   const dirtyRef = useRef(false);
+
+  // Zelfde route, andere cursus (terug/vooruit tussen twee editors): de pagina
+  // blijft gemonteerd en useState zou anders de vorige cursus vasthouden.
+  // Eerst de vorige cursus wegschrijven als ze nog niet bewaard was (de
+  // debounce hieronder wordt door de wissel geannuleerd), en het openen van
+  // de nieuwe mag — net als bij de eerste render — updatedAt niet aanraken.
+  useEffect(() => {
+    if (!initial || course?.id === initial.id) return;
+    if (course && dirtyRef.current) saveCourse(course);
+    dirtyRef.current = false;
+    firstRun.current = true;
+    setCourse(initial);
+    setSelectedSectionId(initial.chapters[0]?.sections[0]?.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial]);
+
   useEffect(() => {
     if (!course) return;
     if (firstRun.current) { firstRun.current = false; return; }

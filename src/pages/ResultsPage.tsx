@@ -8,7 +8,7 @@ import { csvCell, downloadFile, formatDate, formatDuration, normalizeAnswer, pct
 import { ConfirmModal, EmptyState, Modal, ScoreRing, useToast } from '../components/ui';
 import { gradeQuestion } from '../lib/grading';
 import { decodeSubmission } from '../lib/share';
-import { isMediaUrl, MEDIA_REF_PREFIX } from '../lib/mediaStore';
+import { isRenderableMedia } from '../lib/mediaStore';
 import { uid } from '../lib/utils';
 import { askAI, hasAIKey } from '../lib/ai';
 import { markTokens as playerMarkTokens, matchMarkers, ZoneCircle } from '../widgets/qtypes/interactTypes';
@@ -315,7 +315,7 @@ function uploadAnswer(v: unknown): { name: string; size: number | null; dataUrl:
     name: r.name,
     size: typeof r.size === 'number' ? r.size : null,
     // data-URL (legacy) of blob:-URL (na de mediamigratie, zie lib/mediaStore)
-    dataUrl: isMediaUrl(r.dataUrl) && !r.dataUrl.startsWith(MEDIA_REF_PREFIX) ? r.dataUrl : null,
+    dataUrl: isRenderableMedia(r.dataUrl) ? r.dataUrl : null,
     fileId: typeof r.fileId === 'string' && r.fileId !== '' ? r.fileId : null,
   };
 }
@@ -661,7 +661,7 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
           </div>
         );
       })()}
-      {isMediaUrl(drawing) && (
+      {isRenderableMedia(drawing) && (
         <div style={{ marginBottom: 14 }}>
           <h3>🎨 Tekening</h3>
           <img src={drawing} alt={`Tekening van ${submission.studentName}`} style={{ maxWidth: '100%', borderRadius: 10, border: '1px solid var(--line)' }} />

@@ -185,12 +185,20 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
     [def, widget, studentName, timeUp, onComplete]
   );
 
-  // encodeSubmission comprimeert (lz-string) de volledige inzending; die stond
-  // twee keer in de render van het resultaatveld hieronder.
-  const resultCode = useMemo(
-    () => (offerResultCode && completedSub ? encodeSubmission(completedSub) : ''),
-    [offerResultCode, completedSub]
-  );
+  // encodeSubmission comprimeert (lz-string) de volledige inzending, met de
+  // media ingelijnd — async, dus als state.
+  const [resultCode, setResultCode] = useState('');
+  useEffect(() => {
+    let alive = true;
+    if (!offerResultCode || !completedSub) {
+      setResultCode('');
+      return;
+    }
+    void encodeSubmission(completedSub)
+      .then((code) => { if (alive) setResultCode(code); })
+      .catch(() => { if (alive) setResultCode(''); });
+    return () => { alive = false; };
+  }, [offerResultCode, completedSub]);
 
   const mm = timeLeft !== null ? Math.floor(timeLeft / 60) : 0;
   const ss = timeLeft !== null ? timeLeft % 60 : 0;

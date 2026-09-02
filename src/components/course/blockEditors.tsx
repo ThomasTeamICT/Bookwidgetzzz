@@ -14,6 +14,7 @@ import type {
 import { getWidgets, onStorageChange } from '../../lib/storage';
 import { getTypeDef } from '../../widgets/registry';
 import { fileToMediaUrl, uid } from '../../lib/utils';
+import { mediaSizeForUrl } from '../../lib/mediaStore';
 import { pickAndStorePdf } from '../pdf/PdfViewer';
 import { deletePdf, formatBytes, getPdf } from '../../lib/pdfStore';
 import { pdfReferenceCount } from '../../lib/courses';
@@ -95,9 +96,10 @@ function moveItem<T>(arr: T[], i: number, delta: number): T[] {
   return copy;
 }
 
-/** Grootte van een data-URL in leesbare vorm (ruwe schatting). */
-function dataUrlSize(dataUrl: string): string {
-  const bytes = Math.round(dataUrl.length * 0.75);
+/** Grootte van een bestand in leesbare vorm: uit de medialaag (blob:-URL) of geschat (data-URL). */
+function dataUrlSize(url: string): string {
+  const stored = mediaSizeForUrl(url);
+  const bytes = stored ?? (url.startsWith('data:') ? Math.round(url.length * 0.75) : 0);
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${Math.round(bytes / 1024)} KB`;
 }

@@ -96,9 +96,10 @@ const KEEP_ORIGINAL_BYTES = 200 * 1024;
 export async function fileToBlob(file: File, maxDim = 1400): Promise<Blob> {
   if (!file.type.startsWith('image/')) return file;
   if (file.type === 'image/svg+xml' || file.type === 'image/gif') return file;
-  const img = await loadImage(URL.createObjectURL(file));
-  if (!img) return file;
+  const objectUrl = URL.createObjectURL(file);
   try {
+    const img = await loadImage(objectUrl);
+    if (!img) return file;
     const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
     if (scale >= 1 && file.size <= KEEP_ORIGINAL_BYTES) return file;
     const canvas = document.createElement('canvas');
@@ -108,21 +109,27 @@ export async function fileToBlob(file: File, maxDim = 1400): Promise<Blob> {
     if (!ctx) return file;
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     const candidates: Blob[] = [];
+    // WebP behoudt transparantie en is bijna altijd het kleinst.
     const webp = await canvasBlob(canvas, 'image/webp', 0.82);
     if (webp) candidates.push(webp);
-    // JPEG kent geen transparantie: doorschijnende delen worden zwart, tenzij
-    // we eerst wit invullen.
-    ctx.globalCompositeOperation = 'destination-over';
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const jpeg = await canvasBlob(canvas, 'image/jpeg', 0.85);
-    // Een png-origineel kan transparantie hebben; dan enkel WebP als vervanger.
-    if (jpeg && (file.type === 'image/jpeg' || !webp)) candidates.push(jpeg);
+    if (file.type === 'image/jpeg') {
+      // Een jpeg-origineel heeft geen transparantie, dus jpeg (op wit) is veilig.
+      ctx.globalCompositeOperation = 'destination-over';
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const jpeg = await canvasBlob(canvas, 'image/jpeg', 0.85);
+      if (jpeg) candidates.push(jpeg);
+    } else if (!webp && scale < 1) {
+      // Geen WebP-encoder (oude browser): png houdt de transparantie; nooit
+      // jpeg, dat zou een doorschijnende achtergrond wit maken.
+      const pngBlob = await canvasBlob(canvas, 'image/png', 1);
+      if (pngBlob) candidates.push(pngBlob);
+    }
     if (scale >= 1) candidates.push(file);
     if (candidates.length === 0) return file;
     return candidates.reduce((best, b) => (b.size < best.size ? b : best));
   } finally {
-    URL.revokeObjectURL(img.src);
+    URL.revokeObjectURL(objectUrl);
   }
 }
 

@@ -21,7 +21,12 @@ export function EditorPage() {
   // editors): de pagina blijft gemonteerd en useState houdt anders de vorige
   // widget vast — met als gevolg de verkeerde inhoud op het scherm.
   useEffect(() => {
-    if (initial && widget?.id !== initial.id) setWidget(initial);
+    if (!initial || widget?.id === initial.id) return;
+    // Eerst de vorige widget wegschrijven: de autosave-debounce hieronder
+    // wordt door de state-wissel geannuleerd en de laatste 500 ms gingen
+    // anders verloren.
+    if (widget) saveWidget(widget);
+    setWidget(initial);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial]);
   const [tab, setTab] = useState<'content' | 'settings'>('content');

@@ -179,13 +179,40 @@ export function deleteWidget(id: string) {
       : null;
   const mediaIds = widget ? collectMediaRefs(stringifyWithMedia(widget)) : new Set<string>();
   const subs = getSubmissions();
+  const fileIds = new Set<string>();
   for (const sub of subs) {
-    if (sub.widgetId === id) for (const m of collectMediaRefs(stringifyWithMedia(sub))) mediaIds.add(m);
+    if (sub.widgetId !== id) continue;
+    const raw = stringifyWithMedia(sub);
+    for (const m of collectMediaRefs(raw)) mediaIds.add(m);
+    for (const f of collectFileIds(raw)) fileIds.add(f);
   }
   write(KEYS.widgets, getWidgets().filter((w) => w.id !== id));
   write(KEYS.submissions, subs.filter((s) => s.widgetId !== id));
   if (pdfId) cleanupOrphanPdf(pdfId);
   cleanupOrphanMedia(mediaIds);
+  cleanupStudentFiles(fileIds);
+}
+
+/** Ingeleverde bestanden ({name,size,fileId}) in ruwe inzendings-JSON. */
+export function collectFileIds(raw: string): Set<string> {
+  const out = new Set<string>();
+  const re = /"fileId":"([A-Za-z0-9_-]+)"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(raw))) out.add(m[1]);
+  return out;
+}
+
+/**
+ * Ingeleverde bestanden van verwijderde inzendingen uit IndexedDB halen.
+ * Een fileId hoort bij precies één inzending (de upload gebeurt bij het
+ * antwoorden), dus hier is geen verwijzingstelling nodig.
+ */
+export function cleanupStudentFiles(ids: Iterable<string>) {
+  const list = [...ids];
+  if (list.length === 0) return;
+  void import('./pdfStore')
+    .then(({ deleteStudentFile }) => Promise.all(list.map((id) => deleteStudentFile(id))))
+    .catch(() => { /* best-effort */ });
 }
 
 /**
@@ -259,7 +286,11 @@ export function deleteSubmission(id: string) {
   const all = getSubmissions();
   const gone = all.find((s) => s.id === id);
   write(KEYS.submissions, all.filter((s) => s.id !== id));
-  if (gone) cleanupOrphanMedia(collectMediaRefs(stringifyWithMedia(gone)));
+  if (gone) {
+    const raw = stringifyWithMedia(gone);
+    cleanupOrphanMedia(collectMediaRefs(raw));
+    cleanupStudentFiles(collectFileIds(raw));
+  }
 }
 
 // ── Pogingen (per browser) ──────────────────────────────────────────────────

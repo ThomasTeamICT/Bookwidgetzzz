@@ -39,8 +39,12 @@ export const MIN_EXTERNALIZE_CHARS = 2048;
 /** Wezen jonger dan dit blijven staan: misschien is de widget nog niet bewaard. */
 export const ORPHAN_MIN_AGE_MS = 10 * 60 * 1000;
 
-/** Sleutels in localStorage waarin media-verwijzingen kunnen voorkomen. */
+/** Vaste sleutels in localStorage waarin media kunnen voorkomen. */
 export const MEDIA_KEYS = ['wf.widgets.v1', 'wf.courses.v1', 'wf.submissions.v1', 'wf.customtemplates.v1'] as const;
+/** Tussentijds bewaarde antwoorden van leerlingen (tekeningen, audio-opnames). */
+export const AUTOSAVE_PREFIX = 'wf.autosave.';
+/** Na zoveel ms geven we het wachten op IndexedDB op en renderen we toch. */
+const PRELOAD_TIMEOUT_MS = 4000;
 
 // ── Achterkant (IndexedDB), injecteerbaar voor tests ───────────────────────
 
@@ -65,6 +69,7 @@ interface MediaEnv {
   createObjectUrl: (blob: Blob) => string;
   revokeObjectUrl: (url: string) => void;
   storage: () => Storage | null;
+  preloadTimeoutMs: number;
 }
 
 const env: MediaEnv = {
@@ -72,6 +77,7 @@ const env: MediaEnv = {
   createObjectUrl: (blob) => URL.createObjectURL(blob),
   revokeObjectUrl: (url) => URL.revokeObjectURL(url),
   storage: () => (typeof localStorage === 'undefined' ? null : localStorage),
+  preloadTimeoutMs: PRELOAD_TIMEOUT_MS,
 };
 
 /** Alleen voor tests: achterkant en URL-fabriek vervangen, cache leegmaken. */
@@ -84,7 +90,8 @@ export function configureMediaStore(overrides: Partial<MediaEnv>) {
 
 interface Entry {
   id: string;
-  url: string;
+  /** blob:-URL, pas gemaakt bij het eerste gebruik (zie urlFor). */
+  url: string | null;
   blob: Blob;
   name: string;
   size: number;
@@ -92,7 +99,10 @@ interface Entry {
 }
 
 const byId = new Map<string, Entry>();
-const byUrl = new Map<string, string>(); // blob:-URL → id
+/** blob:-URL → id. Blijft ook na het opruimen van een blob bestaan, zodat
+ *  een editor die de URL nog vasthoudt bij het bewaren een verwijzing
+ *  wegschrijft en nooit een dode blob:-string. */
+const byUrl = new Map<string, string>();
 /** Data-URL's die deze sessie al verhuisd zijn, zodat een editor die de oude
  *  data-URL nog in het geheugen heeft bij het bewaren meteen de verwijzing
  *  wegschrijft (anders ping-pongt elke autosave met de migratie). */
@@ -117,7 +127,7 @@ function emit() {
 }
 
 function resetMediaCache() {
-  for (const e of byId.values()) safeRevoke(e.url);
+  for (const e of byId.values()) if (e.url) safeRevoke(e.url);
   byId.clear();
   byUrl.clear();
   byDataUrl.clear();
@@ -139,20 +149,27 @@ function safeRevoke(url: string) {
 function register(rec: FileRecord): Entry {
   const existing = byId.get(rec.id);
   if (existing) return existing;
-  const url = env.createObjectUrl(rec.blob);
-  const entry: Entry = { id: rec.id, url, blob: rec.blob, name: rec.name, size: rec.size, createdAt: rec.createdAt };
+  // Geen object-URL hier: bij het opstarten komen álle records langs en de
+  // meeste worden op deze pagina nooit getoond.
+  const entry: Entry = { id: rec.id, url: null, blob: rec.blob, name: rec.name, size: rec.size, createdAt: rec.createdAt };
   byId.set(rec.id, entry);
-  byUrl.set(url, rec.id);
   missing.delete(rec.id);
   return entry;
+}
+
+function urlFor(entry: Entry): string {
+  if (!entry.url) {
+    entry.url = env.createObjectUrl(entry.blob);
+    byUrl.set(entry.url, entry.id);
+  }
+  return entry.url;
 }
 
 function unregister(id: string) {
   const e = byId.get(id);
   if (!e) return;
   byId.delete(id);
-  byUrl.delete(e.url);
-  safeRevoke(e.url);
+  if (e.url) safeRevoke(e.url); // byUrl bewust laten staan (zie boven)
 }
 
 // ── Basisbewerkingen ────────────────────────────────────────────────────────
@@ -164,6 +181,11 @@ export function isMediaRef(s: unknown): s is string {
 /** Data-, blob- of media-verwijzing: iets wat als bron van <img>/<audio> kan dienen. */
 export function isMediaUrl(s: unknown): s is string {
   return typeof s === 'string' && (s.startsWith('data:') || s.startsWith('blob:') || s.startsWith(MEDIA_REF_PREFIX));
+}
+
+/** Enkel wat een browser écht kan tonen: data- of blob-URL (geen open verwijzing). */
+export function isRenderableMedia(s: unknown): s is string {
+  return typeof s === 'string' && (s.startsWith('data:') || s.startsWith('blob:'));
 }
 
 export function mediaAvailable(): boolean {
@@ -178,17 +200,40 @@ export function mediaAvailable(): boolean {
  */
 export function preloadMedia(): Promise<void> {
   if (preloadPromise) return preloadPromise;
-  preloadPromise = (async () => {
-    try {
-      const recs = await env.backend.getAll();
-      for (const rec of recs) if (rec && rec.blob) register(rec);
-    } catch {
-      available = false;
-    } finally {
+  preloadPromise = new Promise<void>((resolve) => {
+    // IndexedDB kan in zeldzame gevallen nooit antwoorden (Safari, privé-
+    // vensters). Dan mag niet de hele medialaag — en de migratie die erop
+    // wacht — voor de rest van de sessie stilvallen: na de tijdslimiet gaan
+    // we verder en lost resolveMediaRef elke verwijzing apart op.
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
       ready = true;
       emit();
-    }
-  })();
+      resolve();
+    };
+    const timer = setTimeout(finish, env.preloadTimeoutMs);
+    env.backend
+      .getAll()
+      .then((recs) => {
+        let added = false;
+        for (const rec of recs) {
+          if (rec && rec.blob && !byId.has(rec.id)) {
+            register(rec);
+            added = true;
+          }
+        }
+        if (settled && added) emit(); // laat binnengekomen: alsnog verversen
+      })
+      .catch(() => {
+        available = false;
+      })
+      .finally(() => {
+        clearTimeout(timer);
+        finish();
+      });
+  });
   return preloadPromise;
 }
 
@@ -217,7 +262,7 @@ export async function storeMedia(blob: Blob, name = ''): Promise<string> {
   if (!available) throw new Error('Mediaopslag niet beschikbaar');
   const id = await contentId(blob);
   const known = byId.get(id);
-  if (known) return known.url;
+  if (known) return urlFor(known);
   const rec: FileRecord = { id, name, blob, size: blob.size, createdAt: Date.now() };
   try {
     await env.backend.put(rec);
@@ -225,7 +270,14 @@ export async function storeMedia(blob: Blob, name = ''): Promise<string> {
     available = false;
     throw e;
   }
-  return register(rec).url;
+  return urlFor(register(rec));
+}
+
+/** Grootte in bytes van een blob:-URL uit deze opslag (null als onbekend). */
+export function mediaSizeForUrl(url: string): number | null {
+  const id = byUrl.get(url);
+  const entry = id ? byId.get(id) : undefined;
+  return entry ? entry.size : null;
 }
 
 /** Bestaat deze verwijzing (al) in het geheugen? */
@@ -243,7 +295,7 @@ export function hasMedia(id: string): boolean {
 export function resolveMediaRef(ref: string): string {
   const id = ref.slice(MEDIA_REF_PREFIX.length);
   const entry = byId.get(id);
-  if (entry) return entry.url;
+  if (entry) return urlFor(entry);
   if (ready && available && !missing.has(id) && !pendingLoads.has(id)) {
     const p = env.backend
       .get(id)
@@ -354,7 +406,7 @@ export async function inlineMedia<T>(value: T): Promise<T> {
     if (typeof v === 'string') {
       if (v.startsWith('blob:')) {
         const id = byUrl.get(v);
-        return id ? toDataUrl(v, byId.get(id)?.blob ?? null) : v;
+        return id ? toDataUrl(v, await blobForRef(MEDIA_REF_PREFIX + id)) : v;
       }
       if (isMediaRef(v)) return toDataUrl(v, await blobForRef(v));
       return v;
@@ -385,7 +437,23 @@ export async function inlineMedia<T>(value: T): Promise<T> {
 export function prefetchMediaRefs(raw: string) {
   if (!available || !raw.includes(MEDIA_REF_PREFIX)) return;
   for (const id of collectMediaRefs(raw)) {
-    if (!byId.has(id)) resolveMediaRef(MEDIA_REF_PREFIX + id);
+    if (byId.has(id)) continue;
+    missing.delete(id); // het andere tabblad heeft ze net bewaard: opnieuw proberen
+    resolveMediaRef(MEDIA_REF_PREFIX + id);
+  }
+}
+
+/**
+ * Aantal media in een (al ingelijnde) waarde die níét mee konden: open
+ * verwijzingen of blob:-URL's zonder blob. Deelvensters waarschuwen dan dat
+ * de link onvolledig is.
+ */
+export function countUnresolvedMedia(value: unknown): number {
+  try {
+    const m = JSON.stringify(value).match(/"(?:wfmedia:|blob:)/g);
+    return m ? m.length : 0;
+  } catch {
+    return 0;
   }
 }
 
@@ -432,6 +500,22 @@ export function findLargeDataUrls(raw: string, minChars = MIN_EXTERNALIZE_CHARS)
 
 let migrating: Promise<number> | null = null;
 
+/** Alle sleutels die media kunnen bevatten: de vaste, plus de autosave-sleutels. */
+export function mediaKeysInStorage(): string[] {
+  const out: string[] = [...MEDIA_KEYS];
+  const store = env.storage();
+  if (!store) return out;
+  try {
+    for (let i = 0; i < store.length; i++) {
+      const k = store.key(i);
+      if (k && k.startsWith(AUTOSAVE_PREFIX)) out.push(k);
+    }
+  } catch {
+    // dan alleen de vaste sleutels
+  }
+  return out;
+}
+
 /**
  * Verhuist grote data-URL's uit de opgegeven localStorage-sleutels naar
  * IndexedDB. Loopt in twee stappen per sleutel: eerst alle blobs bewaren
@@ -439,7 +523,7 @@ let migrating: Promise<number> | null = null;
  * zo kan een tussentijdse autosave nooit overschreven worden. Geeft het
  * aantal verhuisde bestanden terug; loopt nooit twee keer tegelijk.
  */
-export function migrateDataUrls(keys: readonly string[] = MEDIA_KEYS): Promise<number> {
+export function migrateDataUrls(keys?: readonly string[]): Promise<number> {
   if (migrating) return migrating;
   migrating = (async () => {
     let moved = 0;
@@ -447,7 +531,7 @@ export function migrateDataUrls(keys: readonly string[] = MEDIA_KEYS): Promise<n
     if (!store || !available) return 0;
     await preloadMedia();
     if (!available) return 0;
-    for (const key of keys) {
+    for (const key of keys ?? mediaKeysInStorage()) {
       let raw: string | null;
       try {
         raw = store.getItem(key);
@@ -534,7 +618,9 @@ export async function pruneOrphanMedia(opts: { only?: Iterable<string>; minAgeMs
   for (const id of candidates) {
     if (inUse.has(id)) continue;
     const entry = byId.get(id);
-    if (entry && now - entry.createdAt < minAge) continue;
+    // Niet in het geheugen? Dan kennen we de leeftijd niet: laten staan, de
+    // volgende opstartbeurt kijkt opnieuw.
+    if (!entry || now - entry.createdAt < minAge) continue;
     try {
       await env.backend.delete(id);
       unregister(id);
@@ -555,7 +641,7 @@ export function mediaStats(): { count: number; bytes: number } {
 
 /** Alles weg (privacypagina "alles wissen"): hele bestandsdatabase incl. pdf's. */
 export async function clearAllFiles(): Promise<void> {
-  for (const e of byId.values()) safeRevoke(e.url);
+  for (const e of byId.values()) if (e.url) safeRevoke(e.url);
   byId.clear();
   byUrl.clear();
   byDataUrl.clear();

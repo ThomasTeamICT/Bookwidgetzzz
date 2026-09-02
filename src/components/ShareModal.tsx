@@ -1,32 +1,42 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import type { Widget } from '../lib/types';
-import { encodeWidgetToUrl, exportWidgetJsonWithMedia, playUrlForCode } from '../lib/share';
-import { inlineMedia } from '../lib/mediaStore';
+import { encodeWidgetToUrl, exportWidgetJson, playUrlForCode } from '../lib/share';
+import { countUnresolvedMedia, inlineMedia } from '../lib/mediaStore';
 import { downloadFile } from '../lib/utils';
 import { CheckRow, CopyButton, Modal, useToast } from './ui';
 
+interface Inlined {
+  /** Widget met de media als data-URL (null zolang dat nog loopt). */
+  widget: Widget | null;
+  /** Media die niet mee konden (blob niet op dit toestel). */
+  unresolved: number;
+}
+
 /**
- * Draagbare link, async: de media van de widget staan in IndexedDB en moeten
- * eerst als data-URL ingevoegd worden (lib/mediaStore). Leeg zolang dat loopt.
+ * De media van de widget staan in IndexedDB en moeten voor een draagbare link
+ * of exportbestand als data-URL ingevoegd worden (lib/mediaStore). Dat is
+ * werk voor de hoofdthread (base64 van elke afbeelding), dus precies één
+ * keer per geopend deelvenster; de gewone én de aangepaste link delen het.
  */
-function usePortableUrl(widget: Widget, transform?: (w: Widget) => Widget): string {
-  const [url, setUrl] = useState('');
+function useInlinedWidget(widget: Widget): Inlined {
+  const [state, setState] = useState<Inlined>({ widget: null, unresolved: 0 });
   useEffect(() => {
     let alive = true;
-    setUrl('');
+    setState({ widget: null, unresolved: 0 });
     inlineMedia(widget)
-      .then((w) => { if (alive) setUrl(encodeWidgetToUrl(transform ? transform(w) : w)); })
-      .catch(() => { if (alive) setUrl(encodeWidgetToUrl(transform ? transform(widget) : widget)); });
+      .then((w) => { if (alive) setState({ widget: w, unresolved: countUnresolvedMedia(w) }); })
+      .catch(() => { if (alive) setState({ widget, unresolved: countUnresolvedMedia(widget) }); });
     return () => { alive = false; };
-  }, [widget, transform]);
-  return url;
+  }, [widget]);
+  return state;
 }
 
 export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () => void }) {
   const toast = useToast();
   const codeUrl = playUrlForCode(widget.code);
-  const portableUrl = usePortableUrl(widget);
+  const inlined = useInlinedWidget(widget);
+  const portableUrl = useMemo(() => (inlined.widget ? encodeWidgetToUrl(inlined.widget) : ''), [inlined.widget]);
   const [qr, setQr] = useState<string>('');
   const embedCode = `<iframe src="${portableUrl}" width="100%" height="640" style="border:0;border-radius:12px" allowfullscreen title="${widget.title.replace(/"/g, '&quot;')}"></iframe>`;
   const classroomUrl = `https://classroom.google.com/share?url=${encodeURIComponent(portableUrl)}`;
@@ -43,7 +53,7 @@ export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () =>
 
   const exportJson = async () => {
     try {
-      const json = await exportWidgetJsonWithMedia(widget);
+      const json = exportWidgetJson(inlined.widget ?? (await inlineMedia(widget)));
       downloadFile(`${widget.title.replace(/[^\w\dà-ÿ -]/gi, '')}.widget.json`, json);
     } catch {
       toast('Exporteren mislukt', 'err');
@@ -76,27 +86,36 @@ export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () =>
           dus deze werkt overal — ook thuis. Resultaten blijven dan wel op het toestel van de leerling.
         </div>
       </div>
+      {inlined.unresolved > 0 && (
+        <div className="callout warn">
+          <span aria-hidden>⚠️</span>
+          <div>
+            {inlined.unresolved === 1 ? 'Eén afbeelding of bijlage' : `${inlined.unresolved} afbeeldingen of bijlagen`} van deze
+            widget staan niet (meer) op dit toestel en reizen dus niet mee in de link of het bestand.
+          </div>
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 12 }}>
         <div style={{ flex: '1 1 300px' }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-            <input
-              className="input input-sm"
-              readOnly
-              value={portableUrl || 'Link wordt klaargemaakt…'}
-              aria-label="Draagbare deellink"
-              aria-busy={!portableUrl}
-              onFocus={(e) => e.target.select()}
-            />
-            <CopyButton text={portableUrl} label="Kopiëren" />
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <a className="btn btn-sm btn-ghost" href={classroomUrl} target="_blank" rel="noopener noreferrer">
-              🎓 Delen in Google Classroom
-            </a>
-            <a className="btn btn-sm btn-ghost" href={mailUrl}>
-              ✉️ Mailen
-            </a>
-          </div>
+          {portableUrl ? (
+            <>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                <input className="input input-sm" readOnly value={portableUrl} aria-label="Draagbare deellink" onFocus={(e) => e.target.select()} />
+                <CopyButton text={portableUrl} label="Kopiëren" />
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <a className="btn btn-sm btn-ghost" href={classroomUrl} target="_blank" rel="noopener noreferrer">
+                  🎓 Delen in Google Classroom
+                </a>
+                <a className="btn btn-sm btn-ghost" href={mailUrl}>
+                  ✉️ Mailen
+                </a>
+              </div>
+            </>
+          ) : (
+            // Pas tonen als de link er écht is: anders kopieert of mailt iemand een lege link.
+            <p className="hint" role="status" aria-busy>Link wordt klaargemaakt (afbeeldingen worden ingevoegd)…</p>
+          )}
         </div>
         {qr && (
           <figure style={{ margin: 0, textAlign: 'center' }}>
@@ -116,7 +135,7 @@ export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () =>
 
       <hr className="divider" />
 
-      <AdaptedLinkSection widget={widget} />
+      <AdaptedLinkSection widget={widget} inlined={inlined.widget} />
 
       <hr className="divider" />
 
@@ -143,20 +162,22 @@ export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () =>
  * Redelijke aanpassingen, discreet: een aangepaste variant van de draagbare
  * link (meer tijd, extra poging) die er voor de leerling identiek uitziet.
  */
-function AdaptedLinkSection({ widget }: { widget: Widget }) {
+function AdaptedLinkSection({ widget, inlined }: { widget: Widget; inlined: Widget | null }) {
   const [open, setOpen] = useState(false);
   const [extraTime, setExtraTime] = useState(true);
   const [noLimit, setNoLimit] = useState(false);
   const [extraAttempt, setExtraAttempt] = useState(false);
 
-  const adapt = useCallback((src: Widget) => {
-    const w: Widget = JSON.parse(JSON.stringify(src));
+  // Vertrekt van de al ingelijnde widget: enkel de instellingen wijzigen en
+  // opnieuw coderen, niet opnieuw alle afbeeldingen omzetten.
+  const adaptedUrl = useMemo(() => {
+    if (!inlined) return '';
+    const w: Widget = { ...inlined, settings: { ...inlined.settings } };
     if (noLimit) w.settings.timeLimitMin = 0;
     else if (extraTime && w.settings.timeLimitMin > 0) w.settings.timeLimitMin = Math.ceil(w.settings.timeLimitMin * 1.5);
     if (extraAttempt && w.settings.maxAttempts > 0) w.settings.maxAttempts += 1;
-    return w;
-  }, [extraTime, noLimit, extraAttempt]);
-  const adaptedUrl = usePortableUrl(widget, adapt);
+    return encodeWidgetToUrl(w);
+  }, [inlined, extraTime, noLimit, extraAttempt]);
 
   const hasEffect = noLimit || (extraTime && widget.settings.timeLimitMin > 0) || (extraAttempt && widget.settings.maxAttempts > 0);
 

@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  collectMediaRefs, configureMediaStore, dataUrlToBlob, findLargeDataUrls, inlineMedia, mediaStats,
-  MEDIA_REF_PREFIX, migrateDataUrls, parseWithMedia, preloadMedia, pruneOrphanMedia, replaceMedia,
-  resolveMediaRef, storeMedia, stringifyWithMedia, type MediaBackend,
+  collectMediaRefs, configureMediaStore, countUnresolvedMedia, dataUrlToBlob, findLargeDataUrls, inlineMedia,
+  mediaKeysInStorage, mediaSizeForUrl, mediaStats, MEDIA_REF_PREFIX, migrateDataUrls, parseWithMedia,
+  preloadMedia, pruneOrphanMedia, replaceMedia, resolveMediaRef, storeMedia, stringifyWithMedia,
+  type MediaBackend,
 } from './mediaStore';
 import type { FileRecord } from './idb';
 
@@ -34,13 +35,16 @@ function memoryStorage(init: Record<string, string> = {}): Storage {
 
 let urlCounter = 0;
 const urlToBlob = new Map<string, Blob>();
-function setup(opts: { records?: FileRecord[]; storage?: Record<string, string> } = {}) {
-  const { backend, map } = memoryBackend(opts.records);
+function setup(opts: { records?: FileRecord[]; storage?: Record<string, string>; backend?: MediaBackend } = {}) {
+  const mem = memoryBackend(opts.records);
+  const backend = opts.backend ?? mem.backend;
+  const map = mem.map;
   const storage = memoryStorage(opts.storage);
   urlToBlob.clear();
   configureMediaStore({
     backend,
     storage: () => storage,
+    preloadTimeoutMs: 4000,
     createObjectUrl: (blob) => {
       const url = `blob:test/${++urlCounter}`;
       urlToBlob.set(url, blob);
@@ -289,5 +293,68 @@ describe('pruneOrphanMedia', () => {
     });
     expect(await pruneOrphanMedia()).toBe(0);
     expect(map.size).toBe(1);
+  });
+});
+
+// ── Robuustheid ─────────────────────────────────────────────────────────────
+
+describe('preloadMedia', () => {
+  it('geeft het op na de tijdslimiet als IndexedDB nooit antwoordt, en lost daarna per verwijzing op', async () => {
+    const hang = new Promise<FileRecord[]>(() => {});
+    const later: FileRecord = { id: 'm_late', name: '', blob: new Blob(['l']), size: 1, createdAt: 1 };
+    const { backend } = memoryBackend([later]);
+    setup({ backend: { ...backend, getAll: () => hang } });
+    configureMediaStore({ preloadTimeoutMs: 20 });
+    const t0 = Date.now();
+    await preloadMedia();
+    expect(Date.now() - t0).toBeLessThan(1000);
+    // de migratie wacht op preload en mag dus niet blijven hangen
+    await expect(migrateDataUrls(['wf.widgets.v1'])).resolves.toBe(0);
+    // en losse verwijzingen worden alsnog per stuk opgehaald
+    const ref = MEDIA_REF_PREFIX + 'm_late';
+    expect(resolveMediaRef(ref)).toBe(ref);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(resolveMediaRef(ref)).toMatch(/^blob:/);
+  });
+
+  it('maakt geen object-URL voor media die nooit getoond wordt', async () => {
+    setup({ records: [{ id: 'm_1', name: '', blob: new Blob(['a']), size: 1, createdAt: 1 }] });
+    const before = urlCounter;
+    await preloadMedia();
+    expect(urlCounter).toBe(before);
+    resolveMediaRef(MEDIA_REF_PREFIX + 'm_1');
+    expect(urlCounter).toBe(before + 1);
+  });
+});
+
+describe('na het opruimen van een blob', () => {
+  it('schrijft een editor die de blob:-URL nog vasthoudt tóch een verwijzing weg, nooit een dode blob:-string', async () => {
+    const old = Date.now() - 60 * 60 * 1000;
+    setup({ records: [{ id: 'm_x', name: '', blob: new Blob(['x']), size: 1, createdAt: old }], storage: {} });
+    await preloadMedia();
+    const url = resolveMediaRef(MEDIA_REF_PREFIX + 'm_x');
+    expect(await pruneOrphanMedia()).toBe(1);
+    expect(replaceMedia('', url)).toBe(MEDIA_REF_PREFIX + 'm_x');
+  });
+});
+
+describe('hulpfuncties', () => {
+  it('mediaKeysInStorage neemt de autosave-sleutels mee', () => {
+    setup({ storage: { 'wf.autosave.w1.jan': '{}', 'wf.prefs.v1': '{}' } });
+    const keys = mediaKeysInStorage();
+    expect(keys).toContain('wf.widgets.v1');
+    expect(keys).toContain('wf.autosave.w1.jan');
+    expect(keys).not.toContain('wf.prefs.v1');
+  });
+
+  it('countUnresolvedMedia telt open verwijzingen en onbekende blob:-URL\'s', () => {
+    expect(countUnresolvedMedia({ a: MEDIA_REF_PREFIX + 'm_1', b: ['blob:x', 'data:image/png;base64,AA'], c: 'tekst wfmedia: in prosa' })).toBe(2);
+  });
+
+  it('mediaSizeForUrl kent de grootte van een bewaarde blob', async () => {
+    setup();
+    const url = await storeMedia(new Blob(['12345']));
+    expect(mediaSizeForUrl(url)).toBe(5);
+    expect(mediaSizeForUrl('blob:onbekend')).toBeNull();
   });
 });

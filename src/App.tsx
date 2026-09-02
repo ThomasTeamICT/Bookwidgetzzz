@@ -140,19 +140,19 @@ export default function App() {
         void migrateDataUrls().catch(() => { /* best-effort */ });
       }, delay);
     };
-    const idle = (fn: () => void) => {
-      if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(fn);
-      else window.setTimeout(fn, 800);
-    };
-    idle(() => {
+    const hasIdle = typeof window.requestIdleCallback === 'function';
+    const maintenance = () => {
       void migrateDataUrls()
         .then(() => pruneOrphanMedia())
         .catch(() => { /* best-effort */ });
-    });
+    };
+    const idleHandle = hasIdle ? window.requestIdleCallback(maintenance) : window.setTimeout(maintenance, 800);
     const off = onStorageChange(() => schedule(2500));
     return () => {
       off();
       if (timer !== null) window.clearTimeout(timer);
+      if (hasIdle) window.cancelIdleCallback(idleHandle);
+      else window.clearTimeout(idleHandle);
     };
   }, []);
   return (

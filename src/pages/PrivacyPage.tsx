@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { getSubmissions, getWidgets, onStorageChange } from '../lib/storage';
+import { cleanupStudentFiles, collectFileIds, getSubmissions, getWidgets, onStorageChange } from '../lib/storage';
 import { ConfirmModal, useToast } from '../components/ui';
-import { clearAllFiles, mediaStats, pruneOrphanMedia } from '../lib/mediaStore';
+import { clearAllFiles, collectMediaRefs, mediaStats, pruneOrphanMedia } from '../lib/mediaStore';
 import {
   formatBytes, formatPct, LOCALSTORAGE_BUDGET_BYTES, readStorageHealth,
   rememberPersistenceResult, requestPersistence, storageBreakdown, type StorageHealth,
@@ -49,6 +49,16 @@ export function PrivacyPage() {
   const names = new Set(subs.map((s) => s.studentName));
 
   const wipeSubmissions = () => {
+    // Vóór het wissen noteren welke tekeningen, opnames en ingeleverde
+    // bestanden erbij horen: die moeten mee weg, ook de allerjongste.
+    let rawSubs = '';
+    try {
+      rawSubs = localStorage.getItem('wf.submissions.v1') ?? '';
+    } catch {
+      rawSubs = '';
+    }
+    const mediaIds = collectMediaRefs(rawSubs);
+    const fileIds = collectFileIds(rawSubs);
     localStorage.removeItem('wf.submissions.v1');
     localStorage.removeItem('wf.attempts.v1');
     localStorage.removeItem('wf.live.v1');
@@ -57,8 +67,10 @@ export function PrivacyPage() {
       .filter((k) => k.startsWith('wf.autosave.') || k.startsWith('wf.coursename.')
         || k.startsWith('wf.coursenotes.') || k.startsWith('wf.deadline.'))
       .forEach((k) => localStorage.removeItem(k));
-    // tekeningen/foto's van de gewiste inzendingen mogen ook weg (best-effort)
-    void pruneOrphanMedia().catch(() => { /* genegeerd */ }).finally(refreshHealth);
+    // tekeningen/foto's van de gewiste inzendingen mogen ook weg (best-effort);
+    // een expliciete wisactie kent geen leeftijdsgrens
+    void pruneOrphanMedia({ only: mediaIds, minAgeMs: 0 }).catch(() => { /* genegeerd */ }).finally(refreshHealth);
+    cleanupStudentFiles(fileIds);
     // storage-laag opnieuw laten emitten
     localStorage.setItem('wf.submissions.v1', '[]');
     refreshHealth();

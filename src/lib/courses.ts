@@ -10,7 +10,7 @@ import { allSections, referencedPdfIds, referencedWidgetIds } from './courseType
 import { deletePdf } from './pdfStore';
 import { makeCode, uid } from './utils';
 import { cleanupOrphanMedia, getWidget, getWidgets, notifyChange, reportWriteFailure, saveWidget } from './storage';
-import { collectMediaRefs, inlineMedia, parseWithMedia, stringifyWithMedia } from './mediaStore';
+import { collectMediaRefs, countUnresolvedMedia, inlineMedia, parseWithMedia, stringifyWithMedia } from './mediaStore';
 import { defaultSettings, getTypeDef, WIDGET_TYPES } from '../widgets/registry';
 
 const COURSES_KEY = 'wf.courses.v1';
@@ -287,8 +287,9 @@ interface CoursePayload {
 /**
  * Draagbare cursuslink. Async: afbeeldingen, audio en bijlagen staan op dit
  * toestel in IndexedDB en moeten als data-URL in de link (zie lib/mediaStore).
+ * `unresolved` telt media die niet mee konden (blob niet op dit toestel).
  */
-export async function encodeCourseToUrl(course: Course, chapterIds?: string[]): Promise<string> {
+export async function encodeCourseToUrl(course: Course, chapterIds?: string[]): Promise<{ url: string; unresolved: number }> {
   const partial = Boolean(chapterIds && chapterIds.length && chapterIds.length < course.chapters.length);
   const c: Course = {
     ...course,
@@ -302,7 +303,7 @@ export async function encodeCourseToUrl(course: Course, chapterIds?: string[]): 
   const payload: CoursePayload = await inlineMedia({ v: 1, kind: 'cursus', c, w, ...(partial ? { partial: true } : {}) });
   const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(payload));
   const base = location.origin + location.pathname;
-  return `${base}#/cursus/open?d=${compressed}`;
+  return { url: `${base}#/cursus/open?d=${compressed}`, unresolved: countUnresolvedMedia(payload) };
 }
 
 const KNOWN_TYPES = new Set(WIDGET_TYPES.map((t) => t.id));

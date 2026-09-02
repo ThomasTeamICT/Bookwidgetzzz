@@ -73,8 +73,10 @@ export function playUrlForCode(code: string): string {
  * inzending als gecomprimeerde code doorsturen; de leerkracht plakt die bij de
  * resultaten. Zo komt thuiswerk toch centraal terecht, zonder server.
  */
-export function encodeSubmission(sub: Submission): string {
-  return 'WF1.' + LZString.compressToEncodedURIComponent(JSON.stringify(sub));
+export async function encodeSubmission(sub: Submission): Promise<string> {
+  // Een hervatte tekening kan als blob:-URL in de antwoorden zitten; in de
+  // code moet ze als data-URL, anders ziet de leerkracht niets.
+  return 'WF1.' + LZString.compressToEncodedURIComponent(JSON.stringify(await inlineMedia(sub)));
 }
 
 export function decodeSubmission(code: string): Submission | null {
