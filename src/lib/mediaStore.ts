@@ -377,7 +377,32 @@ export async function inlineMedia<T>(value: T): Promise<T> {
   return (await walk(value)) as T;
 }
 
-/** Bevat deze waarde ergens media die (nog) niet op dit toestel staat? */
+/**
+ * Verwijzingen in ruwe JSON die nog niet in het geheugen zitten alvast
+ * ophalen — bv. bij het storage-event uit een ander tabblad, zodat de blob
+ * er al is tegen dat de gebruiker hier op de widget klikt.
+ */
+export function prefetchMediaRefs(raw: string) {
+  if (!available || !raw.includes(MEDIA_REF_PREFIX)) return;
+  for (const id of collectMediaRefs(raw)) {
+    if (!byId.has(id)) resolveMediaRef(MEDIA_REF_PREFIX + id);
+  }
+}
+
+/**
+ * Staan er in dit (al gelezen) object nog verwijzingen die niet opgelost
+ * raakten (blob nog niet geladen, of niet op dit toestel)? Een weergave kan
+ * dan op onMediaChange wachten en opnieuw lezen.
+ */
+export function hasUnresolvedMedia(value: unknown): boolean {
+  try {
+    return JSON.stringify(value).includes(MEDIA_REF_PREFIX);
+  } catch {
+    return false;
+  }
+}
+
+/** Alle media-id's die in een ruwe JSON-string voorkomen. */
 export function collectMediaRefs(raw: string): Set<string> {
   const out = new Set<string>();
   const re = /wfmedia:(m_[A-Za-z0-9_-]+)/g;

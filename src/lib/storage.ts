@@ -2,7 +2,7 @@ import type { Folder, Submission, Widget } from './types';
 import {
   askPersistenceOnce, emitStorageNotice, hasStorageNoticeListeners, markBackupHint, pendingBackupHint,
 } from './storageHealth';
-import { collectMediaRefs, onMediaChange, parseWithMedia, pruneOrphanMedia, stringifyWithMedia } from './mediaStore';
+import { collectMediaRefs, onMediaChange, parseWithMedia, prefetchMediaRefs, pruneOrphanMedia, stringifyWithMedia } from './mediaStore';
 
 // ── Eenvoudige localStorage-laag met change-events ──────────────────────────
 
@@ -35,7 +35,10 @@ export function notifyChange() {
 // hetzelfde toestel) zodat dashboards en resultaten live verversen.
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
-    if (e.key && e.key.startsWith('wf.')) emit();
+    if (!e.key || !e.key.startsWith('wf.')) return;
+    // Nieuwe afbeeldingen uit het andere tabblad alvast ophalen (zie mediaStore).
+    if (e.newValue) prefetchMediaRefs(e.newValue);
+    emit();
   });
 }
 // Media die op de achtergrond bijgeladen of verhuisd is (zie lib/mediaStore):

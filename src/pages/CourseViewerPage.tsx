@@ -8,6 +8,7 @@ import {
   getCourse, getCourseByCode, getStudentProgress, mergeProgressRecords,
   saveStudentProgress, sharedCourseDiffers, startProgress, touchSection,
 } from '../lib/courses';
+import { hasUnresolvedMedia, onMediaChange } from '../lib/mediaStore';
 import { downloadFile, formatDate } from '../lib/utils';
 import { BlockRenderer } from '../components/course/BlockRenderer';
 import { CopyButton, EmptyState } from '../components/ui';
@@ -103,7 +104,16 @@ export function CourseOpenPage() {
 
 export function CourseViewerPage() {
   const { code } = useParams();
-  const course = useMemo(() => (code ? getCourseByCode(code) : undefined), [code]);
+  // Eén keer lezen (zie PlayerPage): alleen opnieuw wanneer er nog een
+  // media-verwijzing openstaat die pas later oplost.
+  const [mediaTick, setMediaTick] = useState(0);
+  // mediaTick is een bewuste herlees-trigger, geen echte afhankelijkheid
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const course = useMemo(() => (code ? getCourseByCode(code) : undefined), [code, mediaTick]);
+  useEffect(() => {
+    if (!course || !hasUnresolvedMedia(course)) return;
+    return onMediaChange(() => setMediaTick((t) => t + 1));
+  }, [course]);
 
   if (!course) return <CourseNotFound code={code} />;
   // key: bij een andere cursuscode volledig opnieuw beginnen

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { bumpAttemptCount, getAttemptCount, getWidgetByCode, markStarted, saveSubmission } from '../lib/storage';
+import { hasUnresolvedMedia, onMediaChange } from '../lib/mediaStore';
 import { getTypeDef } from '../widgets/registry';
 import type { Question, Submission, Widget } from '../lib/types';
 import type { PlayerResult } from '../widgets/shared';
@@ -17,7 +18,18 @@ function deadlineKey(widgetId: string, studentKey: string): string {
 
 export function PlayerPage() {
   const { code } = useParams();
-  const widget = useMemo(() => (code ? getWidgetByCode(code) : undefined), [code]);
+  // Eén keer lezen — een oefening mag niet onder de handen van een leerling
+  // veranderen. Uitzondering: staat er nog een media-verwijzing in die pas
+  // later oplost (blob nog onderweg uit IndexedDB, of net in een ander tabblad
+  // toegevoegd), dan lezen we opnieuw zodra de medialaag klaar is.
+  const [mediaTick, setMediaTick] = useState(0);
+  // mediaTick is een bewuste herlees-trigger, geen echte afhankelijkheid
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const widget = useMemo(() => (code ? getWidgetByCode(code) : undefined), [code, mediaTick]);
+  useEffect(() => {
+    if (!widget || !hasUnresolvedMedia(widget)) return;
+    return onMediaChange(() => setMediaTick((t) => t + 1));
+  }, [widget]);
 
   if (!widget) {
     return (
