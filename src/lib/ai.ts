@@ -40,8 +40,10 @@ export const PROVIDER_INFO: Record<AIProviderId, { name: string; models: { id: s
   anthropic: {
     name: 'Anthropic (Claude)',
     models: [
-      { id: 'claude-sonnet-5', label: 'Claude Sonnet 5 — beste kwaliteit (aanbevolen)' },
-      { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 — snel en voordelig' },
+      { id: 'claude-sonnet-5', label: 'Claude Sonnet 5 — beste prijs-kwaliteit (aanbevolen)' },
+      { id: 'claude-fable-5-1', label: 'Claude Fable 5.1 — sterkste model, ±5× duurder' },
+      { id: 'claude-opus-5', label: 'Claude Opus 5 — zeer sterk, ±2,5× duurder' },
+      { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 — snelst en goedkoopst' },
     ],
   },
   openai: {
@@ -192,7 +194,13 @@ async function askAnthropic(s: AISettings, opts: AskAIOptions): Promise<string> 
       },
       body: JSON.stringify({
         model: s.model,
-        max_tokens: opts.maxTokens ?? 8192,
+        max_tokens: opts.maxTokens ?? 16000,
+        // De systeeminstructie (rol + vraagschema) is per taak identiek, terwijl
+        // het bronmateriaal in de gebruikersvraag varieert. Caching van dat
+        // stabiele voorstuk maakt een tweede generatie in dezelfde reeks fors
+        // goedkoper — precies het patroon van een leerkracht die genereert,
+        // nakijkt en opnieuw genereert.
+        cache_control: { type: 'ephemeral' },
         system: opts.system,
         messages: [{ role: 'user', content: opts.prompt }],
         stream: true,
@@ -207,6 +215,7 @@ async function askAnthropic(s: AISettings, opts: AskAIOptions): Promise<string> 
   let full = '';
   let inputTokens = 0;
   let outputTokens = 0;
+  let refused = false;
   try {
     await readSSE(res, (data) => {
       try {
@@ -217,6 +226,9 @@ async function askAnthropic(s: AISettings, opts: AskAIOptions): Promise<string> 
           opts.onDelta?.(ev.delta.text);
         }
         if (ev.type === 'message_delta' && ev.usage?.output_tokens) outputTokens = ev.usage.output_tokens;
+        if (ev.type === 'message_delta' && ev.delta?.stop_reason === 'refusal') {
+          refused = true;
+        }
         if (ev.type === 'error') throw new AIError(ev.error?.message ?? 'De AI-dienst meldde een fout tijdens het genereren.');
       } catch (e) {
         if (e instanceof AIError) throw e;
@@ -228,6 +240,12 @@ async function askAnthropic(s: AISettings, opts: AskAIOptions): Promise<string> 
     // invoertokens zijn dan al aangerekend door de aanbieder.
     if (outputTokens === 0 && full) outputTokens = Math.round(full.length / 4);
     logUsage({ at: Date.now(), task: opts.task, model: s.model, inputTokens, outputTokens, keyLabel: maskAIKey(s.apiKey) });
+  }
+  if (refused) {
+    throw new AIError(
+      'Het model heeft deze aanvraag geweigerd. Herformuleer je opdracht of bronmateriaal; ' +
+      'blijft het misgaan, probeer dan een ander model bij de AI-instellingen.'
+    );
   }
   return full;
 }
@@ -252,7 +270,7 @@ async function askOpenAICompatible(s: AISettings, opts: AskAIOptions): Promise<s
       },
       body: JSON.stringify({
         model: s.model,
-        max_tokens: opts.maxTokens ?? 8192,
+        max_tokens: opts.maxTokens ?? 16000,
         messages: [
           ...(opts.system ? [{ role: 'system', content: opts.system }] : []),
           { role: 'user', content: opts.prompt },
@@ -270,11 +288,14 @@ async function askOpenAICompatible(s: AISettings, opts: AskAIOptions): Promise<s
   let full = '';
   let inputTokens = 0;
   let outputTokens = 0;
+  let blocked = false;
   try {
     await readSSE(res, (data) => {
       if (data === '[DONE]') return;
       try {
         const ev = JSON.parse(data);
+        const finish = ev.choices?.[0]?.finish_reason;
+        if (finish === 'content_filter' || finish === 'safety') blocked = true;
         const delta = ev.choices?.[0]?.delta?.content;
         if (typeof delta === 'string' && delta) {
           full += delta;
@@ -293,6 +314,12 @@ async function askOpenAICompatible(s: AISettings, opts: AskAIOptions): Promise<s
     // schatten op tekstlengte, zodat het logboek nooit stil onderrapporteert.
     if (outputTokens === 0 && full) outputTokens = Math.round(full.length / 4);
     logUsage({ at: Date.now(), task: opts.task, model: s.model, inputTokens, outputTokens, keyLabel: maskAIKey(s.apiKey) });
+  }
+  if (blocked) {
+    throw new AIError(
+      'Het model blokkeerde deze aanvraag (inhoudsfilter van de aanbieder). Herformuleer je ' +
+      'opdracht of bronmateriaal, of probeer een ander model bij de AI-instellingen.'
+    );
   }
   return full;
 }

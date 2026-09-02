@@ -1092,7 +1092,13 @@ function gradeTable(q: TableQuestion, answer: unknown): ItemScore {
   const cells: { rowId: string; ci: number; ans: string }[] = [];
   for (const r of q.rows) {
     r.answers.forEach((a, ci) => {
-      if (a !== null && a !== undefined) cells.push({ rowId: r.id, ci, ans: a });
+      // Alleen cellen met een écht juist antwoord tellen mee. De 🔒→✏️-knop in
+      // de editor maakt van een lege vaste cel een invulcel met een leeg
+      // antwoord; die kan een leerling nooit juist hebben, dus ze zou de
+      // noemer niet mogen opblazen (perfect ingevuld werd anders 1 op 2).
+      if (a !== null && a !== undefined && answerAlts(a, q.caseSensitive).length > 0) {
+        cells.push({ rowId: r.id, ci, ans: a });
+      }
     });
   }
   if (cells.length === 0) return { earned: 0, max: 0, mode: 'auto' }; // geen invulcellen = niets te verdienen

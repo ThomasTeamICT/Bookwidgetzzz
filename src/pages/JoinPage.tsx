@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getWidgetByCode } from '../lib/storage';
-import { getCourseByCode } from '../lib/courses';
 
 export function JoinPage() {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const go = () => {
+  // courses.ts (21 kB) hangt aan één functie van vier regels. Lui ophalen
+  // scheelt ~4,6 kB gzip op het kritieke leerlingpad; het kost hoogstens een
+  // fractie van een seconde op het moment dat er écht een cursuscode getypt is.
+  const go = async () => {
     const c = code.trim().toUpperCase();
     if (c.length < 6) {
       setError('Vul de volledige code in (6 tekens).');
@@ -19,6 +21,7 @@ export function JoinPage() {
       navigate(`/speel/${c}`);
       return;
     }
+    const { getCourseByCode } = await import('../lib/courses');
     if (getCourseByCode(c)) {
       navigate(`/cursus/lees/${c}`);
       return;
@@ -40,7 +43,7 @@ export function JoinPage() {
             <div style={{ fontSize: '2.8rem' }} aria-hidden>🎓</div>
             <h1 style={{ fontSize: '1.45rem' }}>Meedoen met een opdracht</h1>
             <p style={{ color: 'var(--text-soft)' }}>Typ de code die je van je leerkracht kreeg.</p>
-            <form onSubmit={(e) => { e.preventDefault(); go(); }}>
+            <form onSubmit={(e) => { e.preventDefault(); void go(); }}>
               <input
                 className="input join-code-input"
                 value={code}

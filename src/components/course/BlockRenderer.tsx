@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   AccordionBlock, AttachmentBlock, AudioBlock, CalloutBlock, ChecklistBlock,
   ColumnsBlock, CourseBlock, EmbedBlock, HeadingBlock, ImageBlock, PdfBlock,
@@ -10,8 +10,13 @@ import { getTypeDef, type WidgetTypeDef } from '../../widgets/registry';
 import type { PlayerResult } from '../../widgets/shared';
 import type { Submission } from '../../lib/types';
 import { pct, uid } from '../../lib/utils';
-import { PdfViewer, pickAndStorePdf } from '../pdf/PdfViewer';
 import { deletePdf, getPdf, savePdf } from '../../lib/pdfStore';
+
+// De pdf-viewer (en via hem pdf.js) hoort niet bij het leesnetwerk van een
+// cursus zonder pdf-blok: lui laden i.p.v. statisch meesturen.
+const PdfViewer = React.lazy(() =>
+  import('../pdf/PdfViewer').then((m) => ({ default: m.PdfViewer }))
+);
 
 // ── Gedeelde weergave van cursusblokken ─────────────────────────────────────
 //
@@ -72,7 +77,11 @@ function Heading({ block }: { block: HeadingBlock }) {
 }
 
 function Markdown({ md }: { md: string }) {
-  return <div className="md-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(md) }} />;
+  // renderMarkdown parst de volledige tekst; zonder memo gebeurt dat bij élke
+  // render van de cursuspagina opnieuw — dus ook bij elke toetsaanslag in het
+  // zoekveld of in een notitie.
+  const html = useMemo(() => renderMarkdown(md), [md]);
+  return <div className="md-body" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 const IMAGE_WIDTHS: Record<string, string> = { small: '380px', normal: '680px', wide: '100%' };
@@ -218,7 +227,9 @@ function PdfBlockView({ block, interactive }: { block: PdfBlock; interactive: bo
 
   return (
     <figure style={{ margin: 0 }}>
-      <PdfViewer src={src} title={block.name || block.caption || 'Pdf-document'} height={block.height ?? 560} />
+      <React.Suspense fallback={<div className="hint" role="status" style={{ margin: 0 }}>📄 Pdf-lezer laden…</div>}>
+        <PdfViewer src={src} title={block.name || block.caption || 'Pdf-document'} height={block.height ?? 560} />
+      </React.Suspense>
       {block.caption && <figcaption>{block.caption}</figcaption>}
     </figure>
   );
@@ -241,6 +252,7 @@ function MissingPdfCard({ block, onRestored }: { block: PdfBlock; onRestored: (b
     setBusy(true);
     setErr(null);
     // pickAndStorePdf valideert (type/grootte) en bewaart onder een vers id …
+    const { pickAndStorePdf } = await import('../pdf/PdfViewer');
     const res = await pickAndStorePdf(f);
     if ('error' in res) {
       setBusy(false);
@@ -334,6 +346,7 @@ const CALLOUT_STYLE: Record<CalloutBlock['kind'], { icon: string; bg: string; bo
 
 function CalloutView({ block }: { block: CalloutBlock }) {
   const st = CALLOUT_STYLE[block.kind] ?? CALLOUT_STYLE.info;
+  const html = useMemo(() => renderMarkdown(block.text), [block.text]);
   return (
     <div
       role="note"
@@ -345,7 +358,7 @@ function CalloutView({ block }: { block: CalloutBlock }) {
       <span aria-hidden style={{ fontSize: '1.15rem', lineHeight: 1.4 }}>{st.icon}</span>
       <div style={{ minWidth: 0 }}>
         <strong>{block.title || st.label}</strong>
-        <div className="md-body" style={{ fontSize: '0.95rem' }} dangerouslySetInnerHTML={{ __html: renderMarkdown(block.text) }} />
+        <div className="md-body" style={{ fontSize: '0.95rem' }} dangerouslySetInnerHTML={{ __html: html }} />
       </div>
     </div>
   );
@@ -393,12 +406,16 @@ function AttachmentView({ block, interactive }: { block: AttachmentBlock; intera
 }
 
 function AccordionView({ block, interactive }: { block: AccordionBlock; interactive: boolean }) {
+  const items = useMemo(
+    () => block.items.map((it) => ({ id: it.id, title: it.title, html: renderMarkdown(it.text) })),
+    [block.items]
+  );
   return (
     <div>
-      {block.items.map((it) => (
+      {items.map((it) => (
         <details key={it.id} open={!interactive || undefined}>
           <summary>{it.title}</summary>
-          <div className="md-body" style={{ fontSize: '0.95rem' }} dangerouslySetInnerHTML={{ __html: renderMarkdown(it.text) }} />
+          <div className="md-body" style={{ fontSize: '0.95rem' }} dangerouslySetInnerHTML={{ __html: it.html }} />
         </details>
       ))}
     </div>
@@ -406,10 +423,12 @@ function AccordionView({ block, interactive }: { block: AccordionBlock; interact
 }
 
 function ColumnsView({ block }: { block: ColumnsBlock }) {
+  const left = useMemo(() => renderMarkdown(block.left), [block.left]);
+  const right = useMemo(() => renderMarkdown(block.right), [block.right]);
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 18 }}>
-      <div className="md-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(block.left) }} />
-      <div className="md-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(block.right) }} />
+      <div className="md-body" dangerouslySetInnerHTML={{ __html: left }} />
+      <div className="md-body" dangerouslySetInnerHTML={{ __html: right }} />
     </div>
   );
 }
@@ -530,32 +549,12 @@ function WidgetBlockView({
     // 'attempt' zit erin zodat de badge na "opnieuw proberen" mee ververst
   }, [widget?.id, name, attempt, sub]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!widget || !def) {
-    return (
-      <div className="callout warn" style={{ marginBottom: 0 }}>
-        <span aria-hidden>🧩</span>
-        <div>
-          <strong>Oefening niet gevonden.</strong><br />
-          De oefening hoort bij dit toestel/deze link te reizen — vraag je leerkracht om een nieuwe link.
-        </div>
-      </div>
-    );
-  }
-
-  if (!interactive) {
-    return (
-      <div className="card" style={{ padding: '14px 18px', borderLeft: `4px solid ${accent ?? def.color}` }}>
-        <strong>🧩 Oefening: {widget.title}</strong>
-        <div className="hint">{def.name} — wordt digitaal gemaakt in de cursus.</div>
-        {block.note && <p style={{ margin: '6px 0 0', fontSize: '0.92rem' }}>{block.note}</p>}
-      </div>
-    );
-  }
-
-  const onComplete = (result: PlayerResult) => {
+  // Stabiele identiteit (net als in PlayerPage): zonder useCallback krijgt de
+  // gememoiseerde speler hieronder bij elke render een nieuwe prop.
+  const onComplete = useCallback((result: PlayerResult) => {
     // exact hetzelfde patroon als PlayerPage: guard tegen dubbel opslaan en
     // tegen lege "afrondingen" zonder inhoud
-    if (doneRef.current || !def.hasSubmissions) return;
+    if (doneRef.current || !widget || !def?.hasSubmissions) return;
     if (result.max === 0 && Object.keys(result.answers).length === 0) return;
     doneRef.current = true;
     // poging meetellen, zodat maxAttempts ook via de cursus geldt
@@ -579,7 +578,40 @@ function WidgetBlockView({
     };
     saveSubmission(s);
     setSub(s);
-  };
+  }, [widget, def, name]);
+
+  // De ingebedde oefening is verreweg het duurste onderdeel van een cursusblok.
+  // De cursuslezer hertekent bij elke toetsaanslag in het zoekveld of in een
+  // notitie; door het element vast te houden blijft de oefening dan onaangeroerd.
+  const Speler = def?.Player;
+  const playerNode = useMemo(
+    () => (Speler && widget
+      ? <Speler key={attempt} widget={widget} studentName={name} preview={false} onComplete={onComplete} />
+      : null),
+    [Speler, widget, name, attempt, onComplete]
+  );
+
+  if (!widget || !def) {
+    return (
+      <div className="callout warn" style={{ marginBottom: 0 }}>
+        <span aria-hidden>🧩</span>
+        <div>
+          <strong>Oefening niet gevonden.</strong><br />
+          De oefening hoort bij dit toestel/deze link te reizen — vraag je leerkracht om een nieuwe link.
+        </div>
+      </div>
+    );
+  }
+
+  if (!interactive) {
+    return (
+      <div className="card" style={{ padding: '14px 18px', borderLeft: `4px solid ${accent ?? def.color}` }}>
+        <strong>🧩 Oefening: {widget.title}</strong>
+        <div className="hint">{def.name} — wordt digitaal gemaakt in de cursus.</div>
+        {block.note && <p style={{ margin: '6px 0 0', fontSize: '0.92rem' }}>{block.note}</p>}
+      </div>
+    );
+  }
 
   const retry = () => {
     if (expired || attemptsLeft <= 0) return;
@@ -643,7 +675,7 @@ function WidgetBlockView({
         ) : (
           // Suspense: de spelers uit de registry worden lui geladen (React.lazy)
           <React.Suspense fallback={<div className="hint" role="status">Widget laden…</div>}>
-            <def.Player key={attempt} widget={widget} studentName={name} preview={false} onComplete={onComplete} />
+            {playerNode}
           </React.Suspense>
         )}
         {sub && (

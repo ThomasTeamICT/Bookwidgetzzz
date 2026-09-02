@@ -1,16 +1,49 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { getSubmissions, getWidgets, onStorageChange } from '../lib/storage';
 import { ConfirmModal, useToast } from '../components/ui';
+import {
+  formatBytes, formatPct, LOCALSTORAGE_BUDGET_BYTES, readStorageHealth,
+  rememberPersistenceResult, requestPersistence, storageBreakdown, type StorageHealth,
+} from '../lib/storageHealth';
+
+// Woorden bij het vulniveau — de kleur van de balk mag nooit de enige drager
+// van de boodschap zijn.
+const LEVEL_TEXT: Record<StorageHealth['level'], string> = {
+  ok: 'Ruim plaats',
+  warn: 'Begint vol te raken',
+  critical: 'Kritiek vol',
+};
+const LEVEL_BADGE: Record<StorageHealth['level'], string> = {
+  ok: 'badge-ok',
+  warn: 'badge-warn',
+  critical: 'badge-err',
+};
 
 /** Transparantiepagina: welke data staat waar, en hoe ruim je ze op (AVG). */
 export function PrivacyPage() {
   const [, force] = useState(0);
-  React.useEffect(() => onStorageChange(() => force((x) => x + 1)), []);
+  const [health, setHealth] = useState<StorageHealth | null>(null);
+  const [asking, setAsking] = useState(false);
   const [confirm, setConfirm] = useState<null | 'subs' | 'all'>(null);
   const toast = useToast();
 
+  const refreshHealth = useCallback(() => {
+    void readStorageHealth()
+      .then(setHealth)
+      .catch(() => setHealth(null));
+  }, []);
+
+  useEffect(() => {
+    refreshHealth();
+    return onStorageChange(() => {
+      force((x) => x + 1);
+      refreshHealth();
+    });
+  }, [refreshHealth]);
+
   const widgets = getWidgets();
   const subs = getSubmissions();
+  const breakdown = storageBreakdown();
   const names = new Set(subs.map((s) => s.studentName));
 
   const wipeSubmissions = () => {
@@ -24,7 +57,23 @@ export function PrivacyPage() {
       .forEach((k) => localStorage.removeItem(k));
     // storage-laag opnieuw laten emitten
     localStorage.setItem('wf.submissions.v1', '[]');
+    refreshHealth();
     toast('Alle leerlinggegevens gewist', 'ok');
+  };
+
+  const protectStorage = async () => {
+    setAsking(true);
+    const result = await requestPersistence();
+    rememberPersistenceResult(result);
+    refreshHealth();
+    setAsking(false);
+    if (result === 'granted') {
+      toast('Deze opslag wordt niet meer automatisch gewist', 'ok');
+    } else if (result === 'denied') {
+      toast('De browser houdt de bescherming voorlopig af — exporteer regelmatig', 'info');
+    } else {
+      toast('Deze browser kent deze bescherming niet — exporteer regelmatig', 'info');
+    }
   };
 
   const wipeAll = () => {
@@ -32,6 +81,7 @@ export function PrivacyPage() {
       .filter((k) => k.startsWith('wf.'))
       .forEach((k) => localStorage.removeItem(k));
     localStorage.setItem('wf.prefs.v1', JSON.stringify({ theme: 'auto', teacherName: '', seeded: true }));
+    refreshHealth();
     toast('Alles gewist', 'ok');
   };
 
@@ -80,6 +130,90 @@ export function PrivacyPage() {
           <li>CSV-exports met namen bevatten persoonsgegevens: bewaar ze volgens de afspraken van je school en mail ze niet onversleuteld door.</li>
           <li>Op een <strong>gedeeld klas­toestel</strong>: wis regelmatig de leerlinggegevens hieronder.</li>
         </ul>
+      </div>
+
+      <div className="card card-pad" style={{ marginBottom: 16 }}>
+        <h3>💾 Opslag op dit toestel</h3>
+        {!health ? (
+          <p style={{ color: 'var(--text-soft)' }}>Het opslaggebruik wordt gemeten…</p>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+              <strong>{formatBytes(health.lsBytes)}</strong>
+              <span style={{ color: 'var(--text-soft)' }}>
+                van ongeveer {formatBytes(LOCALSTORAGE_BUDGET_BYTES)} ({formatPct(health.lsPct)}) gebruikt
+              </span>
+              <span className={`badge ${LEVEL_BADGE[health.level]}`}>{LEVEL_TEXT[health.level]}</span>
+            </div>
+            <div className="progressbar" aria-hidden>
+              <div
+                style={{
+                  width: `${Math.max(2, Math.min(100, health.lsPct))}%`,
+                  background: health.level === 'critical' ? 'var(--err)' : health.level === 'warn' ? 'var(--warn)' : 'var(--ok)',
+                }}
+              />
+            </div>
+            <p className="hint" style={{ marginTop: 8, color: 'var(--text-soft)', fontSize: '0.88rem' }}>
+              Widgets, cursussen en inzendingen staan als tekst in de browseropslag; afbeeldingen zitten
+              daar mee in en wegen het zwaarst. Die opslag is klein — ongeveer 5 MB voor de hele app, hoeveel
+              plaats je toestel verder ook heeft.{' '}
+              {health.estimate
+                ? `Alles samen (inclusief geüploade pdf's, die apart bewaard worden): ${formatBytes(health.estimate.usedBytes)} van ${formatBytes(health.estimate.quotaBytes)} (${formatPct(health.estimate.pct)}).`
+                : 'Deze browser geeft het totale quotum niet vrij, dus hierboven staat enkel wat de app in de browseropslag gebruikt.'}
+            </p>
+
+            {breakdown.length > 0 && (
+              <ul style={{ paddingLeft: 20, margin: '10px 0 0' }}>
+                {breakdown.map((slice) => (
+                  <li key={slice.label}>
+                    {slice.label}: <strong>{formatBytes(slice.bytes)}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <hr className="divider" />
+
+            <h4 style={{ marginBottom: 6 }}>Beveiligd tegen automatisch wissen?</h4>
+            <p style={{ margin: '0 0 10px' }}>
+              <span className={`badge ${health.persisted ? 'badge-ok' : 'badge-warn'}`}>
+                {health.persisted ? '✓ Ja — persistente opslag' : '⚠ Nee — niet beveiligd'}
+              </span>
+            </p>
+            {health.persisted ? (
+              <p>
+                De browser markeerde de opslag van deze site als <em>persistent</em>: ze wordt niet meer
+                opgeruimd omdat je een tijdje niet langskwam of omdat het toestel plaats zoekt. Wissen kan
+                nog altijd manueel (browsergegevens wissen, ander profiel, toestel resetten) — een export
+                blijft dus nodig.
+              </p>
+            ) : (
+              <>
+                <p>
+                  De browser mag de opslag van deze site nu automatisch opruimen. Je kan hem vragen dat niet
+                  te doen; de browser beslist zelf (Chrome kijkt naar hoe vaak je de app gebruikt, Firefox
+                  stelt een vraag, sommige browsers kennen dit niet).
+                </p>
+                <button className="btn btn-primary" onClick={() => { void protectStorage(); }} disabled={asking}>
+                  {asking ? 'Bezig…' : '🔒 Opslag beveiligen tegen automatisch wissen'}
+                </button>
+              </>
+            )}
+
+            <div className="callout warn" style={{ marginTop: 16, marginBottom: 0 }}>
+              <span aria-hidden>📆</span>
+              <div>
+                <strong>Let op — er is geen back-up.</strong> Safari op iPad en iPhone (en op de Mac) wist de
+                volledige opslag van een website na ongeveer zeven dagen zonder bezoek: één vakantieweek
+                volstaat om een cursus of het werk van leerlingen kwijt te spelen. Ook "browsergegevens
+                wissen", een ander gebruikersprofiel of een toestel met weinig vrije ruimte doet dat.
+                Exporteer daarom wat je niet wil verliezen: <a href="#/widgets">widgets en mappen</a> als
+                pakketbestand, <a href="#/cursussen">cursussen</a> met 💾 Exporteren, en resultaten als CSV.
+                Zet die bestanden op de schoolschijf — dát is je back-up.
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="card card-pad">

@@ -24,9 +24,17 @@ en maximale opvolgbaarheid.
   bestaande cursus herwerken / een sectie vullen), optioneel met een oefenquiz per hoofdstuk.
 - **Feedbacksuggesties** bij het nakijken: taakgericht voorstel (wat lukt, wat nog niet,
   volgende stap) — zonder leerlingnaam in de prompt; de leerkracht past aan en beslist.
-- **Eigen sleutel, eigen regie**: werkt met een API-sleutel van Anthropic (Claude), OpenAI
-  of elke OpenAI-compatibele aanbieder. Sleutel blijft op het toestel; elk gebruik staat in
-  een tokenlogboek (kostentransparantie). AI-uitvoer landt áltijd eerst in een voorvertoning.
+- **Eigen sleutel, eigen regie**: werkt met een API-sleutel van Anthropic (Claude),
+  Google (Gemini), OpenAI of elke OpenAI-compatibele aanbieder. Sleutel blijft op het
+  toestel; elk gebruik staat in een tokenlogboek, ook uitgesplitst per sleutel
+  (kostentransparantie). AI-uitvoer landt áltijd eerst in een voorvertoning.
+- **Modelkeuze met eerlijke prijsindicatie**: van Claude Sonnet 5 (aanbevolen prijs-kwaliteit)
+  over Claude Fable 5.1 en Opus 5 (sterker, duurder) tot Haiku 4.5 (snelst en goedkoopst),
+  plus de Gemini-reeks. De systeeminstructie wordt gecachet, zodat een tweede generatie in
+  dezelfde reeks fors goedkoper uitvalt; weigert een model een aanvraag, dan krijgt de
+  leerkracht een duidelijke melding in plaats van een leeg resultaat.
+- **Instel-links voor een testgroep**: deel je AI-instellingen (aanbieder, model, sleutel)
+  via één link — de ontvanger hoeft niets in te stellen.
 
 ### 📚 Cursusmodule: digitale cursussen (BrightBook-achtig, en verder)
 - **Authoring**: hoofdstukken → secties → 16 bloktypes (kop, tekst met markdown,

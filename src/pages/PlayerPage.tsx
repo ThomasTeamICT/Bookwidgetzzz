@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { bumpAttemptCount, getAttemptCount, getWidgetByCode, markStarted, saveSubmission } from '../lib/storage';
 import { getTypeDef } from '../widgets/registry';
@@ -9,6 +9,11 @@ import { hasProgress } from '../lib/autosave';
 import { encodeSubmission } from '../lib/share';
 import { CopyButton } from '../components/ui';
 import { A11yMenu, loadA11y } from '../components/A11yMenu';
+
+/** Sleutel waaronder de deadline van één leerling bewaard wordt. */
+function deadlineKey(widgetId: string, studentKey: string): string {
+  return `wf.deadline.${widgetId}.${studentKey.toLowerCase()}`;
+}
 
 export function PlayerPage() {
   const { code } = useParams();
@@ -70,8 +75,6 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
 
   const expired = !!widget.settings.expiresAt && Date.now() > new Date(widget.settings.expiresAt).getTime();
 
-  const deadlineKey = (studentKey: string) => `wf.deadline.${widget.id}.${studentKey.toLowerCase()}`;
-
   const start = () => {
     if (needsName && !name.trim()) return;
     const studentKey = name || 'anoniem';
@@ -93,10 +96,10 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
       // deadline overleeft herladen: hervatten geeft geen verse tijd
       let end = Date.now() + widget.settings.timeLimitMin * 60000;
       if (resuming) {
-        const saved = parseInt(localStorage.getItem(deadlineKey(studentKey)) ?? '', 10);
+        const saved = parseInt(localStorage.getItem(deadlineKey(widget.id, studentKey)) ?? '', 10);
         if (!Number.isNaN(saved)) end = saved;
       }
-      try { localStorage.setItem(deadlineKey(studentKey), String(end)); } catch { /* best effort */ }
+      try { localStorage.setItem(deadlineKey(widget.id, studentKey), String(end)); } catch { /* best effort */ }
       setTimeLeft(Math.max(0, Math.round((end - Date.now()) / 1000)));
     }
     setPhase('playing');
@@ -123,12 +126,14 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
     return () => document.removeEventListener('visibilitychange', onHide);
   }, [phase, widget.settings.examMode]);
 
-  const onComplete = (result: PlayerResult) => {
+  // Stabiele identiteit: anders krijgt de gememoiseerde speler hieronder bij elke
+  // timertik een nieuwe prop en hertekent de hele oefening zich.
+  const onComplete = useCallback((result: PlayerResult) => {
     if (doneRef.current || !recordSubmission || !def.hasSubmissions) return;
     // lege widget die door timeUp "afrondt" zonder enige inhoud: niets registreren
     if (result.max === 0 && Object.keys(result.answers).length === 0) return;
     doneRef.current = true;
-    try { localStorage.removeItem(deadlineKey(name || 'anoniem')); } catch { /* best effort */ }
+    try { localStorage.removeItem(deadlineKey(widget.id, name || 'anoniem')); } catch { /* best effort */ }
     if (widget.settings.examMode && document.fullscreenElement) {
       document.exitFullscreen?.().catch(() => { /* negeren */ });
     }
@@ -156,7 +161,24 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
     };
     saveSubmission(sub);
     setCompletedSub(sub);
-  };
+  }, [recordSubmission, def, widget, name, doelProces, doelStreef, doelVrij]);
+
+  // De widgetmodule zelf is het duurste stuk van de pagina. Zolang de leerling
+  // dezelfde opdracht speelt verandert er niets aan haar props, dus houden we
+  // het element vast: een timertik, een toetsmodus-waarschuwing of een a11y-
+  // instelling hertekent dan de balk eromheen, niet de hele oefening.
+  const studentName = name.trim() || 'Anoniem';
+  const playerNode = useMemo(
+    () => <def.Player widget={widget} studentName={studentName} timeUp={timeUp} onComplete={onComplete} />,
+    [def, widget, studentName, timeUp, onComplete]
+  );
+
+  // encodeSubmission comprimeert (lz-string) de volledige inzending; die stond
+  // twee keer in de render van het resultaatveld hieronder.
+  const resultCode = useMemo(
+    () => (offerResultCode && completedSub ? encodeSubmission(completedSub) : ''),
+    [offerResultCode, completedSub]
+  );
 
   const mm = timeLeft !== null ? Math.floor(timeLeft / 60) : 0;
   const ss = timeLeft !== null ? timeLeft % 60 : 0;
@@ -317,7 +339,7 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
             )}
             {/* de widgetmodule wordt lazy geladen (zie registry): even een laadmelding tonen */}
             <React.Suspense fallback={<div className="hint" role="status" style={{ textAlign: 'center', padding: '40px 0' }}>Widget laden…</div>}>
-              <def.Player widget={widget} studentName={name.trim() || 'Anoniem'} timeUp={timeUp} onComplete={onComplete} />
+              {playerNode}
             </React.Suspense>
             {completedSub && widget.settings.showFeedback && (
               <FoutenAnalysePanel
@@ -344,11 +366,11 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
                 </p>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <input
-                    className="input input-sm" readOnly value={encodeSubmission(completedSub)}
+                    className="input input-sm" readOnly value={resultCode}
                     aria-label="Resultaatcode" onFocus={(e) => e.target.select()}
                     style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}
                   />
-                  <CopyButton text={encodeSubmission(completedSub)} label="Code kopiëren" />
+                  <CopyButton text={resultCode} label="Code kopiëren" />
                 </div>
               </div>
             )}
@@ -374,11 +396,16 @@ function FoutenAnalysePanel({
   widget, submission, onSaved,
 }: { widget: Widget; submission: Submission; onSaved: (s: Submission) => void }) {
   const questions = (widget.config as { questions?: Question[] }).questions;
-  const wrong = (questions ?? []).filter((q) => {
-    if (q.type === 'info') return false;
-    const s = submission.itemScores?.[q.id];
-    return !!s && s.mode !== 'pending' && s.earned < s.max;
-  });
+  // Zonder memo wordt deze lijst bij elke toetsaanslag in het invulveld hieronder
+  // opnieuw doorlopen.
+  const wrong = useMemo(
+    () => (questions ?? []).filter((q) => {
+      if (q.type === 'info') return false;
+      const s = submission.itemScores?.[q.id];
+      return !!s && s.mode !== 'pending' && s.earned < s.max;
+    }),
+    [questions, submission.itemScores]
+  );
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [nextTime, setNextTime] = useState('');
   const [saved, setSaved] = useState(!!(submission.answers as Record<string, unknown>)['_foutenanalyse']);

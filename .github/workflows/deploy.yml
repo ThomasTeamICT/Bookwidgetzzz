@@ -24,7 +24,20 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run build
+
+      # ── Kwaliteitspoort ─────────────────────────────────────────────────
+      # Faalt één van deze stappen, dan stopt de job en wordt er niets
+      # gedeployd. De Playwright-rooktest (tests/smoke.mjs) draait bewust
+      # lokaal: een browserdownload maakt de pipeline traag en broos.
+      - name: Lint
+        run: npm run lint
+      - name: Typecontrole
+        run: npm run typecheck
+      - name: Unittests (scoringsmotor)
+        run: npm test
+
+      - name: Bouwen
+        run: npm run build
       - uses: actions/configure-pages@v5
         with:
           # probeert GitHub Pages automatisch te activeren voor deze repo

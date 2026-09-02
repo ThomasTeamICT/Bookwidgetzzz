@@ -27,6 +27,16 @@ export function splitGapText(text: string): { type: 'text' | 'gap'; value: strin
   return parts;
 }
 
+/**
+ * Ligt het antwoord binnen de tolerantie? Met een kleine marge tegen
+ * drijvende-kommafouten: 1,1 − 1 is in JavaScript 0,10000000000000009, waardoor
+ * een leerling die exact op de ondergrens antwoordt anders fout gerekend werd
+ * terwijl dezelfde afwijking naar boven wél juist telde.
+ */
+function withinTolerance(given: number, answer: number, tolerance: number): boolean {
+  return Math.abs(given - answer) <= tolerance + 1e-9;
+}
+
 /** Eén quizvraag automatisch beoordelen. Antwoordvormen zijn per type gedocumenteerd in de speler. */
 export function gradeQuestion(q: Question, answer: unknown): ItemScore {
   const max = q.type === 'info' ? 0 : q.points;
@@ -62,12 +72,12 @@ export function gradeQuestion(q: Question, answer: unknown): ItemScore {
     case 'number': {
       const n = typeof answer === 'number' ? answer : parseFloat(String(answer ?? '').replace(',', '.'));
       if (Number.isNaN(n)) return wrong;
-      return Math.abs(n - q.answer) <= q.tolerance ? right : wrong;
+      return withinTolerance(n, q.answer, q.tolerance) ? right : wrong;
     }
     case 'slider': {
       const n = typeof answer === 'number' ? answer : NaN;
       if (Number.isNaN(n)) return wrong;
-      return Math.abs(n - q.answer) <= q.tolerance ? right : wrong;
+      return withinTolerance(n, q.answer, q.tolerance) ? right : wrong;
     }
     case 'gap': {
       const gaps = extractGaps(q.text);
@@ -123,9 +133,15 @@ export function gradeQuiz(config: QuizConfig, answers: Record<string, unknown>) 
   return { itemScores, earned: Math.round(earned * 100) / 100, max, hasPending };
 }
 
-/** Maximale score van een quiz-configuratie. */
+/**
+ * Maximale score van een quiz-configuratie — precies wat gradeQuiz ook optelt.
+ * Vraagt het maximum per vraag op bij de beoordelaar zelf, zodat vragen die
+ * niets kunnen opleveren (meningsvragen, een tabel zonder invulcellen) hier
+ * niet meetellen. Anders drukt de papieren versie "/ 12" terwijl de digitale
+ * score op 10 staat.
+ */
 export function quizMaxScore(config: QuizConfig): number {
-  return config.questions.reduce((sum, q) => sum + (q.type === 'info' ? 0 : q.points), 0);
+  return config.questions.reduce((sum, q) => sum + gradeQuestion(q, undefined).max, 0);
 }
 
 /** Voorbeeldweergave van een gap-vraag zonder de antwoorden. */

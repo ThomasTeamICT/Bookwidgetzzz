@@ -1,4 +1,7 @@
 import type { Folder, Submission, Widget } from './types';
+import {
+  askPersistenceOnce, emitStorageNotice, hasStorageNoticeListeners, markBackupHint, pendingBackupHint,
+} from './storageHealth';
 
 // ── Eenvoudige localStorage-laag met change-events ──────────────────────────
 
@@ -43,14 +46,68 @@ function read<T>(key: string, fallback: T): T {
     return fallback;
   }
 }
-function write(key: string, value: unknown) {
+// ── Mislukt opslaan mag nooit stil zijn ─────────────────────────────────────
+// Bij een volle opslag verdwijnt de wijziging zonder dat de gebruiker iets
+// merkt: het scherm toont nog de nieuwe tekst, de opslag de oude. Daarom
+// melden we elke mislukte schrijfactie via het busje in storageHealth (de
+// leerkrachtschil toont ze als balk). Luistert er niemand — de leerling-
+// weergave laadt die schil niet — dan valt het terug op een alert().
+
+const QUOTA_MESSAGE =
+  'De opslag van dit toestel is vol. Exporteer je materiaal en ruim oude inzendingen op — je laatste wijziging is niet bewaard.';
+const WRITE_FAIL_MESSAGE =
+  'Bewaren op dit toestel is mislukt — je laatste wijziging is niet bewaard. Staat de browser misschien in privémodus of blokkeert ze opslag?';
+
+function isQuotaError(e: unknown): boolean {
+  if (!e || typeof e !== 'object') return false;
+  const err = e as { name?: unknown; code?: unknown };
+  return (
+    err.name === 'QuotaExceededError' ||
+    err.name === 'NS_ERROR_DOM_QUOTA_REACHED' || // Firefox
+    err.code === 22 || // oudere WebKit/Blink
+    err.code === 1014 // oudere Firefox
+  );
+}
+
+// Autosave probeert het gerust elke seconde opnieuw: hoogstens één melding
+// per 8 seconden, anders krijgt de gebruiker een lawine (of erger: alerts).
+let lastFailureReport = 0;
+
+/**
+ * Meldt een mislukte schrijfactie via het meldingenbusje (of als laatste
+ * redmiddel een alert). Ook gebruikt door lib/courses.ts, dat een eigen
+ * write() heeft maar dezelfde meldweg hoort te volgen.
+ */
+export function reportWriteFailure(key: string, e: unknown) {
+  console.error(`Opslaan mislukt (${key})`, e);
+  const now = Date.now();
+  if (now - lastFailureReport < 8000) return;
+  lastFailureReport = now;
+  const message = isQuotaError(e) ? QUOTA_MESSAGE : WRITE_FAIL_MESSAGE;
+  if (hasStorageNoticeListeners()) {
+    emitStorageNotice({ kind: isQuotaError(e) ? 'quota' : 'write-failed', message, severe: true, at: now });
+    return;
+  }
+  try {
+    alert(message);
+  } catch {
+    // genegeerd: zelfs zonder alert staat de fout in de console
+  }
+}
+
+/** Schrijft weg; geeft false terug wanneer er niets bewaard is. */
+function write(key: string, value: unknown): boolean {
+  let ok = true;
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {
-    console.error('Opslaan mislukt (localStorage vol?)', e);
-    alert('Opslaan mislukt: de lokale opslag is vol. Verwijder oude widgets of grote afbeeldingen.');
+    ok = false;
+    reportWriteFailure(key, e);
   }
+  // Ook na een mislukking verwittigen: de UI leest dan opnieuw uit de opslag
+  // en toont eerlijk wat er écht bewaard staat.
   emit();
+  return ok;
 }
 
 // ── Widgets ─────────────────────────────────────────────────────────────────
@@ -71,8 +128,36 @@ export function saveWidget(widget: Widget) {
   const updated = { ...widget, updatedAt: Date.now() };
   if (i >= 0) all[i] = updated;
   else all.unshift(updated);
-  write(KEYS.widgets, all);
+  if (write(KEYS.widgets, all)) protectStorageOnce();
 }
+
+/**
+ * Waarom hier? `navigator.storage.persist()` lukt alleen na echte interactie,
+ * dus stil bij het opstarten vragen heeft geen zin. Een geslaagde widget-
+ * bewaaractie is het eerste moment waarop (a) er iets op dit toestel staat dat
+ * verloren kán gaan en (b) de gebruiker aantoonbaar aan het werk is. Álle
+ * leerkrachtwegen komen hier voorbij (nieuwe widget, editor-autosave, AI-studio,
+ * dupliceren, en het overnemen van een gedeelde link), dus één plek volstaat.
+ *
+ * `askPersistenceOnce` bewaakt zelf dat het hoogstens één keer gebeurt en dat
+ * er al geklikt of getypt is — de voorbeeldwidgets die bij het allereerste
+ * bezoek automatisch bewaard worden, tellen dus niet mee. Zegt de browser nee,
+ * dan zeuren we niet: één keer de eerlijke back-uphint, en klaar. Wie enkel
+ * cursussen maakt, kan het altijd zelf aanvragen op de privacypagina.
+ */
+function protectStorageOnce() {
+  void askPersistenceOnce()
+    .then((result) => {
+      if (result !== 'denied' && result !== 'unsupported') return;
+      // De hint blijft in een vlag staan tot ze getoond én weggeklikt is: vlak
+      // na het bewaren springt de app vaak naar de editor, buiten de schil.
+      markBackupHint();
+      const hint = pendingBackupHint();
+      if (hint) emitStorageNotice(hint);
+    })
+    .catch(() => { /* genegeerd: opslag beschermen is best-effort */ });
+}
+
 export function deleteWidget(id: string) {
   // Vóór het verwijderen: heeft deze widget een geüploade pdf als bron
   // (bv. splitwidgets: config.source.pdfId)? Dan die straks mee opruimen.

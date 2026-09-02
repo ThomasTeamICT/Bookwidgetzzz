@@ -6,7 +6,6 @@ import { Landing } from './pages/Landing';
 import { PlayerPage } from './pages/PlayerPage';
 import { OpenSharedPage } from './pages/OpenSharedPage';
 import { JoinPage } from './pages/JoinPage';
-import { seedIfEmpty } from './lib/seed';
 
 // ── Code-splitting: zwaardere pagina's laden pas wanneer ze nodig zijn ──────
 // (De leerlingroutes /speel, /open en /meedoen blijven in de hoofdbundel:
@@ -119,7 +118,10 @@ const router = createHashRouter([
 
 export default function App() {
   useEffect(() => {
-    seedIfEmpty();
+    // De voorbeeldinhoud is puur leerkrachtmateriaal; een leerling die met een
+    // code binnenkomt heeft ze nooit nodig. Lui laden houdt ~3 kB gzip uit de
+    // hoofdbundel die iedereen op /speel/:code binnenhaalt.
+    void import('./lib/seed').then((m) => m.seedIfEmpty());
   }, []);
   return (
     <ToastProvider>

@@ -9,7 +9,7 @@ import type {
 import { allSections, referencedPdfIds, referencedWidgetIds } from './courseTypes';
 import { deletePdf } from './pdfStore';
 import { makeCode, uid } from './utils';
-import { getWidget, getWidgets, notifyChange, saveWidget } from './storage';
+import { getWidget, getWidgets, notifyChange, reportWriteFailure, saveWidget } from './storage';
 import { defaultSettings, getTypeDef, WIDGET_TYPES } from '../widgets/registry';
 
 const COURSES_KEY = 'wf.courses.v1';
@@ -23,14 +23,18 @@ function read<T>(key: string, fallback: T): T {
     return fallback;
   }
 }
-function write(key: string, value: unknown) {
+function write(key: string, value: unknown): boolean {
+  let ok = true;
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {
-    console.error('Opslaan mislukt (localStorage vol?)', e);
-    alert('Opslaan mislukt: de lokale opslag is vol. Verwijder grote afbeeldingen of oude cursussen.');
+    ok = false;
+    // Zelfde meldweg als de widgetopslag: een nette balk in de app in plaats
+    // van een blokkerende alert, en hoogstens één melding per 8 seconden.
+    reportWriteFailure(key, e);
   }
   notifyChange();
+  return ok;
 }
 
 // ── CRUD ────────────────────────────────────────────────────────────────────
