@@ -489,6 +489,62 @@ check('… ook na herladen', (await page.evaluate(() => document.querySelector('
 await go('/#/privacy');
 check('privacypagina toont mediateller', await page.locator('text=/Afbeeldingen, audio en bijlagen/').first().isVisible());
 
+// ── 20. Leerstof (apart onderdeel) ──────────────────────────────────────────
+console.log('20. Leerstof');
+await go('/#/leerstof');
+check('leerstofoverzicht opent', await page.locator('h1', { hasText: 'Leerstof' }).isVisible());
+const leerstofKaarten = await page.locator('.study-card').count();
+check(`voorbeeldleerstof geseed (${leerstofKaarten})`, leerstofKaarten >= 1);
+check('toetsaftelling of oproep tot datum', await page.locator('.study-chip').first().isVisible());
+
+await page.locator('.study-card a', { hasText: 'Studeren' }).first().click();
+await sleep(700);
+check('studeerpagina opent', await page.locator('.study-head h1').isVisible());
+check('doelen afvinkbaar', (await page.locator('.checkbox-row input[type=checkbox]').count()) >= 5);
+check('theorie met eigen tekening', (await page.locator('.study-figure svg').count()) >= 3);
+check('notatietabel aanwezig', (await page.locator('.study-notation tbody tr').count()) >= 8);
+
+// een doel afvinken → percentage moet stijgen
+await page.locator('.checkbox-row input[type=checkbox]').first().check();
+await sleep(400);
+const naVinken = await page.evaluate(() => JSON.parse(localStorage.getItem('wf.studyprogress.v1') || '[]'));
+check('afgevinkt doel wordt bewaard', naVinken[0]?.doelen?.length === 1);
+
+// overhoren: één vraag beantwoorden
+await page.getByRole('tab', { name: /Overhoren/ }).click();
+await sleep(300);
+await page.getByRole('button', { name: /Starten/ }).click();
+await sleep(300);
+check('overhoorvraag getoond', await page.locator('.study-quiz-prompt').isVisible());
+await page.getByRole('button', { name: /Toon het antwoord/ }).click();
+await sleep(200);
+check('antwoord verschijnt', await page.locator('.study-quiz-answer').isVisible());
+await page.getByRole('button', { name: /Wist ik$/ }).click();
+await sleep(400);
+const naVraag = await page.evaluate(() => JSON.parse(localStorage.getItem('wf.studyprogress.v1') || '[]'));
+check('antwoord telt mee in de voortgang', Object.keys(naVraag[0]?.vragen ?? {}).length === 1);
+
+// begrippen als flitskaarten
+await page.getByRole('tab', { name: /Begrippen/ }).click();
+await sleep(300);
+check('begrippenlijst gevuld', (await page.locator('.study-notation tbody tr').count()) >= 10);
+
+// bewerken: titel aanpassen wordt automatisch bewaard
+await page.getByRole('tab', { name: /Samenvatting/ }).click();
+await page.getByRole('button', { name: /Bewerken/ }).first().click();
+await sleep(700);
+const titelVeld = page.locator('input.input').first();
+check('bewerkscherm opent', await titelVeld.isVisible());
+await titelVeld.fill('Transformaties van het vlak en symmetrie (toets)');
+await page.locator('input[type=date]').first().fill('2030-06-01');
+await sleep(1200);
+const bewaard = await page.evaluate(() => JSON.parse(localStorage.getItem('wf.study.v1') || '[]'));
+check('titel automatisch bewaard', bewaard[0]?.titel?.endsWith('(toets)'));
+check('toetsdatum bewaard', bewaard[0]?.toetsDatum === '2030-06-01');
+
+await go('/#/leerstof');
+check('overzicht toont de aftelling', await page.locator('.study-chip', { hasText: /Toets over/ }).first().isVisible());
+
 // ── Slot ────────────────────────────────────────────────────────────────────
 console.log('\n──────────');
 if (errors.length) {

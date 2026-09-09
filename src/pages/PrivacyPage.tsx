@@ -129,6 +129,7 @@ export function PrivacyPage() {
           <li><strong>Afbeeldingen, audio en bijlagen</strong> ({media.count}, {formatBytes(media.bytes)}): apart bewaard in de bestandsopslag van de browser (IndexedDB), samen met geüploade pdf's en ingeleverde bestanden.</li>
           <li><strong>Cursussen &amp; leesvoortgang</strong>: je cursusinhoud en, per leerling(naam), welke secties gelezen zijn en hoelang.</li>
           <li><strong>Inzendingen</strong> ({subs.length}, van {names.size} {names.size === 1 ? 'naam' : 'verschillende namen'}): naam, antwoorden, score, tijdstip en duur.</li>
+          <li><strong>Leerstof &amp; studievoortgang</strong>: wat je per toets bijhoudt (samenvatting, begrippen, vragen, foto’s van cursusbladzijden) en wat de leerling daarvan als gekend aanduidde. Foto’s staan in de bestandsopslag van dit toestel en zitten nooit in een deellink.</li>
           <li><strong>Tussentijds werk</strong>: automatisch opgeslagen antwoorden zodat leerlingen kunnen hervatten.</li>
           <li><strong>Notities &amp; deadlines</strong>: privénotities van leerlingen bij cursussen en de einddeadline per leerling bij oefeningen met tijdslimiet.</li>
           <li><strong>Voorkeuren</strong>: thema en weergave-instellingen.</li>
