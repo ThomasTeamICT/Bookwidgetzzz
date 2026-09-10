@@ -281,8 +281,8 @@ export function StudyEditorPage() {
 
       {/* ── Notaties ────────────────────────────────────────────────────── */}
       <Blok
-        titel="✍️ Notaties"
-        uitleg="Symbool en hoe je het leest — precies wat op een toets gevraagd wordt."
+        titel="✍️ Notaties en patronen"
+        uitleg="Een symbool, notatie of vast patroon, en wat het betekent. Werkt voor wiskunde net zo goed als voor een taal."
         onAdd={() => lijstPatch('notaties', (l) => [...l, { id: uid(), symbool: '', betekenis: '' } as StudyNotation])}
         addLabel="+ Notatie"
       >

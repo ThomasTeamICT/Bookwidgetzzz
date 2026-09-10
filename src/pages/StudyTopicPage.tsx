@@ -122,7 +122,7 @@ function Samenvatting({ topic, progress }: { topic: StudyTopic; progress: StudyP
         <div className="card study-section">
           <h3>✅ Wat moet ik kennen?</h3>
           <p className="hint" style={{ marginTop: -6 }}>
-            Vink af wat je echt kan uitleggen of tekenen — niet wat je al eens gelezen hebt.
+            Vink af wat je écht kent — niet wat je al eens gelezen of overgeschreven hebt.
           </p>
           {topic.doelen.map((doel) => (
             <label key={doel.id} className="checkbox-row">
@@ -163,11 +163,11 @@ function Samenvatting({ topic, progress }: { topic: StudyTopic; progress: StudyP
 
       {topic.notaties.length > 0 && (
         <div className="card study-section">
-          <h3>✍️ Notaties: zo lees en schrijf je het</h3>
+          <h3>✍️ Notaties en patronen</h3>
           <div style={{ overflowX: 'auto' }}>
             <table className="study-notation">
               <thead>
-                <tr><th>In symbolen</th><th>Lees je als</th></tr>
+                <tr><th>Notatie</th><th>Wat het betekent</th></tr>
               </thead>
               <tbody>
                 {topic.notaties.map((n) => (
