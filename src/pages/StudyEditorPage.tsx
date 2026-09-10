@@ -335,7 +335,7 @@ export function StudyEditorPage() {
       {/* ── Valkuilen ───────────────────────────────────────────────────── */}
       <Blok
         titel="⚠️ Valkuilen"
-        uitleg="Fouten uit verbeterde oefeningen horen hier: net die komen terug op de toets."
+        uitleg="Fouten uit verbeterde oefeningen horen hier: net die komen terug op de toets. **Vet** mag."
         onAdd={() => lijstPatch('valkuilen', (l) => [...l, { id: uid(), tekst: '' } as StudyPitfall])}
         addLabel="+ Valkuil"
       >

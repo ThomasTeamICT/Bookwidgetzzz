@@ -143,7 +143,8 @@ function Samenvatting({ topic, progress }: { topic: StudyTopic; progress: StudyP
           {topic.valkuilen.map((v) => (
             <div key={v.id} className="study-pitfall">
               <span aria-hidden>⚠️</span>
-              <span>{v.tekst}</span>
+              {/* Ook hier mag opmaak: een valkuil draait vaak om één woord (over, kleine, midden). */}
+              <div dangerouslySetInnerHTML={{ __html: renderMarkdown(v.tekst) }} />
             </div>
           ))}
         </div>

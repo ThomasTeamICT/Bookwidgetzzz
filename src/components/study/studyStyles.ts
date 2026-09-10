@@ -69,6 +69,9 @@ export const STUDY_CSS = `
   background: var(--warn-soft); color: var(--text); margin-bottom: 8px;
 }
 .study-pitfall span:first-child { flex: none; }
+.study-pitfall > div { min-width: 0; }
+.study-pitfall p { margin: 0; }
+.study-pitfall p + p { margin-top: 0.5em; }
 
 .study-quiz-card { padding: 24px; text-align: center; }
 .study-quiz-prompt { font-size: 1.25rem; font-weight: 650; margin: 6px 0 18px; white-space: pre-wrap; }
