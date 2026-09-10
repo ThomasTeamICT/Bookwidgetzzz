@@ -61,6 +61,28 @@ en maximale opvolgbaarheid.
   context, per-sectieoverzicht ("waar haakt de klas af?"), widgetresultaten, CSV-export
   en **voortgangscodes** voor thuiswerk — transparant: de leerling ziet wat jij ziet.
 
+### 📖 Leerstof: bijhouden wat er voor de volgende toets gekend moet zijn
+Een apart onderdeel (`#/leerstof`), met een andere gebruiker dan de rest van de app: een
+ouder of leerling die per toets vastlegt wát er gekend moet zijn — niet een leerkracht die
+materiaal voor een klas maakt.
+- **Per toets één onderdeel**: vak, voor wie, toetsdatum en bron (boek, module, bladzijden).
+  Het overzicht is een agenda: de eerstvolgende toets staat bovenaan, met "toets over 3 dagen".
+- **Invullen gaat snel**: doelen ("wat moet ik kennen"), samenvatting in mini-markdown,
+  notatietabel (symbool ↔ hoe je het leest), begrippen, valkuilen en overhoorvragen. Alles
+  wordt automatisch bewaard.
+- **Studeren**: de doelen zijn een afvinklijst, de begrippen draaien als flitskaarten en de
+  vragen overhoor je met zelfbeoordeling ("wist ik" / "nog niet"). Na een beurt kan je meteen
+  **alleen de foute vragen** opnieuw doen; het overzicht toont hoeveel procent gekend is en
+  hoe de vorige beurten gingen.
+- **Eigen tekeningen** bij de theorie (spiegeling, translatie, rotatie, puntspiegeling):
+  ingebouwde svg's die meekleuren met het thema en een tekstalternatief hebben.
+- **Foto’s van cursusbladzijden** voeg je zelf toe; ze blijven als blob in de browseropslag
+  van dat ene toestel (IndexedDB) en zitten nooit in een deellink of in deze repo — het
+  auteursrecht op een werkboek is van de uitgever.
+- **Exporteren, inlezen, dupliceren en archiveren** per onderdeel, plus één back-upbestand
+  voor alles samen. Een gearchiveerd onderdeel (toets geweest) verdwijnt uit het overzicht
+  maar blijft bewaard.
+
 ### 38 widgettypes, in 5 categorieën
 
 | Categorie | Widgets |
@@ -139,6 +161,7 @@ De app gebruikt een **hash-router** en een relatieve basis-URL, dus de `dist/`-m
 ```
 src/
   lib/            types, localStorage-laag, deellinks (lz-string), beoordeling, seed,
+                  studyTypes + study + studySeed (leerstofmodule),
                   ai (providerlaag + streaming), aiWidgetGen (schema's + sanering),
                   aiCourse (cursusgeneratie), courseTypes + courses (cursusmodel/opslag/delen),
                   markdown (veilige mini-markdown)
@@ -146,14 +169,15 @@ src/
                   aiCommon, AIEditorPanel, course/ (BlockRenderer, deel- en AI-modals)
   widgets/        registry + per widgettype één module met Editor & Player
   pages/          landing, dashboard, nieuw, editor, speler, meedoen, resultaten,
-                  AI-studio, AI-instellingen, cursussen (overzicht/editor/viewer/volgen/print)
+                  AI-studio, AI-instellingen, cursussen (overzicht/editor/viewer/volgen/print),
+                  leerstof (overzicht/studeren/bewerken)
   styles/         global.css — volledig eigen ontwerpsysteem met CSS-variabelen
 ```
 
 Elk widgettype registreert zich in `src/widgets/registry.tsx` met metadata, standaardconfiguratie, een **Editor**-component (leerkracht) en een **Player**-component (leerling). Een nieuw widgettype toevoegen = één module schrijven + één registratie.
 
 ### Gegevensopslag
-Alles staat in `localStorage` (`wf.*`-sleutels): widgets, mappen, inzendingen, pogingen, cursussen, leesvoortgang, AI-instellingen en voorkeuren. Bij het eerste bezoek worden voorbeeldwidgets en een voorbeeldcursus geplaatst zodat je meteen kan verkennen.
+Alles staat in `localStorage` (`wf.*`-sleutels): widgets, mappen, inzendingen, pogingen, cursussen, leesvoortgang, leerstof en studievoortgang, AI-instellingen en voorkeuren. Bij het eerste bezoek worden voorbeeldwidgets en een voorbeeldcursus geplaatst zodat je meteen kan verkennen.
 
 **Afbeeldingen, audio en bijlagen** staan niet in `localStorage` (dat biedt ±5 MB voor de hele app) maar als blob in IndexedDB (`lib/mediaStore.ts`, zelfde database als de pdf's). In de opgeslagen JSON staat alleen een verwijzing `wfmedia:m_…`; bij het lezen wordt die (via een JSON-reviver in de opslaglaag) een `blob:`-URL, zodat geen enkele widget iets van de opslag hoeft te weten. Uploads worden verkleind (max. 1400 px) en hergecodeerd als WebP/JPEG wanneer dat kleiner is. Draagbare links en exportbestanden krijgen de media weer als data-URL ingebed (`inlineMedia`), en data-URL's die binnenkomen via import, link, AI of resultaatcode worden na het bewaren automatisch verhuisd — dat is meteen de migratie van oudere opslag. Blobs waar niets meer naar verwijst worden bij het opstarten opgeruimd (met een leeftijdsgrens van 10 minuten).
 
