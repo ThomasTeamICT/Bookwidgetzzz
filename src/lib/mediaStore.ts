@@ -40,7 +40,12 @@ export const MIN_EXTERNALIZE_CHARS = 2048;
 export const ORPHAN_MIN_AGE_MS = 10 * 60 * 1000;
 
 /** Vaste sleutels in localStorage waarin media kunnen voorkomen. */
-export const MEDIA_KEYS = ['wf.widgets.v1', 'wf.courses.v1', 'wf.submissions.v1', 'wf.customtemplates.v1'] as const;
+export const MEDIA_KEYS = [
+  'wf.widgets.v1', 'wf.courses.v1', 'wf.submissions.v1', 'wf.customtemplates.v1',
+  // Leerstof: foto's van cursusbladzijden (zie lib/study.ts). Staat deze
+  // sleutel er niet bij, dan ziet het opruimen die foto's als wezen.
+  'wf.study.v1',
+] as const;
 /** Tussentijds bewaarde antwoorden van leerlingen (tekeningen, audio-opnames). */
 export const AUTOSAVE_PREFIX = 'wf.autosave.';
 /** Na zoveel ms geven we het wachten op IndexedDB op en renderen we toch. */

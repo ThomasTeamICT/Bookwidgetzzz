@@ -47,6 +47,9 @@ const ProgressPage = lazyRetry(() => import('./pages/ProgressPage').then((m) => 
 const HelpPage = lazyRetry(() => import('./pages/HelpPage').then((m) => ({ default: m.HelpPage })), 'HelpPage');
 const AIStudioPage = lazyRetry(() => import('./pages/AIStudioPage').then((m) => ({ default: m.AIStudioPage })), 'AIStudioPage');
 const AISettingsPage = lazyRetry(() => import('./pages/AISettingsPage').then((m) => ({ default: m.AISettingsPage })), 'AISettingsPage');
+const StudyPage = lazyRetry(() => import('./pages/StudyPage').then((m) => ({ default: m.StudyPage })), 'StudyPage');
+const StudyTopicPage = lazyRetry(() => import('./pages/StudyTopicPage').then((m) => ({ default: m.StudyTopicPage })), 'StudyTopicPage');
+const StudyEditorPage = lazyRetry(() => import('./pages/StudyEditorPage').then((m) => ({ default: m.StudyEditorPage })), 'StudyEditorPage');
 const CoursesPage = lazyRetry(() => import('./pages/CoursesPage').then((m) => ({ default: m.CoursesPage })), 'CoursesPage');
 const CourseEditorPage = lazyRetry(() => import('./pages/CourseEditorPage').then((m) => ({ default: m.CourseEditorPage })), 'CourseEditorPage');
 const CourseViewerPage = lazyRetry(() => import('./pages/CourseViewerPage').then((m) => ({ default: m.CourseViewerPage })), 'CourseViewerPage');
@@ -96,6 +99,9 @@ const router = createHashRouter([
       { path: '/resultaten', element: lz(<ResultsOverviewPage />) },
       { path: '/resultaten/:id', element: lz(<ResultsPage />) },
       { path: '/cursussen', element: lz(<CoursesPage />) },
+      { path: '/leerstof', element: lz(<StudyPage />) },
+      { path: '/leerstof/:id', element: lz(<StudyTopicPage />) },
+      { path: '/leerstof/bewerk/:id', element: lz(<StudyEditorPage />) },
       { path: '/cursus/volg/:id', element: lz(<CourseTrackPage />) },
       { path: '/ai-studio', element: lz(<AIStudioPage />) },
       { path: '/ai-instellingen', element: lz(<AISettingsPage />) },

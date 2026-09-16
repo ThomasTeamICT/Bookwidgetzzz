@@ -175,7 +175,9 @@ export function storageBreakdown(): StorageSlice[] {
       if (key === 'wf.widgets.v1') add('Widgets', bytes);
       else if (key === 'wf.courses.v1') add('Cursussen', bytes);
       else if (key === 'wf.submissions.v1') add('Inzendingen', bytes);
-      else if (key === 'wf.courseprogress.v1' || key === 'wf.attempts.v1' || key === 'wf.live.v1') add('Voortgang en pogingen', bytes);
+      else if (key === 'wf.study.v1') add('Leerstof', bytes);
+      else if (key === 'wf.courseprogress.v1' || key === 'wf.attempts.v1' || key === 'wf.live.v1'
+        || key === 'wf.studyprogress.v1') add('Voortgang en pogingen', bytes);
       else if (key.startsWith('wf.autosave.') || key.startsWith('wf.coursenotes.')
         || key.startsWith('wf.coursename.') || key.startsWith('wf.deadline.')) add('Tussentijds werk en notities', bytes);
       else add('Overige (instellingen, AI-logboek…)', bytes);

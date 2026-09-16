@@ -156,6 +156,7 @@ export function Layout() {
           <NavLink to="/widgets">Mijn widgets</NavLink>
           <NavLink to="/nieuw">Nieuwe widget</NavLink>
           <NavLink to="/cursussen">Cursussen</NavLink>
+          <NavLink to="/leerstof" title="Leerstof per toets bijhouden en overhoren">📖 Leerstof</NavLink>
           <NavLink to="/ai-studio" title="Widgets maken met AI vanuit je bronmateriaal">✨ AI-studio</NavLink>
           <NavLink to="/resultaten">Resultaten</NavLink>
           <NavLink to="/hulp" title="Aan de slag en veelgestelde vragen">Hulp</NavLink>
