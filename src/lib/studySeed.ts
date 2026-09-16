@@ -42,6 +42,12 @@ export function transformatiesTopic(): StudyTopic {
       { id: 'tf-d7', tekst: 'Ik kan het centrum van een puntspiegeling vinden (het midden van [PP′]) en de vector van een translatie tekenen (van origineel naar beeld).' },
       { id: 'tf-d8', tekst: 'Ik kan de rotatiehoek berekenen bij n plaatsen rond een cirkel: 360° gedeeld door n.' },
       { id: 'tf-d9', tekst: 'Ik herken spiegelsymmetrie om een as (lijnsymmetrisch) en om een punt (puntsymmetrisch).' },
+      { id: 'tf-d10', tekst: 'Ik kan de eigenschappen in een volledige zin schrijven: collineariteit, evenwijdigheid, lengte en hoekgrootte.' },
+      { id: 'tf-d11', tekst: 'Ik kan uitleggen wat een isometrie is en waarom deze vier transformaties er een zijn.' },
+      { id: 'tf-d12', tekst: 'Ik weet bij welke twee transformaties het beeld van een rechte evenwijdig is met die rechte zelf.' },
+      { id: 'tf-d13', tekst: 'Ik ken het aantal symmetrieassen van de driehoeken en de vierhoeken uit de tabellen.' },
+      { id: 'tf-d14', tekst: 'Ik kan een symmetrieas, een symmetriemiddelpunt en een symmetrievlak aanduiden en het verschil uitleggen.' },
+      { id: 'tf-d15', tekst: 'Ik ken het aantal symmetrievlakken van een kubus, een balk, een prisma en een cilinder.' },
     ],
 
     secties: [
@@ -116,13 +122,96 @@ export function transformatiesTopic(): StudyTopic {
       },
       {
         id: 'tf-s6',
-        titel: 'Symmetrie',
-        todo: true,
+        titel: '2 Eigenschappen van transformaties',
         markdown:
-          'Van deel 2 (eigenschappen van transformaties) en deel 3 (symmetrie) staat hier alleen de kern — vul aan uit het werkboek zodra je die bladzijden hebt.\n\n'
-          + '- Een figuur is **spiegelsymmetrisch om een as** (of **lijnsymmetrisch**) als een spiegeling om die as de figuur precies op **zichzelf** afbeeldt. Die as heet dan een **symmetrieas**.\n'
-          + '- Een figuur is **spiegelsymmetrisch om een punt** (of **puntsymmetrisch**) als een puntspiegeling om dat punt de figuur op zichzelf afbeeldt.\n'
-          + '- Ook **ruimtefiguren** kan je op symmetrie onderzoeken (symmetrievlakken).',
+          'Om beter inzicht te krijgen vertrekt het boek telkens van een **rechthoekig trapezium ABCD** en voert het de vier transformaties uit.\n\n'
+          + 'De vaststelling die alles samenvat:\n\n'
+          + '> Spiegelingen, translaties en rotaties zijn bijzondere transformaties die **afstanden en hoekgroottes behouden**. De vorm en de grootte van de figuur blijven onveranderd; alleen de **positie** verandert en soms verandert de **oriëntatie**. Zo\u2019n transformatie noemen we een **isometrie**.\n\n'
+          + 'Niet alle transformaties zijn isometrieën. Volgend jaar zie je de **homothetie**: daar is het beeld een schaalmodel van de oorspronkelijke figuur, dus niet congruent.',
+      },
+      {
+        id: 'tf-s7',
+        titel: '2.2 A) Collineariteit',
+        markdown:
+          'Drie punten zijn **collineair** als ze op één rechte liggen.\n\n'
+          + 'Als drie punten collineair zijn, dan zijn de beeldpunten ook collineair door:\n'
+          + '- een spiegeling om een as\n'
+          + '- een translatie over een vector\n'
+          + '- een rotatie rond een centrum over een hoek\n'
+          + '- een spiegeling om een punt\n\n'
+          + 'We stellen ook vast dat het **beeld van een rechte** door elk van die vier transformaties **opnieuw een rechte** is.',
+      },
+      {
+        id: 'tf-s8',
+        titel: '2.2 B) Evenwijdigheid',
+        markdown:
+          'Alle vier bewaren de evenwijdigheid:\n'
+          + '- Een spiegeling om een as bewaart de evenwijdigheid.\n'
+          + '- Een translatie over een vector bewaart de evenwijdigheid.\n'
+          + '- Een rotatie rond een centrum over een hoek bewaart de evenwijdigheid.\n'
+          + '- Een spiegeling om een punt bewaart de evenwijdigheid.\n\n'
+          + '**Bij twee transformaties geldt nog iets extra** — dit is een geliefde toetsvraag:\n'
+          + '- Het beeld van een rechte door een **translatie over een vector** is een rechte die **evenwijdig is met de oorspronkelijke** rechte.\n'
+          + '- Het beeld van een rechte door een **spiegeling om een punt** is een rechte die **evenwijdig is met de oorspronkelijke** rechte.\n\n'
+          + 'Bij een spiegeling om een as en bij een rotatie geldt dat niet: daar snijdt het beeld de oorspronkelijke rechte meestal.',
+      },
+      {
+        id: 'tf-s9',
+        titel: '2.2 C) Behoud van lengte',
+        markdown:
+          'Een spiegeling om een as, een translatie over een vector, een rotatie rond een centrum over een hoek en een spiegeling om een punt **bewaren de lengte van een lijnstuk**.\n\n'
+          + '**Merk op:** dat is eigenlijk logisch, want het beeld is telkens een **congruente** figuur. En omdat het beeld congruent is, blijft ook de **oppervlakte** behouden.',
+      },
+      {
+        id: 'tf-s10',
+        titel: '2.2 D) Behoud van hoekgrootte',
+        markdown:
+          'Alle vier **bewaren de grootte van een hoek**.\n\n'
+          + '**Merk op:**\n'
+          + '- Ook dat volgt uit de congruentie van het beeld.\n'
+          + '- De **loodrechte stand** van twee rechten blijft eveneens behouden bij alle vier de transformaties.\n\n'
+          + 'Zo schrijf je zo\u2019n eigenschap in een volledige zin, want dat wordt gevraagd: *“Een translatie over een vector bewaart de grootte van een hoek.”*',
+      },
+      {
+        id: 'tf-s11',
+        titel: '3.1 Spiegelsymmetrie bij vlakke figuren',
+        markdown:
+          'Sommige figuren hebben **zichzelf** als beeld. Een figuur is **symmetrisch** als er een transformatie bestaat die ze op zichzelf afbeeldt.\n\n'
+          + '**Definitie:** een vlakke figuur is **spiegelsymmetrisch om een as** als ze zichzelf als beeld heeft bij spiegeling om die as. Die as heet een **symmetrieas**, en ze verdeelt de figuur in **twee congruente** delen. Zulke figuren heten ook **lijnsymmetrisch**.\n\n'
+          + '**Driehoeken** hebben 0, 1 of 3 symmetrieassen:\n'
+          + '- ongelijkbenige driehoek: **0**\n'
+          + '- gelijkbenige driehoek: **1**\n'
+          + '- gelijkzijdige driehoek: **3**\n\n'
+          + 'Bij de gelijkbenige driehoek is die symmetrieas een **merkwaardige lijn**: de hoogtelijn uit de top, en tegelijk de bissectrice van de tophoek, de zwaartelijn uit de top en de middelloodlijn van de basis.\n\n'
+          + '**Vierhoeken** hebben 0, 1, 2 of 4 symmetrieassen:\n'
+          + '- vierhoek: 0 of 1\n'
+          + '- trapezium: 0 of 1\n'
+          + '- **parallellogram: 0**\n'
+          + '- ruit: 2\n'
+          + '- rechthoek: 2\n'
+          + '- vierkant: 4',
+      },
+      {
+        id: 'tf-s12',
+        titel: '3.1 B) Spiegelsymmetrisch om een punt',
+        markdown:
+          '**Definitie:** een vlakke figuur is **spiegelsymmetrisch om een punt** als ze zichzelf als beeld heeft bij spiegeling om dat punt. Dat centrum heet het **symmetriemiddelpunt**. Zulke figuren heten ook **puntsymmetrisch**.\n\n'
+          + '- **Driehoeken hebben géén symmetriemiddelpunt.**\n'
+          + '- Bij de vierhoeken zijn **alle parallellogrammen** (en dus ook ruiten, rechthoeken en vierkanten) spiegelsymmetrisch om een punt. Het symmetriemiddelpunt is het **snijpunt van de diagonalen**.\n\n'
+          + 'Let op het verschil: een parallellogram heeft **0 symmetrieassen** maar **wel** een symmetriemiddelpunt.',
+      },
+      {
+        id: 'tf-s13',
+        titel: '3.2 Spiegelsymmetrie in ruimtefiguren',
+        markdown:
+          '**Spiegelsymmetrisch om een vlak:** een ruimtefiguur is spiegelsymmetrisch om een vlak als ze zichzelf als beeld heeft bij spiegeling om dat vlak. Zo\u2019n vlak heet een **symmetrievlak** en het verdeelt de figuur in **twee congruente ruimtefiguren**.\n\n'
+          + 'Aantallen om te onthouden:\n'
+          + '- **kubus: 9** symmetrievlakken\n'
+          + '- balk met drie verschillende ribben: **3**\n'
+          + '- balk met een vierkant grondvlak: **5**\n'
+          + '- driezijdig prisma met gelijkzijdige driehoeken: **4**\n'
+          + '- cilinder: **oneindig veel**\n\n'
+          + '**Spiegelsymmetrisch om een punt:** een ruimtefiguur is spiegelsymmetrisch om een punt als ze zichzelf als beeld heeft bij spiegeling om dat punt. Bij een **kubus en een balk** is het **snijpunt van de ruimtediagonalen** het symmetriemiddelpunt. Een bol heeft zijn middelpunt.',
       },
     ],
 
@@ -159,6 +248,12 @@ export function transformatiesTopic(): StudyTopic {
       { id: 'tf-b17', term: 'lijnsymmetrisch', uitleg: 'Een figuur die door een spiegeling om een as op zichzelf wordt afgebeeld.' },
       { id: 'tf-b18', term: 'puntsymmetrisch', uitleg: 'Een figuur die door een puntspiegeling op zichzelf wordt afgebeeld.' },
       { id: 'tf-b19', term: 'homothetie', uitleg: 'Een transformatie die vergroot of verkleint — het beeld is dan niet congruent.' },
+      { id: 'tf-b20', term: 'isometrie', uitleg: 'Transformatie die afstanden en hoekgroottes behoudt; vorm en grootte blijven, alleen de positie en soms de oriëntatie veranderen.' },
+      { id: 'tf-b21', term: 'collineair', uitleg: 'Op één rechte gelegen.' },
+      { id: 'tf-b22', term: 'symmetrieas', uitleg: 'As waarbij de figuur zichzelf als beeld heeft; ze verdeelt de figuur in twee congruente delen.' },
+      { id: 'tf-b23', term: 'symmetriemiddelpunt', uitleg: 'Punt waarbij de figuur zichzelf als beeld heeft bij spiegeling om dat punt.' },
+      { id: 'tf-b24', term: 'symmetrievlak', uitleg: 'Vlak waarbij een ruimtefiguur zichzelf als beeld heeft; het verdeelt ze in twee congruente ruimtefiguren.' },
+      { id: 'tf-b25', term: 'oriëntatie', uitleg: 'De draaizin van een figuur. Een spiegeling keert ze om, een translatie en een rotatie niet.' },
     ],
 
     valkuilen: [
@@ -170,6 +265,13 @@ export function transformatiesTopic(): StudyTopic {
       { id: 'tf-p6', tekst: 'Een as krijgt een kleine letter (a), een centrum een hoofdletter (O, M).' },
       { id: 'tf-p7', tekst: 'Vergeet de accenten niet: het beeld van ABCD is A′B′C′D′.' },
       { id: 'tf-p8', tekst: 'Vraagt de oefening om te noteren “in symbolen”, dan volstaat een woordelijk antwoord niet — schrijf s, t of r met centrum, as of vector erbij.' },
+      { id: 'tf-p9', tekst: '`s_b(R) = S` lees je als “S is het beeld van R door een spiegeling om de **as** b”. Een kleine letter is een as, een hoofdletter een punt.' },
+      { id: 'tf-p10', tekst: 'Alleen bij een **translatie** en een **puntspiegeling** is het beeld van een rechte evenwijdig met die rechte zelf. Bij een asspiegeling en een rotatie niet.' },
+      { id: 'tf-p11', tekst: 'Een parallellogram heeft **0 symmetrieassen** maar **wel** een symmetriemiddelpunt: het snijpunt van de diagonalen.' },
+      { id: 'tf-p12', tekst: '**Driehoeken hebben nooit een symmetriemiddelpunt**, ook de gelijkzijdige niet.' },
+      { id: 'tf-p13', tekst: 'Rotatie van 90° in tegenwijzerzin rond de oorsprong: (x, y) wordt **(−y, x)**. Enkel de coördinaten verwisselen geeft (y, x), en dat is een spiegeling om de rechte y = x.' },
+      { id: 'tf-p14', tekst: 'Elke balk heeft **minstens 3** symmetrievlakken. Met een vierkant grondvlak zijn het er 5, bij een kubus 9.' },
+      { id: 'tf-p15', tekst: 'Een puntspiegeling behoudt de oriëntatie, een asspiegeling keert ze om. Bij een parallellogram zonder symmetrieas bestaat er dus **geen** asspiegeling die hetzelfde beeld geeft.' },
     ],
 
     vragen: [
@@ -197,13 +299,41 @@ export function transformatiesTopic(): StudyTopic {
       q(22, 'Hoe controleer je of twee figuren elkaars beeld zijn door een spiegeling om een as?', 'Verbind elk punt met zijn beeld: die verbindingslijnen staan loodrecht op de as en het punt ligt even ver van de as als zijn beeld. De figuur is ook omgekeerd (spiegelbeeld).'),
       q(23, 'Hoe herken je dat twee figuren elkaars beeld zijn door een puntspiegeling en niet door een translatie?', 'Bij een puntspiegeling staat het beeld ondersteboven (180° gedraaid) en gaan alle verbindingslijnen door één punt: het centrum. Bij een translatie blijft de stand gelijk en zijn de verbindingspijlen evenwijdig.', 'Opgelet bij figuren die zelf puntsymmetrisch zijn (bv. een regelmatige zeshoek): dan kan het beeld er hetzelfde uitzien. Controleer dan of het centrum echt het midden is van elk punt en zijn beeld.', 'oef. 5, blz. 9'),
       q(24, 'Wanneer is een figuur lijnsymmetrisch?', 'Als je ze met een spiegeling om een as precies op zichzelf kan afbeelden. Die as heet de symmetrieas.'),
+      q(25, 'Wat is een isometrie?', 'Een transformatie die afstanden en hoekgroottes behoudt. Vorm en grootte blijven gelijk; alleen de positie verandert en soms de oriëntatie. Spiegelingen, translaties en rotaties zijn isometrieën.', undefined, 'blz. 11'),
+      q(26, 'Wat betekent “collineair”?', 'Dat de punten op één rechte liggen.'),
+      q(27, 'Wat gebeurt er met drie collineaire punten na een transformatie?', 'De beeldpunten zijn ook collineair — bij alle vier de transformaties. Het beeld van een rechte is trouwens altijd opnieuw een rechte.', undefined, 'blz. 12'),
+      q(28, 'Welke van de vier transformaties bewaren de evenwijdigheid?', 'Alle vier: de asspiegeling, de translatie, de rotatie en de puntspiegeling.', undefined, 'blz. 12'),
+      q(29, 'Bij welke twee transformaties is het beeld van een rechte evenwijdig met die rechte zelf?', 'Bij een translatie over een vector en bij een spiegeling om een punt.', 'Bij een asspiegeling en een rotatie geldt dat niet.', 'blz. 12'),
+      q(30, 'Som op wat er behouden blijft bij alle vier de transformaties.', 'De collineariteit, de evenwijdigheid, de lengte van een lijnstuk, de grootte van een hoek, en daardoor ook de oppervlakte en de loodrechte stand.', undefined, 'blz. 12'),
+      q(31, 'Waarom blijft de oppervlakte behouden?', 'Omdat het beeld congruent is met de oorspronkelijke figuur.'),
+      q(32, 'Schrijf de eigenschap in een volledige zin: na een asspiegeling blijven twee evenwijdige rechten evenwijdig.', 'Een spiegeling om een as bewaart de evenwijdigheid.', 'Zo wil de oefening het: één zin met de transformatie én de eigenschap.', 'oef. 7a, blz. 13'),
+      q(33, 'Wanneer is een vlakke figuur spiegelsymmetrisch om een as?', 'Als ze zichzelf als beeld heeft bij spiegeling om die as. Die as heet de symmetrieas en verdeelt de figuur in twee congruente delen.', undefined, 'blz. 15'),
+      q(34, 'Hoeveel symmetrieassen heeft een ongelijkbenige, een gelijkbenige en een gelijkzijdige driehoek?', '0, 1 en 3.', undefined, 'blz. 15'),
+      q(35, 'Welke merkwaardige lijn is de symmetrieas van een gelijkbenige driehoek?', 'De hoogtelijn uit de top — en dat is tegelijk de bissectrice van de tophoek, de zwaartelijn uit de top en de middelloodlijn van de basis.', undefined, 'blz. 15'),
+      q(36, 'Hoeveel symmetrieassen hebben een parallellogram, een ruit, een rechthoek en een vierkant?', '0, 2, 2 en 4.', 'Een trapezium en een gewone vierhoek hebben er 0 of 1.', 'blz. 16'),
+      q(37, 'Wanneer is een figuur spiegelsymmetrisch om een punt?', 'Als ze zichzelf als beeld heeft bij spiegeling om dat punt. Dat punt heet het symmetriemiddelpunt.', undefined, 'blz. 16'),
+      q(38, 'Welke vierhoeken hebben een symmetriemiddelpunt, en waar ligt het?', 'Alle parallellogrammen, dus ook ruiten, rechthoeken en vierkanten. Het ligt op het snijpunt van de diagonalen.', undefined, 'blz. 16'),
+      q(39, 'Hebben driehoeken een symmetriemiddelpunt?', 'Nee, nooit.', undefined, 'blz. 16'),
+      q(40, 'Wat is een symmetrievlak?', 'Een vlak waarbij een ruimtefiguur zichzelf als beeld heeft bij spiegeling om dat vlak. Het verdeelt de figuur in twee congruente ruimtefiguren.', undefined, 'blz. 17'),
+      q(41, 'Hoeveel symmetrievlakken heeft een kubus?', '9.', undefined, 'blz. 17'),
+      q(42, 'Hoeveel symmetrievlakken heeft een balk?', 'Minstens 3. Met drie verschillende ribben zijn het er 3, met een vierkant grondvlak 5, en bij een kubus 9.', '2 kan dus nooit kloppen.', 'oef. 12, blz. 18'),
+      q(43, 'Waar ligt het symmetriemiddelpunt van een kubus of een balk?', 'Op het snijpunt van de ruimtediagonalen.', undefined, 'blz. 17'),
+      q(44, 'Hoeveel symmetrievlakken hebben een driezijdig prisma met gelijkzijdige driehoeken en een cilinder?', 'Het prisma 4, de cilinder oneindig veel.', undefined, 'oef. 5, blz. 21'),
+      q(45, 'Hoe lees je `s_b(R) = S`?', 'S is het beeld van het punt R door een spiegeling om de **as** b.', 'De kleine letter b is een as. Bij een hoofdletter zou het om een punt gaan.', 'signaaloef. 2b'),
+      q(46, 'A(3, 2) draait 90° in tegenwijzerzin rond de oorsprong. Wat is A′?', 'A′(−2, 3). Bij die rotatie wordt (x, y) afgebeeld op (−y, x).', 'B(−4, 2) wordt B′(−2, −4) en C(0, 2) wordt C′(−2, 0): de hele rechte y = 2 komt op de rechte x = −2 terecht.', 'oef. 9b, blz. 14'),
+      q(47, 'Waarom is “de coördinaten verwisselen” geen juist besluit bij die rotatie?', 'Omdat er ook een minteken bij komt: (x, y) wordt (−y, x). Alleen verwisselen geeft (y, x), en dat is een spiegeling om de rechte y = x.', undefined, 'oef. 9b, blz. 14'),
+      q(48, 'KLMN is het beeld van een parallellogram ABCD door een spiegeling om O. Welke uitspraken kloppen?', 'Drie ervan: de vierhoeken zijn congruent, A, O en K zijn collineair, en AC ∥ KM. De uitspraak over een spiegeling om een rechte klopt niet.', 'Een puntspiegeling behoudt de oriëntatie, een asspiegeling keert ze om. Een parallellogram dat geen ruit of rechthoek is heeft geen symmetrieas, dus geen enkele asspiegeling geeft hetzelfde beeld.', 'oef. 8, blz. 13'),
+      q(49, 'O en P zijn dekpunten bij de spiegeling s_a. Wat weet je dan over de as a?', 'Dat O en P allebei óp de as liggen. De as a is dus de rechte door O en P. Met O(0, 0) en P(2, 2) is dat de rechte y = x.', undefined, 'oef. 9c, blz. 14'),
+      q(50, 'Hoe spiegel je een punt om de rechte y = x?', 'Je verwisselt de coördinaten: (x, y) wordt (y, x). Het beeld van een cirkel is een cirkel met dezelfde straal.', undefined, 'oef. 9c, blz. 14'),
     ],
 
     fotos: [],
     notitie:
-      'Nog te doen: oefening 3l (blz. 8) staat nog niet ingevuld — noteer die twee opgaven in symbolen. '
-      + 'Van deel 2 (eigenschappen van transformaties) en deel 3 (symmetrie) ontbreken de bladzijden nog: '
-      + 'voeg ze toe met een foto en vul de samenvatting aan. Vergeet de toetsdatum niet in te vullen.',
+      'Deel 2 en deel 3 staan er nu volledig in. In het boek staat bij blz. 12 genoteerd dat alle eigenschappen **van buiten** gekend moeten zijn.\n\n'
+      + '**Nakijken bij de verbetering:** oefening 8 (blz. 13) — daar horen er drie aangevinkt, niet de eerste. '
+      + 'Oefening 9b (blz. 14) — het besluit is dat (x, y) op (−y, x) wordt afgebeeld. '
+      + 'Oefening 12a (blz. 18) — een balk heeft minstens 3 symmetrievlakken, dus 2 kan niet.\n\n'
+      + '**Nog in te vullen:** oefening 3l (blz. 8) in symbolen, en de toetsdatum.',
     createdAt: now,
     updatedAt: now,
   };
