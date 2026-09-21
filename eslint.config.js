@@ -18,6 +18,7 @@ export default tseslint.config(
       'node_modules/**',
       // Playwright-rooktest: ander runtime-profiel (browser + node-script), draait lokaal.
       'tests/**',
+      'tools/**', // bouwscripts (node + playwright), net als de rooktest
     ],
   },
   js.configs.recommended,
