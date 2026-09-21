@@ -28,7 +28,7 @@ const EXAMPLE_GOALS: { code: string; text: string; theme: string; level?: 'basis
   { code: 'NW 4.2', theme: 'Systeem aarde', text: 'De leerlingen verklaren hoe wolken en neerslag ontstaan.', level: 'basis' },
   { code: 'NW 4.3', theme: 'Systeem aarde', text: 'De leerlingen geven het belang van zoet water voor mens en natuur aan en illustreren hoe menselijk handelen de waterkwaliteit beïnvloedt.', level: 'basis' },
   { code: 'NW 4.4', theme: 'Systeem aarde', text: 'De leerlingen leggen het verband tussen de waterkringloop en weersverschijnselen in onze streken.', level: 'uitbreiding' },
-  // Toegevoegd bij de voorbeeldcursus natuurwetenschappen (13 hoofdstukken):
+  // Toegevoegd bij de voorbeeldcursus natuurwetenschappen (14 hoofdstukken):
   // dezelfde thema-indeling, zodat de dekking per hoofdstuk iets zegt.
   { code: 'NW 1.5', theme: 'Wetenschappelijke vaardigheden', text: 'De leerlingen formuleren een onderzoeksvraag en een hypothese en toetsen die met een eenvoudig experiment.', level: 'basis' },
   { code: 'NW 1.6', theme: 'Wetenschappelijke vaardigheden', text: 'De leerlingen formuleren een besluit op basis van hun waarnemingen en reflecteren op de werkwijze.', level: 'basis' },
@@ -47,6 +47,10 @@ const EXAMPLE_GOALS: { code: string; text: string; theme: string; level?: 'basis
   { code: 'NW 5.8', theme: 'Organismen en stelsels', text: 'De leerlingen leggen de rol van de puberteit en hormonen in de voortplanting uit en bespreken relaties en seksualiteit respectvol.', level: 'basis' },
   { code: 'NW 5.9', theme: 'Organismen en stelsels', text: 'De leerlingen beschrijven bevruchting, zwangerschap en geboorte bij de mens in grote lijnen.', level: 'basis' },
   { code: 'NW 5.10', theme: 'Organismen en stelsels', text: 'De leerlingen leggen uit hoe de stelsels van het lichaam samenwerken.', level: 'uitbreiding' },
+  { code: 'NW 5.11', theme: 'Organismen en stelsels', text: 'De leerlingen beschrijven de cel als kleinste levende bouwsteen en benoemen de belangrijkste celonderdelen (celmembraan, cytoplasma, celkern; bij planten ook celwand, vacuole en bladgroenkorrels).', level: 'basis' },
+  { code: 'NW 5.12', theme: 'Organismen en stelsels', text: 'De leerlingen onderscheiden de organisatieniveaus cel, weefsel, orgaan, stelsel en organisme en geven van elk een voorbeeld.', level: 'basis' },
+  { code: 'NW 5.13', theme: 'Organismen en stelsels', text: 'De leerlingen gebruiken loep en microscoop om structuren op macroscopisch en microscopisch niveau te bekijken, en onderscheiden een dwarse van een overlangse doorsnede.', level: 'basis' },
+  { code: 'NW 5.14', theme: 'Organismen en stelsels', text: 'De leerlingen situeren de inwendige organen van een zoogdier en leggen uit hoe organen samenwerken in stelsels.', level: 'uitbreiding' },
   { code: 'NW 6.1', theme: 'Ecologie', text: 'De leerlingen omschrijven een biotoop en onderscheiden biotische en abiotische factoren.', level: 'basis' },
   { code: 'NW 6.2', theme: 'Ecologie', text: 'De leerlingen determineren organismen met een eenvoudige determineertabel en meten abiotische factoren.', level: 'basis' },
   { code: 'NW 6.3', theme: 'Ecologie', text: 'De leerlingen stellen voedselrelaties voor in een voedselketen en een voedselweb.', level: 'basis' },

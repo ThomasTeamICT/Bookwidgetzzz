@@ -88,7 +88,7 @@ export function HelpPage() {
           },
           {
             q: '📚 Mijn cursus is één pdf per hoofdstuk. Kan dat in één keer?',
-            a: 'Ja. Kies bij Importeren alle pdf\'s tegelijk (in de goede volgorde), geef de cursus een titel en klik "Samenvoegen tot één cursus": elk bestand wordt een hoofdstuk. Uit een pdf haalt de app de titels (op lettergrootte), vet, opsommingen en vette labels als "Voorbeeld:" of "Oefening:" — die worden kadertjes — en een begrippenlijst wordt een termenblok. Alleen de afbeeldingen reizen niet mee: die voeg je daarna toe met een afbeeldingsblok. Wil je eerst zien hoe zoiets eruitziet? Klik bij Cursussen op "Voorbeeldcursus laden": een echte cursus natuurwetenschappen van 13 hoofdstukken die precies zo binnenkwam.',
+            a: 'Ja. Kies bij Importeren alle pdf\'s tegelijk (in de goede volgorde), geef de cursus een titel en klik "Samenvoegen tot één cursus": elk bestand wordt een hoofdstuk. Uit een pdf haalt de app de titels (op lettergrootte), vet, opsommingen en vette labels als "Voorbeeld:" of "Oefening:" — die worden kadertjes — en een begrippenlijst wordt een termenblok. Alleen de afbeeldingen reizen niet mee: die voeg je daarna toe met een afbeeldingsblok. Wil je eerst zien hoe zoiets eruitziet? Klik bij Cursussen op "Voorbeeldcursus laden": een echte cursus natuurwetenschappen van 14 hoofdstukken die precies zo binnenkwam.',
           },
           {
             q: '🧹 De opslag zit vol — wat nu?',

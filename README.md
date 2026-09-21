@@ -85,11 +85,12 @@ en maximale opvolgbaarheid.
 - **Meerdere bestanden → één cursus**: elk bestand (bv. één pdf per hoofdstuk) wordt een
   hoofdstuk, in de volgorde van de lijst; een eigen `#`-titel in het bestand wint.
 - **Voorbeeldcursus** (`/cursussen` → 🧪 *Voorbeeldcursus laden*): een echte cursus
-  natuurwetenschappen 1e graad van een leerkracht, 13 pdf-hoofdstukken, precies via die weg
-  ingelezen en daarna aangevuld met de 90 afbeeldingen uit de pdf's (als bestanden naast de
+  natuurwetenschappen 1e graad van een leerkracht, 14 pdf-hoofdstukken, precies via die weg
+  ingelezen en daarna aangevuld met de 111 afbeeldingen uit de pdf's (als bestanden naast de
   app in `public/voorbeelden/nw/`, niet in de opslag), doelcodes van het voorbeeldleerplan op
   elke sectie en per hoofdstuk een flitskaartenset uit de begrippenlijst. Het script dat dit
-  samenstelt staat in `tools/build-voorbeeldcursus.py`; de pdf's zelf zitten niet in de repo.
+  samenstelt staat in `tools/build-voorbeeldcursus.py` (stap 1: `tools/importeer-pdfs.mjs` haalt de
+  pdf's door de echte importpagina); de pdf's zelf zitten niet in de repo.
 - In de quiz-editor krijgt elke vraag een leerplandoel (autocomplete), en het
   AI-editorpaneel koppelt bestaande vragen in één keer aan leerplandoelen.
 

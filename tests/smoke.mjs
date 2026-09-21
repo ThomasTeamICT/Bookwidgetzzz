@@ -622,18 +622,18 @@ check('"Let op" wordt een waarschuwing', (pdfSections[2]?.blocks ?? []).some((b)
 const termsBlock = (pdfSections[3]?.blocks ?? []).find((b) => b.type === 'terms');
 check('begrippenlijst wordt een termenblok met 4 termen', termsBlock?.items?.length === 4 && termsBlock.items[0].term === 'Kracht');
 
-// ── 26. Voorbeeldcursus (bestaand materiaal, 13 hoofdstukken) laden ────────
+// ── 26. Voorbeeldcursus (bestaand materiaal, 14 hoofdstukken) laden ────────
 console.log('26. Voorbeeldcursus laden');
 await go('/#/cursussen');
 await page.getByRole('button', { name: /Voorbeeldcursus laden/ }).first().click();
 await page.waitForFunction(() => (JSON.parse(localStorage.getItem('wf.courses.v1') || '[]')).some((c) => c.id === 'nw-voorbeeld-1e-graad'), null, { timeout: 30000 }).catch(() => {});
 const example = await page.evaluate(() => JSON.parse(localStorage.getItem('wf.courses.v1')).find((c) => c.id === 'nw-voorbeeld-1e-graad'));
-check('voorbeeldcursus staat in de bibliotheek met 13 hoofdstukken', example?.chapters?.length === 13);
+check('voorbeeldcursus staat in de bibliotheek met 14 hoofdstukken', example?.chapters?.length === 14);
 const exSections = (example?.chapters ?? []).flatMap((c) => c.sections);
 check('elke sectie draagt doelcodes van het voorbeeldleerplan', exSections.length > 100 && exSections.every((x) => Array.isArray(x.goalCodes) && x.goalCodes.length > 0));
 const exBlocks = exSections.flatMap((x) => x.blocks);
-check('afbeeldingen uit de pdf\'s zitten erin (≥ 80)', exBlocks.filter((b) => b.type === 'image').length >= 80);
-check('flitskaarten per hoofdstuk als widgetblok', exBlocks.filter((b) => b.type === 'widget').length === 13 && (await page.evaluate(() => JSON.parse(localStorage.getItem('wf.widgets.v1')).filter((w) => w.type === 'flashcards' && /^nw-vb-flits-/.test(w.id)).length)) === 13);
+check('afbeeldingen uit de pdf\'s zitten erin (≥ 100)', exBlocks.filter((b) => b.type === 'image').length >= 100);
+check('flitskaarten per hoofdstuk als widgetblok', exBlocks.filter((b) => b.type === 'widget').length === 14 && (await page.evaluate(() => JSON.parse(localStorage.getItem('wf.widgets.v1')).filter((w) => w.type === 'flashcards' && /^nw-vb-flits-/.test(w.id)).length)) === 14);
 check('cursus hangt aan het voorbeeldleerplan', example?.curriculumId === 'wf-voorbeeld-nw-1egraad');
 await go(`/#/cursus/lees/${example?.code}`);
 await page.getByLabel(/Jouw naam/).fill('Testleerling');

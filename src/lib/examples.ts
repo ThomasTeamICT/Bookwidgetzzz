@@ -1,7 +1,7 @@
 // ── Voorbeeldcursus: bestaand materiaal van een leerkracht ──────────────────
 //
 // public/voorbeelden/natuurwetenschappen-1e-graad.json is een echte cursus
-// (13 pdf-hoofdstukken) die door de importpagina ging — "Samenvoegen tot één
+// (14 pdf-hoofdstukken) die door de importpagina ging — "Samenvoegen tot één
 // cursus", sectieniveau 3 — en daarna aangevuld werd met de afbeeldingen uit
 // de pdf's, doelcodes op elke sectie en flitskaarten uit elke begrippenlijst
 // (zie tools/build-voorbeeldcursus.py). Ze laadt lui, alleen op verzoek: het

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Bouwt de voorbeeldcursus natuurwetenschappen (public/voorbeelden/…) uit
-1. de cursus zoals de importpagina ze zelf maakt (13 pdf's → "Samenvoegen tot
+1. de cursus zoals de importpagina ze zelf maakt (14 pdf's → "Samenvoegen tot
    één cursus", sectieniveau 3), gedumpt als json, en
 2. de oorspronkelijke pdf's, voor de afbeeldingen (PyMuPDF rendert elke
    afbeelding op de pagina en zet ze op de juiste plek in de sectie).
@@ -58,6 +58,9 @@ GOALS = {
         (r'deeltjes|molecul|opgebouwd', ['NW 2.3']), (r'toestand|aggregatie|vormen', ['NW 2.1']),
         (r'faseovergang|smelt|verdamp|stollen|condens', ['NW 2.2']), (r'chemisch|stofomzetting|fysisch|verander', ['NW 2.4']),
         (r'temperatuur|uitzet|volume', ['NW 2.3'])]),
+    (4, ''): (['NW 5.11', 'NW 5.12', 'NW 5.13'], [
+        (r'bouwsteentje|cellen opgebouwd|functioneert de cel', ['NW 5.11']), (r'doorsnede|macro- en micro|microscop', ['NW 5.13']),
+        (r'weefsels|organen zich tot stelsels|organisatieniveaus', ['NW 5.12']), (r'zoogdier inwendig', ['NW 5.14', 'NW 5.12'])]),
     (5, ''): (['NW 5.1', 'NW 5.2'], [
         (r'weg|route|orga|mond|maag|darm', ['NW 5.1']), (r'gezond|voeding|voedingsstof|verter|enzym', ['NW 5.2'])]),
     (6, ''): (['NW 5.3'], []),
@@ -74,7 +77,7 @@ GOALS = {
         (r'soorten|wat is een kracht|voorkom', ['NW 7.1']), (r'voorgesteld|pijl|meten', ['NW 7.2']), (r'snelheid', ['NW 7.3'])]),
     (13, ''): (['NW 2.5', 'NW 2.6'], [(r'drijf|zink', ['NW 2.6']), (r'massa|volume|dichtheid', ['NW 2.5'])]),
 }
-EMOJI = {(1, ''): '🔬', (2, ''): '🌿', (3, ''): '🧊', (5, ''): '🍎', (6, ''): '🫁', (7, ''): '❤️', (8, ''): '💧',
+EMOJI = {(1, ''): '🔬', (2, ''): '🌿', (3, ''): '🧊', (4, ''): '🧫', (5, ''): '🍎', (6, ''): '🫁', (7, ''): '❤️', (8, ''): '💧',
          (9, ''): '🐟', (10, 'a'): '🌱', (10, 'b'): '👶', (11, ''): '☀️', (12, ''): '🧲', (13, ''): '⚖️'}
 
 
@@ -279,7 +282,7 @@ for ch in course['chapters']:
 course.update({
     'id': COURSE_ID,
     'title': 'Natuurwetenschappen 1e graad — voorbeeldcursus',
-    'subtitle': 'Bestaande cursus van een leerkracht: 13 pdf-hoofdstukken, via Materiaal → “Samenvoegen tot één cursus” ingelezen en daarna aangevuld met afbeeldingen, doelcodes en flitskaarten.',
+    'subtitle': 'Bestaande cursus van een leerkracht: 14 pdf-hoofdstukken, via Materiaal → “Samenvoegen tot één cursus” ingelezen en daarna aangevuld met afbeeldingen, doelcodes en flitskaarten.',
     'author': 'Voorbeeldmateriaal',
     'coverEmoji': '🧪',
     'code': 'NWVBAA',

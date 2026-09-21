@@ -103,7 +103,7 @@ export function CoursesPage() {
     toast('Cursus gedupliceerd', 'ok');
   };
 
-  // Voorbeeldcursus (bestaand materiaal van een leerkracht, 13 hoofdstukken):
+  // Voorbeeldcursus (bestaand materiaal van een leerkracht, 14 hoofdstukken):
   // lui opgehaald uit public/voorbeelden, zie lib/examples.ts.
   const loadExample = async () => {
     setExampleBusy(true);
@@ -167,7 +167,7 @@ export function CoursesPage() {
             className="btn btn-quiet"
             onClick={() => { void loadExample(); }}
             disabled={exampleBusy}
-            title="Een echte cursus natuurwetenschappen (13 hoofdstukken, uit pdf's ingelezen) als voorbeeld in je bibliotheek zetten"
+            title="Een echte cursus natuurwetenschappen (14 hoofdstukken, uit pdf's ingelezen) als voorbeeld in je bibliotheek zetten"
           >
             {exampleBusy ? '⏳ Laden…' : '🧪 Voorbeeldcursus laden'}
           </button>
@@ -201,7 +201,7 @@ export function CoursesPage() {
           </div>
           <p className="hint" style={{ marginTop: 14 }}>
             Eerst eens zien hoe een ingelezen cursus eruitziet? Laad de <strong>voorbeeldcursus natuurwetenschappen</strong>:
-            13 hoofdstukken uit de pdf's van een leerkracht, met afbeeldingen, doelcodes en flitskaarten.{' '}
+            14 hoofdstukken uit de pdf's van een leerkracht, met afbeeldingen, doelcodes en flitskaarten.{' '}
             <button className="btn btn-sm btn-quiet" onClick={() => { void loadExample(); }} disabled={exampleBusy}>
               {exampleBusy ? '⏳ Laden…' : '🧪 Voorbeeldcursus laden'}
             </button>
