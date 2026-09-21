@@ -40,6 +40,7 @@ export function CoursesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Course | null>(null);
   const [importConflict, setImportConflict] = useState<{ course: Course; widgets: Widget[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [exampleBusy, setExampleBusy] = useState(false);
 
   const reload = () => {
     setCourses(getCourses());
@@ -102,6 +103,23 @@ export function CoursesPage() {
     toast('Cursus gedupliceerd', 'ok');
   };
 
+  // Voorbeeldcursus (bestaand materiaal van een leerkracht, 13 hoofdstukken):
+  // lui opgehaald uit public/voorbeelden, zie lib/examples.ts.
+  const loadExample = async () => {
+    setExampleBusy(true);
+    try {
+      const m = await import('../lib/examples');
+      const already = m.exampleCourseInstalled();
+      const { course, widgets } = await m.loadExampleCourse();
+      const n = course.chapters.length;
+      toast(already ? `Voorbeeldcursus opnieuw geladen (${n} hoofdstukken)` : `Voorbeeldcursus geladen: ${n} hoofdstukken, ${widgets.length} flitskaartensets`, 'ok');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Voorbeeldcursus laden mislukt', 'err');
+    } finally {
+      setExampleBusy(false);
+    }
+  };
+
   const importFile = async (f: File) => {
     try {
       const res = importCourseJson(await f.text());
@@ -145,6 +163,14 @@ export function CoursesPage() {
           <button className="btn btn-quiet" onClick={() => fileRef.current?.click()} title="Een cursusbestand (.json) terugzetten">
             📂 JSON openen
           </button>
+          <button
+            className="btn btn-quiet"
+            onClick={() => { void loadExample(); }}
+            disabled={exampleBusy}
+            title="Een echte cursus natuurwetenschappen (13 hoofdstukken, uit pdf's ingelezen) als voorbeeld in je bibliotheek zetten"
+          >
+            {exampleBusy ? '⏳ Laden…' : '🧪 Voorbeeldcursus laden'}
+          </button>
           <input ref={fileRef} type="file" accept="application/json,.json" hidden
             onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f); e.target.value = ''; }} />
         </div>
@@ -173,6 +199,13 @@ export function CoursesPage() {
               <button className="btn btn-sm btn-primary" onClick={() => setNewOpen(true)}>Lege cursus</button>
             </div>
           </div>
+          <p className="hint" style={{ marginTop: 14 }}>
+            Eerst eens zien hoe een ingelezen cursus eruitziet? Laad de <strong>voorbeeldcursus natuurwetenschappen</strong>:
+            13 hoofdstukken uit de pdf's van een leerkracht, met afbeeldingen, doelcodes en flitskaarten.{' '}
+            <button className="btn btn-sm btn-quiet" onClick={() => { void loadExample(); }} disabled={exampleBusy}>
+              {exampleBusy ? '⏳ Laden…' : '🧪 Voorbeeldcursus laden'}
+            </button>
+          </p>
         </EmptyState>
       ) : (
         <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))' }}>

@@ -17,7 +17,7 @@ import type { Course, CourseBlock, CourseChapter, CourseSection } from './course
 import type { FolderPack } from './share';
 import { adoptSharedCourse, createCourse, importCourseJson, makeBlock } from './courses';
 import { importFolderPack, importWidgetJson } from './share';
-import { extractPdfText } from './pdfText';
+import { extractPdfMarkdown } from './pdfMarkdown';
 import { htmlToMarkdown } from './htmlToMarkdown';
 import { saveFolder, saveWidget } from './storage';
 import { makeCode, uid } from './utils';
@@ -222,22 +222,27 @@ export async function extractFromFile(file: File): Promise<ExtractedSource> {
     );
   }
   if (ext === 'pdf' || mime === 'application/pdf') {
-    let result: { text: string; pages: number };
+    let result: { markdown: string; pages: number; images: number };
     try {
-      result = await extractPdfText(file);
+      result = await extractPdfMarkdown(file);
     } catch {
       throw new ImportError(
         `“${origin}” kon niet gelezen worden. Is de pdf beschadigd of met een wachtwoord beveiligd?`
       );
     }
     const src = textSource(
-      result.text,
+      result.markdown,
       fallbackTitle,
       origin,
       `pdf · ${plural(result.pages, 'pagina', 'pagina’s')}`
     );
     src.pages = result.pages;
-    if (!result.text.trim()) {
+    if (result.images > 0) {
+      src.warnings.push(
+        `${plural(result.images, 'afbeelding', 'afbeeldingen')} in de pdf reizen niet mee in de tekst. Voeg ze na het omzetten toe in de cursuseditor (afbeeldingsblok).`
+      );
+    }
+    if (!result.markdown.trim()) {
       src.warnings = [
         'Geen leesbare tekst gevonden. Dit is wellicht een gescande pdf: foto’s van pagina’s bevatten ' +
           'geen tekstlaag. Gebruik het originele bestand, of typ/plak de tekst hieronder zelf.',
@@ -354,26 +359,193 @@ function tableBlockFrom(lines: string[]): CourseBlock | null {
  * lege hoofdstukken) vallen weg. De titel komt uit de eerste `#`, anders uit
  * de meegegeven naam (doorgaans de bestandsnaam).
  */
-export function markdownToCourse(markdown: string, fallbackTitle = 'Nieuwe cursus'): Course {
+export interface MarkdownToCourseOptions {
+  /**
+   * Welk kopniveau een sectie wordt. Standaard 2 (`##`). Kies 3 als het
+   * materiaal genummerde tussentitels heeft (1.1, 1.2 …) onder bredere
+   * `##`-titels: dan worden die genummerde titels de secties en komt de
+   * bredere titel als tussenkop bovenaan de eerste sectie eronder.
+   */
+  sectionLevel?: 2 | 3;
+}
+
+// ── Run-in-labels → callouts ────────────────────────────────────────────────
+// Cursusmateriaal uit Word of pdf begint alinea's vaak met een vet label:
+// "Voorbeeld: …", "Oefening: …", "Weetje: …". Dat zijn in de cursusviewer
+// precies de callouts; "Uitleg:" is gewoon de lopende tekst.
+
+// Het label mag een toevoeging hebben ("Oefening (invuloefening)", "Voorbeeld 2"):
+// we kijken naar het eerste woord en houden het volledige label als titel.
+const CALLOUT_LABELS: { re: RegExp; kind: 'info' | 'tip' | 'warn' | 'goal' | 'text'; title: string }[] = [
+  { re: /^voorbeeld/i, kind: 'info', title: '' },
+  { re: /^(oefening|opdracht|opgave|doe-opdracht|taak)/i, kind: 'goal', title: '' },
+  { re: /^(weetje|wist je|extra)/i, kind: 'tip', title: '' },
+  { re: /^(let op|opgelet|waarschuwing|veiligheid|pas op)/i, kind: 'warn', title: '' },
+  { re: /^(besluit|samenvatting|onthoud|conclusie|kern|definitie)/i, kind: 'info', title: '' },
+  { re: /^(uitleg|theoretische uitleg|theorie|toelichting)/i, kind: 'text', title: '' },
+];
+
+const RUNIN_RE = /^\*\*\s*([^*:：]{2,32})\s*[:：]\s*(\*\*)?\s*/;
+
+/** Vette markering weghalen die door het label doormidden gesneden is. */
+function balanceBold(text: string): string {
+  const count = (text.match(/\*\*/g) ?? []).length;
+  return count % 2 === 1 ? text.replace('**', '') : text;
+}
+
+/**
+ * Herkent een alinea die met een vet label begint. Geeft null terug als het
+ * geen bekend label is; anders het blok dat het moet worden.
+ */
+export function runInToBlock(paragraph: string): CourseBlock | null {
+  const m = RUNIN_RE.exec(paragraph);
+  if (!m) return null;
+  const label = m[1].trim();
+  const rule = CALLOUT_LABELS.find((r) => r.re.test(label));
+  if (!rule) return null;
+  const rest = balanceBold(paragraph.slice(m[0].length)).trim();
+  if (rule.kind === 'text') {
+    const block = makeBlock('text');
+    if (block.type === 'text') block.markdown = rest || paragraph;
+    return block;
+  }
+  const block = makeBlock('callout');
+  if (block.type === 'callout') {
+    block.kind = rule.kind;
+    block.title = label.charAt(0).toUpperCase() + label.slice(1);
+    block.text = rest;
+  }
+  return block;
+}
+
+// ── Begrippenlijsten → termenblok ───────────────────────────────────────────
+// Een sectie "Kernbegrippen" of "Begrippenlijst" bestaat uit alinea's
+// "**Term** uitleg" of "**Term**" met de uitleg in de alinea erna. In de
+// cursusviewer is dat een termenblok (en later, met één klik, flitskaarten).
+
+const TERMS_TITLE_RE = /^(kern|sleutel)?begrippen(lijst|kader)?$|^woordenlijst$|^begrippen en definities$|^verklarende woordenlijst$/i;
+const TERM_LINE_RE = /^\*\*\s*([^*]{1,60}?)\s*[:：]?\s*\*\*\s*[:：]?\s*([\s\S]*)$/;
+
+/** "**Term** uitleg" → [term, uitleg]; "**Term**" alleen → [term, '']; anders null. */
+function termPair(block: CourseBlock, titled: boolean): [string, string] | null {
+  if (block.type !== 'text' || /^\s*[-*]\s/m.test(block.markdown)) return null;
+  const m = TERM_LINE_RE.exec(block.markdown.trim());
+  if (!m) return null;
+  const term = m[1].trim();
+  if (!term || /[.!?]$/.test(term)) return null;
+  const uitleg = m[2].replace(/\s+/g, ' ').trim();
+  // Buiten een begrippensectie: een vet kopje boven een lange alinea is een
+  // tussenkop, geen definitie.
+  if (!titled && (term.length > 40 || uitleg.length > 320 || uitleg.split(/(?<=[.!?])\s/).length > 3)) return null;
+  return [term, uitleg];
+}
+
+function termsBlock(items: { id: string; term: string; uitleg: string }[]): CourseBlock {
+  const terms = makeBlock('terms');
+  if (terms.type === 'terms') terms.items = items;
+  return terms;
+}
+
+/**
+ * Begrippen → termenblok.
+ * - In een sectie "Kernbegrippen"/"Begrippenlijst" worden álle term/uitleg-
+ *   paren één termenblok (ook "**Term**" met de uitleg in de alinea erna);
+ *   een vet kopje zonder uitleg ("**Thema 1**") blijft gewoon staan.
+ * - In elke andere sectie wordt een reeks van minstens drie opeenvolgende
+ *   "**Term** uitleg"-alinea's een termenblok op die plek (een begrippenlijst
+ *   zonder eigen titel, bv. onderaan de mindmap-pagina).
+ */
+export function termsFromSection(section: CourseSection): CourseSection {
+  const titled = TERMS_TITLE_RE.test(section.title.trim());
+  type Item = { id: string; term: string; uitleg: string };
+  // Een lopende reeks: de gevonden paren, de oorspronkelijke blokken (om terug
+  // te zetten als het er te weinig zijn) en, in een begrippensectie, wat er
+  // tussen de termen stond en achteraf achter het termenblok komt.
+  type Run = { at: number; items: Item[]; original: CourseBlock[]; others: CourseBlock[] };
+  const out: CourseBlock[] = [];
+  const st: { run: Run | null; pending: { term: string; block: CourseBlock } | null } = { run: null, pending: null };
+  const dropPending = () => { if (st.pending) { out.push(st.pending.block); st.pending = null; } };
+  const closeRun = () => {
+    dropPending();
+    const run = st.run;
+    if (!run) return;
+    if (run.items.length >= 3) out.splice(run.at, 0, termsBlock(run.items), ...run.others);
+    else out.splice(run.at, 0, ...run.original);
+    st.run = null;
+  };
+  const addItem = (term: string, uitleg: string, blocks: CourseBlock[]) => {
+    if (!st.run) st.run = { at: out.length, items: [], original: [], others: [] };
+    st.run.items.push({ id: uid(), term, uitleg });
+    st.run.original.push(...blocks);
+    st.pending = null;
+  };
+  for (const block of section.blocks) {
+    const pair = termPair(block, titled);
+    if (pair) {
+      const [term, uitleg] = pair;
+      if (uitleg) { dropPending(); addItem(term, uitleg, [block]); }
+      else if (titled) { dropPending(); st.pending = { term, block }; }
+      else { closeRun(); out.push(block); }
+      continue;
+    }
+    if (titled && st.pending && block.type === 'text' && !block.markdown.trim().startsWith('**')) {
+      addItem(st.pending.term, block.markdown.replace(/\s+/g, ' ').trim(), [st.pending.block, block]);
+      continue;
+    }
+    if (titled && st.run) {
+      dropPending();
+      st.run.original.push(block);
+      st.run.others.push(block);
+      continue;
+    }
+    closeRun();
+    out.push(block);
+  }
+  closeRun();
+  return { ...section, blocks: out };
+}
+
+export function markdownToCourse(markdown: string, fallbackTitle = 'Nieuwe cursus', opts: MarkdownToCourseOptions = {}): Course {
+  const sectionLevel = opts.sectionLevel ?? 2;
   const lines = (markdown ?? '').replace(/\r\n?/g, '\n').split('\n');
   const chapters: CourseChapter[] = [];
   let docTitle = '';
   let chapter: CourseChapter | null = null;
   let section: CourseSection | null = null;
+  /**
+   * Bij sectionLevel 3 start een `##`-titel voorlopig een sectie met die naam.
+   * Volgt er meteen een `###` (nog geen inhoud), dan wordt dát de sectietitel
+   * en schuift de `##` op naar een tussenkop bovenaan. Zonder `###` (een
+   * hoofdstuk zonder genummerde tussentitels) blijft de `##` gewoon de sectie.
+   */
+  let groupTitle: string | null = null;
+  let sectionFromGroup = false;
 
   function startChapter(title: string): void {
     chapter = { id: uid(), title: title.trim() || 'Hoofdstuk', emoji: '📖', sections: [] };
     chapters.push(chapter);
     section = null;
   }
+  function headingBlock(text: string, level: 2 | 3): CourseBlock {
+    const block = makeBlock('heading');
+    if (block.type === 'heading') {
+      block.text = text;
+      block.level = level;
+    }
+    return block;
+  }
   function startSection(title: string): void {
     if (!chapter) startChapter(docTitle || fallbackTitle);
     section = { id: uid(), title: title.trim() || 'Sectie', blocks: [] };
     (chapter as CourseChapter).sections.push(section);
+    sectionFromGroup = false;
+    emptyCallout = null;
   }
+  let emptyCallout: (CourseBlock & { type: 'callout' }) | null = null;
   function addBlock(block: CourseBlock): void {
     if (!section) startSection('Inleiding');
     (section as CourseSection).blocks.push(block);
+    emptyCallout = null;
   }
 
   let i = 0;
@@ -390,16 +562,26 @@ export function markdownToCourse(markdown: string, fallbackTitle = 'Nieuwe cursu
       const text = heading[2].trim().replace(/\s*#+\s*$/, '').trim();
       if (level === 1) {
         if (!docTitle) docTitle = text;
+        groupTitle = null;
         startChapter(text);
       } else if (level === 2) {
         startSection(text);
-      } else if (text) {
-        const block = makeBlock('heading');
-        if (block.type === 'heading') {
-          block.text = text;
-          block.level = 3;
+        if (sectionLevel === 3) {
+          groupTitle = text;
+          sectionFromGroup = true;
         }
-        addBlock(block);
+      } else if (level === 3 && sectionLevel === 3) {
+        const cur = section as CourseSection | null;
+        if (cur && sectionFromGroup && cur.blocks.length === 0 && groupTitle) {
+          // de ##-titel was maar een groepstitel: de genummerde titel wordt de sectie
+          cur.title = text.trim() || cur.title;
+          cur.blocks.push(headingBlock(groupTitle, 2));
+          sectionFromGroup = false;
+        } else {
+          startSection(text);
+        }
+      } else if (text) {
+        addBlock(headingBlock(text, 3));
       }
       i++;
       continue;
@@ -431,15 +613,27 @@ export function markdownToCourse(markdown: string, fallbackTitle = 'Nieuwe cursu
       i++;
     }
     if (para.length > 0) {
-      const block = makeBlock('text');
-      if (block.type === 'text') block.markdown = para.join('\n');
-      addBlock(block);
+      const joined = para.join('\n');
+      const runIn = runInToBlock(joined);
+      if (runIn) {
+        addBlock(runIn);
+        // Een label dat alleen op zijn regel staat ("**Voorbeeld:**") hoort bij
+        // de alinea die erop volgt.
+        emptyCallout = runIn.type === 'callout' && !runIn.text.trim() ? runIn : null;
+      } else if (emptyCallout) {
+        emptyCallout.text = joined;
+        emptyCallout = null;
+      } else {
+        const block = makeBlock('text');
+        if (block.type === 'text') block.markdown = joined;
+        addBlock(block);
+      }
     }
   }
 
   // Lege secties en hoofdstukken dragen niets bij en zouden in de viewer als
   // lege pagina's opduiken.
-  for (const ch of chapters) ch.sections = ch.sections.filter((s) => s.blocks.length > 0);
+  for (const ch of chapters) ch.sections = ch.sections.filter((s) => s.blocks.length > 0).map(termsFromSection);
   const kept = chapters.filter((ch) => ch.sections.length > 0);
 
   const course = createCourse(docTitle || fallbackTitle);
@@ -498,4 +692,30 @@ export function saveImportedPack(
 export function saveImportedCourse(bundle: { course: Course; widgets: Widget[] }): Course {
   adoptSharedCourse(bundle.course, bundle.widgets);
   return bundle.course;
+}
+
+// ── Meerdere bronnen → één cursus ───────────────────────────────────────────
+
+/**
+ * Elke bron wordt een hoofdstuk: begint de tekst zelf al met een `#`-titel
+ * (zoals een pdf "Hoofdstuk 3: Materie"), dan is dát de hoofdstuktitel;
+ * anders wordt de bronnaam het hoofdstuk. De cursustitel geef je apart op.
+ */
+export function mergeSourcesToCourse(
+  sources: { title: string; text: string }[],
+  courseTitle: string,
+  opts: MarkdownToCourseOptions = {}
+): Course {
+  const parts = sources
+    .map((src) => {
+      const text = (src.text ?? '').replace(/\r\n?/g, '\n').trim();
+      if (!text) return '';
+      const firstLine = text.split('\n').find((l) => l.trim()) ?? '';
+      const startsWithChapter = /^\s*#\s+\S/.test(firstLine);
+      return startsWithChapter ? text : `# ${src.title.trim() || 'Hoofdstuk'}\n\n${text}`;
+    })
+    .filter(Boolean);
+  const course = markdownToCourse(parts.join('\n\n'), courseTitle, opts);
+  course.title = courseTitle.trim() || course.title;
+  return course;
 }

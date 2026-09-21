@@ -28,6 +28,33 @@ const EXAMPLE_GOALS: { code: string; text: string; theme: string; level?: 'basis
   { code: 'NW 4.2', theme: 'Systeem aarde', text: 'De leerlingen verklaren hoe wolken en neerslag ontstaan.', level: 'basis' },
   { code: 'NW 4.3', theme: 'Systeem aarde', text: 'De leerlingen geven het belang van zoet water voor mens en natuur aan en illustreren hoe menselijk handelen de waterkwaliteit beïnvloedt.', level: 'basis' },
   { code: 'NW 4.4', theme: 'Systeem aarde', text: 'De leerlingen leggen het verband tussen de waterkringloop en weersverschijnselen in onze streken.', level: 'uitbreiding' },
+  // Toegevoegd bij de voorbeeldcursus natuurwetenschappen (13 hoofdstukken):
+  // dezelfde thema-indeling, zodat de dekking per hoofdstuk iets zegt.
+  { code: 'NW 1.5', theme: 'Wetenschappelijke vaardigheden', text: 'De leerlingen formuleren een onderzoeksvraag en een hypothese en toetsen die met een eenvoudig experiment.', level: 'basis' },
+  { code: 'NW 1.6', theme: 'Wetenschappelijke vaardigheden', text: 'De leerlingen formuleren een besluit op basis van hun waarnemingen en reflecteren op de werkwijze.', level: 'basis' },
+  { code: 'NW 2.4', theme: 'Materie', text: 'De leerlingen onderscheiden fysische veranderingen (faseovergangen) van chemische veranderingen (stofomzettingen).', level: 'basis' },
+  { code: 'NW 2.5', theme: 'Materie', text: 'De leerlingen bepalen massa en volume van een voorwerp en berekenen de massadichtheid.', level: 'basis' },
+  { code: 'NW 2.6', theme: 'Materie', text: 'De leerlingen leggen met massadichtheid uit waarom een voorwerp drijft of zinkt.', level: 'uitbreiding' },
+  { code: 'NW 3.4', theme: 'Energie', text: 'De leerlingen beschrijven fotosynthese als de omzetting van lichtenergie in chemische energie en noemen de stoffen die erbij betrokken zijn.', level: 'basis' },
+  { code: 'NW 3.5', theme: 'Energie', text: 'De leerlingen leggen uit hoe organismen energie uit voedsel halen (celademhaling) en verbinden dat met fotosynthese.', level: 'uitbreiding' },
+  { code: 'NW 5.1', theme: 'Organismen en stelsels', text: 'De leerlingen beschrijven de weg van het voedsel door het spijsverteringsstelsel en de functie van de organen.', level: 'basis' },
+  { code: 'NW 5.2', theme: 'Organismen en stelsels', text: 'De leerlingen leggen uit hoe voedingsstoffen verteerd en opgenomen worden en wat een gezonde voeding inhoudt.', level: 'basis' },
+  { code: 'NW 5.3', theme: 'Organismen en stelsels', text: 'De leerlingen beschrijven de bouw en werking van het ademhalingsstelsel en de gaswisseling in de longen.', level: 'basis' },
+  { code: 'NW 5.4', theme: 'Organismen en stelsels', text: 'De leerlingen beschrijven de bouw en werking van het transportstelsel (hart, bloedvaten, bloed).', level: 'basis' },
+  { code: 'NW 5.5', theme: 'Organismen en stelsels', text: 'De leerlingen beschrijven hoe het uitscheidingsstelsel afvalstoffen uit het lichaam verwijdert.', level: 'basis' },
+  { code: 'NW 5.6', theme: 'Organismen en stelsels', text: 'De leerlingen vergelijken stelsels van de mens met die van andere dieren en leggen aanpassingen aan de leefomgeving uit.', level: 'uitbreiding' },
+  { code: 'NW 5.7', theme: 'Organismen en stelsels', text: 'De leerlingen beschrijven de bouw en werking van het mannelijk en vrouwelijk voortplantingsstelsel.', level: 'basis' },
+  { code: 'NW 5.8', theme: 'Organismen en stelsels', text: 'De leerlingen leggen de rol van de puberteit en hormonen in de voortplanting uit en bespreken relaties en seksualiteit respectvol.', level: 'basis' },
+  { code: 'NW 5.9', theme: 'Organismen en stelsels', text: 'De leerlingen beschrijven bevruchting, zwangerschap en geboorte bij de mens in grote lijnen.', level: 'basis' },
+  { code: 'NW 5.10', theme: 'Organismen en stelsels', text: 'De leerlingen leggen uit hoe de stelsels van het lichaam samenwerken.', level: 'uitbreiding' },
+  { code: 'NW 6.1', theme: 'Ecologie', text: 'De leerlingen omschrijven een biotoop en onderscheiden biotische en abiotische factoren.', level: 'basis' },
+  { code: 'NW 6.2', theme: 'Ecologie', text: 'De leerlingen determineren organismen met een eenvoudige determineertabel en meten abiotische factoren.', level: 'basis' },
+  { code: 'NW 6.3', theme: 'Ecologie', text: 'De leerlingen stellen voedselrelaties voor in een voedselketen en een voedselweb.', level: 'basis' },
+  { code: 'NW 6.4', theme: 'Ecologie', text: 'De leerlingen geven voorbeelden van aanpassingen van organismen aan hun omgeving.', level: 'basis' },
+  { code: 'NW 6.5', theme: 'Ecologie', text: 'De leerlingen lichten het belang van biodiversiteit toe en de invloed van de mens op een ecosysteem.', level: 'basis' },
+  { code: 'NW 7.1', theme: 'Krachten en beweging', text: 'De leerlingen herkennen krachten aan hun effecten en onderscheiden contactkrachten van krachten op afstand.', level: 'basis' },
+  { code: 'NW 7.2', theme: 'Krachten en beweging', text: 'De leerlingen stellen een kracht voor met een pijl (aangrijpingspunt, richting, zin, grootte) en meten ze met een krachtmeter.', level: 'basis' },
+  { code: 'NW 7.3', theme: 'Krachten en beweging', text: 'De leerlingen berekenen snelheid uit afgelegde weg en tijd en zetten eenheden om.', level: 'basis' },
 ];
 
 /**
@@ -37,7 +64,20 @@ const EXAMPLE_GOALS: { code: string; text: string; theme: string; level?: 'basis
  */
 export function ensureExampleCurriculum(): Curriculum | undefined {
   const existing = getCurriculum(EXAMPLE_CURRICULUM_ID);
-  if (existing) return existing;
+  if (existing) {
+    // Het voorbeeld groeide (nieuwe thema's voor de voorbeeldcursus): doelen
+    // die nog ontbreken erbij zetten, zonder eigen wijzigingen te overschrijven.
+    const have = new Set(existing.goals.map((g) => g.code));
+    const missing = EXAMPLE_GOALS.filter((g) => !have.has(g.code));
+    if (missing.length === 0 || !existing.example) return existing;
+    const updated: Curriculum = {
+      ...existing,
+      goals: [...existing.goals, ...missing.map((g) => ({ id: uid(), ...g }))],
+      updatedAt: Date.now(),
+    };
+    saveCurriculum(updated);
+    return updated;
+  }
   if (getCurricula().length > 0) return undefined;
   const now = Date.now();
   const cur: Curriculum = {

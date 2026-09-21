@@ -87,6 +87,10 @@ export function HelpPage() {
             a: 'Ga naar Importeren (ook via de knop op de widgetpagina): sleep je .docx, pdf, markdown of tekst erin. Je ziet de tekst en kiest wat je ermee doet: een cursus laten bouwen met AI (optioneel gekoppeld aan een leerplan), oefeningen laten maken in de AI-studio, of zonder AI omzetten naar een cursus waarbij koppen hoofdstukken en secties worden. Daarna pas je alles aan in de editor en kan je het met de optimaliseer-knop vereenvoudigen, differentiëren of controlevragen laten toevoegen.',
           },
           {
+            q: '📚 Mijn cursus is één pdf per hoofdstuk. Kan dat in één keer?',
+            a: 'Ja. Kies bij Importeren alle pdf\'s tegelijk (in de goede volgorde), geef de cursus een titel en klik "Samenvoegen tot één cursus": elk bestand wordt een hoofdstuk. Uit een pdf haalt de app de titels (op lettergrootte), vet, opsommingen en vette labels als "Voorbeeld:" of "Oefening:" — die worden kadertjes — en een begrippenlijst wordt een termenblok. Alleen de afbeeldingen reizen niet mee: die voeg je daarna toe met een afbeeldingsblok. Wil je eerst zien hoe zoiets eruitziet? Klik bij Cursussen op "Voorbeeldcursus laden": een echte cursus natuurwetenschappen van 13 hoofdstukken die precies zo binnenkwam.',
+          },
+          {
             q: '🧹 De opslag zit vol — wat nu?',
             a: 'Afbeeldingen, audio en bijlagen staan sinds kort apart in de bestandsopslag van de browser (IndexedDB, honderden MB), dus die vullen de kleine tekstopslag niet meer. Zit ze toch vol, dan zijn oude inzendingen (met tekeningen en audio-antwoorden) meestal de boosdoener: wis ze via de privacypagina, of exporteer oude widgets naar een bestand en verwijder ze uit de app.',
           },

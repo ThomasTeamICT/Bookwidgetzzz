@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { baseName, fromPastedText, ImportError, markdownToCourse } from './importers';
+import {
+  ImportError, baseName, fromPastedText, markdownToCourse, mergeSourcesToCourse, runInToBlock,
+} from './importers';
 import type { HeadingBlock, TableBlock, TextBlock } from './courseTypes';
 
 function blocksOf(course: ReturnType<typeof markdownToCourse>, chapter = 0, section = 0) {
@@ -195,5 +197,164 @@ describe('fromPastedText', () => {
     const src = fromPastedText(json);
     expect(src.kind).toBe('widget');
     expect(src.widget?.type).toBe('flashcards');
+  });
+});
+
+describe('markdownToCourse — sectieniveau 3 en callouts', () => {
+  const md = [
+    '# Hoofdstuk 1: Kennismaken',
+    '',
+    'Inleidende tekst.',
+    '',
+    '## Kennismaking met natuurwetenschappen',
+    '',
+    '### 1.1 Hoe stel je een goede onderzoeksvraag?',
+    '',
+    '**Theoretische uitleg:** Elk onderzoek start met een vraag.',
+    '',
+    '**Voorbeeld:** Beschimmelen boterhammen sneller in de koelkast?',
+    '',
+    '**Oefening: Bedenk zelf een vraag** en controleer ze.',
+    '',
+    '### 1.2 Hoe bedenk je een hypothese?',
+    '',
+    'Een hypothese is een voorlopig antwoord.',
+    '',
+    '**Weetje:** Meerdere hypothesen zijn mogelijk.',
+  ].join('\n');
+
+  it('maakt genummerde tussentitels tot secties en de bredere titel tot tussenkop', () => {
+    const course = markdownToCourse(md, 'x', { sectionLevel: 3 });
+    expect(course.chapters).toHaveLength(1);
+    const titles = course.chapters[0].sections.map((s) => s.title);
+    expect(titles).toEqual(['Inleiding', '1.1 Hoe stel je een goede onderzoeksvraag?', '1.2 Hoe bedenk je een hypothese?']);
+    const first = course.chapters[0].sections[1];
+    expect(first.blocks[0]).toMatchObject({ type: 'heading', level: 2, text: 'Kennismaking met natuurwetenschappen' });
+  });
+
+  it('zet vette run-in-labels om in callouts en laat "uitleg" als tekst', () => {
+    const course = markdownToCourse(md, 'x', { sectionLevel: 3 });
+    const blocks = course.chapters[0].sections[1].blocks.slice(1);
+    expect(blocks.map((b) => b.type)).toEqual(['text', 'callout', 'callout']);
+    expect(blocks[0]).toMatchObject({ type: 'text', markdown: 'Elk onderzoek start met een vraag.' });
+    expect(blocks[1]).toMatchObject({ type: 'callout', kind: 'info', title: 'Voorbeeld', text: 'Beschimmelen boterhammen sneller in de koelkast?' });
+    expect(blocks[2]).toMatchObject({ type: 'callout', kind: 'goal', title: 'Oefening' });
+    expect(runInToBlock('**Oefening (invuloefening):** vul in')).toMatchObject({ type: 'callout', kind: 'goal', title: 'Oefening (invuloefening)', text: 'vul in' });
+    // het vet dat door het label doormidden werd gesneden, is opgeruimd
+    expect((blocks[2] as { text: string }).text).toBe('Bedenk zelf een vraag en controleer ze.');
+    const weetje = course.chapters[0].sections[2].blocks[1];
+    expect(weetje).toMatchObject({ type: 'callout', kind: 'tip', title: 'Weetje' });
+  });
+
+  it('standaard (niveau 2) blijft ongewijzigd: ## is een sectie, ### een tussenkop', () => {
+    const course = markdownToCourse(md, 'x');
+    expect(course.chapters[0].sections.map((s) => s.title)).toEqual(['Inleiding', 'Kennismaking met natuurwetenschappen']);
+    expect(course.chapters[0].sections[1].blocks[0]).toMatchObject({ type: 'heading', level: 3 });
+  });
+
+  it('runInToBlock negeert onbekende labels', () => {
+    expect(runInToBlock('**Hallo:** wereld')).toBeNull();
+    expect(runInToBlock('Gewone tekst')).toBeNull();
+  });
+});
+
+describe('mergeSourcesToCourse', () => {
+  it('maakt van elk bestand een hoofdstuk en gebruikt een eigen #-titel als die er is', () => {
+    const course = mergeSourcesToCourse(
+      [
+        { title: 'Hoofdstuk_1.pdf', text: '# Hoofdstuk 1: Kennismaken\n\n## Sectie A\n\nTekst a.' },
+        { title: 'Ecologie', text: 'Zonder eigen titel.\n\n## Biotoop\n\nTekst b.' },
+        { title: 'Leeg', text: '   ' },
+      ],
+      'Natuurwetenschappen 1e graad'
+    );
+    expect(course.title).toBe('Natuurwetenschappen 1e graad');
+    expect(course.chapters.map((c) => c.title)).toEqual(['Hoofdstuk 1: Kennismaken', 'Ecologie']);
+    expect(course.chapters[1].sections.map((s) => s.title)).toEqual(['Inleiding', 'Biotoop']);
+  });
+});
+
+describe('markdownToCourse — niveau 3 zonder genummerde tussentitels', () => {
+  it('houdt de ##-titels als secties wanneer er geen ### volgt', () => {
+    const md = '# H9\n\n## Insecten\n\nTekst a.\n\n## Vissen\n\nTekst b.';
+    const course = markdownToCourse(md, 'x', { sectionLevel: 3 });
+    expect(course.chapters[0].sections.map((s) => s.title)).toEqual(['Insecten', 'Vissen']);
+    expect(course.chapters[0].sections[0].blocks[0]).toMatchObject({ type: 'text', markdown: 'Tekst a.' });
+  });
+});
+
+describe('markdownToCourse: los label neemt de volgende alinea op', () => {
+  it('"**Voorbeeld:**" op een eigen regel wordt een callout met de alinea erna als tekst', () => {
+    const md = ['# Hoofdstuk 1', '', '## 1.1 Onderzoeksvraag', '', '**Voorbeeld:**', '', 'Een *slechte* onderzoeksvraag zou kunnen zijn: "Beschimmelen boterhammen snel?"', '', 'Gewone alinea erna.', ''].join('\n');
+    const course = markdownToCourse(md, 'x');
+    const blocks = course.chapters[0].sections[0].blocks;
+    expect(blocks.map((b) => b.type)).toEqual(['callout', 'text']);
+    const c = blocks[0];
+    if (c.type !== 'callout') throw new Error('geen callout');
+    expect(c.title).toBe('Voorbeeld');
+    expect(c.text).toContain('Een *slechte* onderzoeksvraag');
+    const t = blocks[1];
+    if (t.type !== 'text') throw new Error('geen tekst');
+    expect(t.markdown).toBe('Gewone alinea erna.');
+  });
+
+  it('een kop tussen label en alinea breekt de koppeling', () => {
+    const md = ['# H', '', '## S', '', '**Oefening:**', '', '### Kopje', '', 'Alinea.', ''].join('\n');
+    const blocks = markdownToCourse(md, 'x').chapters[0].sections[0].blocks;
+    expect(blocks.map((b) => b.type)).toEqual(['callout', 'heading', 'text']);
+  });
+});
+
+describe('termsFromSection: begrippenlijst → termenblok', () => {
+  it('"**Term** uitleg"-alinea\'s in een sectie Kernbegrippen worden één termenblok', () => {
+    const md = ['# H', '', '## Kernbegrippen', '', '**Thema 1: Kennismaking**', '', '**Onderzoeksvraag** De vraag die je onderzoekt.', '', '**Hypothese** Een voorlopige voorspelling.', '', '**Werkwijze:** Een stappenplan.', ''].join('\n');
+    const sec = markdownToCourse(md, 'x').chapters[0].sections[0];
+    expect(sec.blocks.map((b) => b.type)).toEqual(['text', 'terms']);
+    const t = sec.blocks[1];
+    if (t.type !== 'terms') throw new Error('geen termen');
+    expect(t.items.map((i) => [i.term, i.uitleg])).toEqual([
+      ['Onderzoeksvraag', 'De vraag die je onderzoekt.'],
+      ['Hypothese', 'Een voorlopige voorspelling.'],
+      ['Werkwijze', 'Een stappenplan.'],
+    ]);
+  });
+
+  it('term op eigen regel met de uitleg in de alinea erna', () => {
+    const md = ['# H', '', '## Begrippenlijst', '', '**Ecologie**', '', 'De wetenschap die samenleven bestudeert.', '', '**Biotoop**', '', 'Een afgebakend leefgebied.', '', '**Voedselrelatie**', '', 'Wie eet wie.', ''].join('\n');
+    const sec = markdownToCourse(md, 'x').chapters[0].sections[0];
+    expect(sec.blocks).toHaveLength(1);
+    const t = sec.blocks[0];
+    if (t.type !== 'terms') throw new Error('geen termen');
+    expect(t.items).toHaveLength(3);
+    expect(t.items[1]).toMatchObject({ term: 'Biotoop', uitleg: 'Een afgebakend leefgebied.' });
+  });
+
+  it('minder dan drie paren: niets veranderd', () => {
+    const few = ['# H', '', '## Kernbegrippen', '', '**A** b.', '', '**C** d.', ''].join('\n');
+    expect(markdownToCourse(few, 'x').chapters[0].sections[0].blocks.every((b) => b.type === 'text')).toBe(true);
+  });
+});
+
+describe('termsFromSection: begrippenreeks zonder eigen titel', () => {
+  it('drie of meer opeenvolgende "**Term** uitleg"-alinea\'s in een gewone sectie worden een termenblok op die plek', () => {
+    const md = ['# H', '', '## Mindmap', '', 'Mindmap', '', '**Kracht** Een duw of een trek.', '', '**Contactkracht** Werkt bij aanraking.', '', '**Veerkracht** Kracht van een veer.', '', 'Slotzin.', ''].join('\n');
+    const sec = markdownToCourse(md, 'x').chapters[0].sections[0];
+    expect(sec.blocks.map((b) => b.type)).toEqual(['text', 'terms', 'text']);
+    const t = sec.blocks[1];
+    if (t.type !== 'terms') throw new Error('geen termen');
+    expect(t.items.map((i) => i.term)).toEqual(['Kracht', 'Contactkracht', 'Veerkracht']);
+  });
+
+  it('twee losse definities blijven tekst', () => {
+    const md = ['# H', '', '## Uitleg', '', '**Kracht** Een duw of een trek.', '', '**Massa** Hoeveelheid stof.', '', 'Tekst.', ''].join('\n');
+    expect(markdownToCourse(md, 'x').chapters[0].sections[0].blocks.every((b) => b.type === 'text')).toBe(true);
+  });
+});
+
+describe('termsFromSection: tussenkoppen zijn geen definities', () => {
+  it('vette kopjes boven lange alinea\'s blijven tekst', () => {
+    const long = 'Dit is een lange alinea. '.repeat(20).trim();
+    const md = ['# H', '', '## 1. Voortplanting', '', `**Mannelijk voortplantingsstelsel** ${long}`, '', `**Kort samengevat** ${long}`, '', `**Vrouwelijk voortplantingsstelsel** ${long}`, ''].join('\n');
+    expect(markdownToCourse(md, 'x').chapters[0].sections[0].blocks.every((b) => b.type === 'text')).toBe(true);
   });
 });

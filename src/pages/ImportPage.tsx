@@ -13,7 +13,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   extractFromFile, fromPastedText, ImportError, IMPORT_ACCEPT, MAX_COMFORT_CHARS,
-  markdownToCourse, saveImportedCourse, saveImportedPack, saveImportedWidget,
+  markdownToCourse, mergeSourcesToCourse, saveImportedCourse, saveImportedPack, saveImportedWidget,
 } from '../lib/importers';
 import type { ExtractedSource } from '../lib/importers';
 import { saveCourse } from '../lib/courses';
@@ -48,6 +48,8 @@ export function ImportPage() {
   const [status, setStatus] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [curriculumId, setCurriculumId] = useState('');
+  const [sectionLevel, setSectionLevel] = useState<2 | 3>(2);
+  const [mergeTitle, setMergeTitle] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const curricula = useMemo(() => getCurricula(), []);
@@ -120,7 +122,7 @@ export function ImportPage() {
       toast('Er staat nog geen tekst in deze bron.', 'err');
       return;
     }
-    const course = markdownToCourse(item.text, item.title.trim() || item.origin);
+    const course = markdownToCourse(item.text, item.title.trim() || item.origin, { sectionLevel });
     if (curriculumId) course.curriculumId = curriculumId;
     saveCourse(course);
     const sections = course.chapters.reduce((n, ch) => n + ch.sections.length, 0);
@@ -128,6 +130,26 @@ export function ImportPage() {
       `Cursus “${course.title}” aangemaakt — ${course.chapters.length} hoofdstuk${course.chapters.length === 1 ? '' : 'ken'}, ${sections} sectie${sections === 1 ? '' : 's'}`,
       'ok'
     );
+    navigate(`/cursus/bewerk/${course.id}`);
+  }
+
+  /** Alle tekstbronnen samen: elk bestand een hoofdstuk (in de volgorde van de lijst). */
+  function mergeToCourse() {
+    const texts = items.filter((it) => it.kind === 'text' && it.text.trim());
+    if (texts.length < 2) {
+      toast('Voeg minstens twee bronnen met tekst toe om ze samen te voegen.', 'err');
+      return;
+    }
+    const title = mergeTitle.trim() || 'Cursus';
+    const course = mergeSourcesToCourse(
+      texts.map((it) => ({ title: it.title.trim() || it.origin, text: it.text })),
+      title,
+      { sectionLevel }
+    );
+    if (curriculumId) course.curriculumId = curriculumId;
+    saveCourse(course);
+    const sections = course.chapters.reduce((n, ch) => n + ch.sections.length, 0);
+    toast(`Cursus “${course.title}” aangemaakt — ${course.chapters.length} hoofdstukken, ${sections} secties`, 'ok');
     navigate(`/cursus/bewerk/${course.id}`);
   }
 
@@ -311,6 +333,43 @@ export function ImportPage() {
               </span>
             )}
           </Field>
+          <Field
+            label="Wat wordt een sectie bij omzetten zonder AI?"
+            hint="Kies niveau 3 als je materiaal genummerde tussentitels heeft (1.1, 1.2 …) onder bredere titels: elke genummerde titel wordt dan een sectie en de bredere titel een tussenkop."
+          >
+            <select
+              className="select"
+              value={String(sectionLevel)}
+              onChange={(e) => setSectionLevel(e.target.value === '3' ? 3 : 2)}
+              style={{ maxWidth: 460 }}
+            >
+              <option value="2">Koppen van niveau 2 (## of de op één na grootste titel)</option>
+              <option value="3">Koppen van niveau 3 (### of genummerde tussentitels zoals 1.1)</option>
+            </select>
+          </Field>
+          {items.filter((it) => it.kind === 'text').length >= 2 && (
+            <div className="callout" style={{ marginTop: 6 }}>
+              <span aria-hidden>📚</span>
+              <div style={{ flex: 1 }}>
+                <strong>Alles samen: één cursus.</strong> Elk bestand wordt een hoofdstuk, in de volgorde van de
+                lijst hieronder; begint een bestand met een eigen titel (“Hoofdstuk 3: Materie”), dan wordt die de
+                hoofdstuktitel.
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+                  <input
+                    className="input input-sm"
+                    value={mergeTitle}
+                    onChange={(e) => setMergeTitle(e.target.value)}
+                    placeholder="Titel van de cursus, bv. Natuurwetenschappen 1e graad"
+                    aria-label="Titel van de samengevoegde cursus"
+                    style={{ maxWidth: 380 }}
+                  />
+                  <button className="btn btn-primary btn-sm" onClick={mergeToCourse}>
+                    📚 Samenvoegen tot één cursus (zonder AI)
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

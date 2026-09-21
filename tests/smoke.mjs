@@ -600,6 +600,52 @@ await page.getByRole('button', { name: /Codes verwerken/ }).click();
 await sleep(500);
 check('dubbele code wordt niet nog eens bewaard', (await page.evaluate(() => JSON.parse(localStorage.getItem('wf.submissions.v1')).filter((s) => s.id === 'smokeinbox1').length)) === 1);
 
+// ── 25. Bestaand materiaal: pdf met structuur → cursus (zonder AI) ─────────
+console.log('25. Pdf-import met structuur');
+await go('/#/importeren');
+await page.locator('input[type=file]').first().setInputFiles(new URL('./fixtures/voorbeeld-cursus.pdf', import.meta.url).pathname);
+await page.waitForFunction(() => [...document.querySelectorAll('textarea.textarea')].some((t) => /Kernbegrippen/.test(t.value)), null, { timeout: 30000 }).catch(() => {});
+const pdfMd = await page.evaluate(() => [...document.querySelectorAll('textarea.textarea')].map((t) => t.value).find((v) => /Kernbegrippen/.test(v)) ?? '');
+check('pdf → markdown met koppen op drie niveaus', /^# Hoofdstuk 1: Proefcursus krachten$/m.test(pdfMd) && /^## 1\. Hoe komen krachten voor\?$/m.test(pdfMd) && /^### 1\.1 Wat is een kracht\?$/m.test(pdfMd));
+check('vectorbolletjes worden een lijst', /^- \*\*Vervorming:\*\* een bal die je indrukt\.$/m.test(pdfMd));
+check('vet run-in-label blijft één alinea', /\*\*Voorbeeld:\*\* Als je een winkelkar duwt, oefen je een spierkracht uit\. De kar versnelt/.test(pdfMd));
+await page.getByLabel(/Wat wordt een sectie/).selectOption('3');
+await page.getByRole('button', { name: /Omzetten naar cursus/ }).click();
+await page.waitForFunction(() => /#\/cursus\/bewerk\//.test(location.hash), null, { timeout: 30000 });
+await sleep(500);
+const pdfCourse = await page.evaluate(() => JSON.parse(localStorage.getItem('wf.courses.v1')).find((c) => /Proefcursus/.test(c.title)));
+const pdfSections = pdfCourse?.chapters[0]?.sections ?? [];
+check('genummerde titels worden secties', pdfSections.map((x) => x.title).join('|') === 'Inleiding|1.1 Wat is een kracht?|1.2 Welke soorten krachten zijn er?|Kernbegrippen');
+const sec11 = pdfSections[1]?.blocks ?? [];
+check('labels worden callouts (Voorbeeld → info, Oefening → doel)', sec11.some((b) => b.type === 'callout' && b.kind === 'info') && sec11.some((b) => b.type === 'callout' && b.kind === 'goal'));
+check('"Let op" wordt een waarschuwing', (pdfSections[2]?.blocks ?? []).some((b) => b.type === 'callout' && b.kind === 'warn'));
+const termsBlock = (pdfSections[3]?.blocks ?? []).find((b) => b.type === 'terms');
+check('begrippenlijst wordt een termenblok met 4 termen', termsBlock?.items?.length === 4 && termsBlock.items[0].term === 'Kracht');
+
+// ── 26. Voorbeeldcursus (bestaand materiaal, 13 hoofdstukken) laden ────────
+console.log('26. Voorbeeldcursus laden');
+await go('/#/cursussen');
+await page.getByRole('button', { name: /Voorbeeldcursus laden/ }).first().click();
+await page.waitForFunction(() => (JSON.parse(localStorage.getItem('wf.courses.v1') || '[]')).some((c) => c.id === 'nw-voorbeeld-1e-graad'), null, { timeout: 30000 }).catch(() => {});
+const example = await page.evaluate(() => JSON.parse(localStorage.getItem('wf.courses.v1')).find((c) => c.id === 'nw-voorbeeld-1e-graad'));
+check('voorbeeldcursus staat in de bibliotheek met 13 hoofdstukken', example?.chapters?.length === 13);
+const exSections = (example?.chapters ?? []).flatMap((c) => c.sections);
+check('elke sectie draagt doelcodes van het voorbeeldleerplan', exSections.length > 100 && exSections.every((x) => Array.isArray(x.goalCodes) && x.goalCodes.length > 0));
+const exBlocks = exSections.flatMap((x) => x.blocks);
+check('afbeeldingen uit de pdf\'s zitten erin (≥ 80)', exBlocks.filter((b) => b.type === 'image').length >= 80);
+check('flitskaarten per hoofdstuk als widgetblok', exBlocks.filter((b) => b.type === 'widget').length === 13 && (await page.evaluate(() => JSON.parse(localStorage.getItem('wf.widgets.v1')).filter((w) => w.type === 'flashcards' && /^nw-vb-flits-/.test(w.id)).length)) === 13);
+check('cursus hangt aan het voorbeeldleerplan', example?.curriculumId === 'wf-voorbeeld-nw-1egraad');
+await go(`/#/cursus/lees/${example?.code}`);
+await page.getByLabel(/Jouw naam/).fill('Testleerling');
+await page.getByRole('button', { name: /Start met lezen/ }).click();
+await sleep(1000);
+check('viewer opent de voorbeeldcursus', await page.locator('text=/Kennismaken met natuurwetenschappen/i').first().isVisible());
+// Naar een sectie met een afbeelding: de mindmap van hoofdstuk 1.
+await page.locator('a:has-text("Mindmap"), button:has-text("Mindmap")').first().click();
+await sleep(1500);
+const exImg = await page.evaluate(() => [...document.querySelectorAll('img')].filter((i) => /voorbeelden\/nw\//.test(i.src)).map((i) => i.naturalWidth));
+check('afbeelding uit de pdf rendert in de viewer (naast de app, niet in de opslag)', exImg.length >= 1 && exImg[0] > 0);
+
 // ── Slot ────────────────────────────────────────────────────────────────────
 console.log('\n──────────');
 if (errors.length) {

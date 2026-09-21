@@ -69,10 +69,27 @@ en maximale opvolgbaarheid.
 - **Importpagina** (`#/importeren`): sleep of kies **.docx, pdf, markdown, tekst, html** of
   json (widget, vakgroeppakket, cursus), of plak tekst. Word-documenten worden client-side
   omgezet (mammoth, lui geladen) naar markdown met koppen, lijsten en tabellen.
+- **Pdf met structuur**: pdf.js geeft losse tekstitems; `lib/pdfMarkdown.ts` maakt er markdown
+  mét opbouw van. Lettergroottes worden kopniveaus (`#`, `##`, `###`), vet en cursief blijven
+  bewaard (ook over een regeleinde heen), meerregelige titels worden samengevoegd, en
+  opsommingsbolletjes die als klein vectorcirkeltje getekend zijn (Word, Docs, browser-pdf's)
+  worden lijsten. Gescande pdf's zonder tekstlaag en afbeeldingen krijgen een duidelijke melding.
 - Vervolgstappen per bron: **AI-cursus bouwen** (de tekst gaat via een overdracht naar de
   cursusbouwer, met optioneel een leerplan), **AI-oefeningen maken** (naar de AI-studio), of
-  **zonder AI omzetten naar een cursus**: `#` wordt hoofdstuk, `##` sectie, tabellen worden
-  tabelblokken — meteen bewerkbaar in de cursuseditor.
+  **zonder AI omzetten naar een cursus**: `#` wordt hoofdstuk, `##` of `###` sectie (instelbaar:
+  een genummerde `###`-titel onder een `##`-groepstitel wordt dan de sectie), tabellen worden
+  tabelblokken. Vette run-in-labels worden callouts (*Voorbeeld* → info, *Oefening/Opdracht* →
+  doel, *Weetje* → tip, *Let op* → waarschuwing; *Uitleg* blijft tekst), een label dat alleen
+  op zijn regel staat neemt de alinea erna mee, en een begrippenlijst ("**Term** uitleg",
+  ook zonder eigen titel) wordt een termenblok.
+- **Meerdere bestanden → één cursus**: elk bestand (bv. één pdf per hoofdstuk) wordt een
+  hoofdstuk, in de volgorde van de lijst; een eigen `#`-titel in het bestand wint.
+- **Voorbeeldcursus** (`/cursussen` → 🧪 *Voorbeeldcursus laden*): een echte cursus
+  natuurwetenschappen 1e graad van een leerkracht, 13 pdf-hoofdstukken, precies via die weg
+  ingelezen en daarna aangevuld met de 90 afbeeldingen uit de pdf's (als bestanden naast de
+  app in `public/voorbeelden/nw/`, niet in de opslag), doelcodes van het voorbeeldleerplan op
+  elke sectie en per hoofdstuk een flitskaartenset uit de begrippenlijst. Het script dat dit
+  samenstelt staat in `tools/build-voorbeeldcursus.py`; de pdf's zelf zitten niet in de repo.
 - In de quiz-editor krijgt elke vraag een leerplandoel (autocomplete), en het
   AI-editorpaneel koppelt bestaande vragen in één keer aan leerplandoelen.
 
