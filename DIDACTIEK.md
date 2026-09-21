@@ -1,6 +1,6 @@
 # 🎓 Didactische inschatting & roadmap
 
-Dit document bundelt een analyse van WidgetFabriek door vijf didactische brillen:
+Dit document bundelt een analyse van Boosterz door vijf didactische brillen:
 **formatieve evaluatie**, **differentiatie & inclusie (UDL)**, **zelfregulerend leren**,
 **werkdruk van de leerkracht** en **verantwoord/ethisch gebruik**. Per bril is gekeken
 welke functionaliteiten de app didactisch sterker maken, wat al gebouwd is, en wat

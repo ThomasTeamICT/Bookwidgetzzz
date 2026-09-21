@@ -1,7 +1,8 @@
 // ── AI-cursusbouwer: prompts + sanering ─────────────────────────────────────
 //
-// Drie taken: (1) een nieuwe cursus opbouwen vanuit leerplandoelen,
-// (2) een bestaande cursus herwerken, (3) één sectie vullen.
+// Drie taken: (1) een nieuwe cursus opbouwen vanuit bronmateriaal (cursustekst,
+// pdf) en/of leerplandoelen, (2) een bestaande cursus herwerken, (3) één sectie
+// vullen.
 // De AI mag ALLEEN tekstuele blokken maken — nooit media-URL's verzinnen.
 // Bij herwerken reizen mediablokken mee als {"type":"keep","id":…} zodat ze
 // ongewijzigd op hun (nieuwe) plek terugkomen.
@@ -27,7 +28,7 @@ const BLOCK_SCHEMA = `Een "blok" is een JSON-object met "type" en velden. TOEGEL
 - {"type":"terms","items":[{"term":"…","uitleg":"…"}]} — begrippenlijst
 - {"type":"checklist","title":"…","items":["afvinkbaar item",…]} — de leerling vinkt af`;
 
-const COURSE_SYSTEM = `Je bent een ervaren Vlaamse leerkracht en leermiddelenauteur die digitale cursussen bouwt voor WidgetFabriek.
+const COURSE_SYSTEM = `Je bent een ervaren Vlaamse leerkracht en leermiddelenauteur die digitale cursussen bouwt voor Boosterz.
 Didactische eisen:
 - Elke sectie begint met een callout van kind "goal" die in leerlingtaal zegt wat je er leert.
 - Wissel leerstof (text/table/terms) af met verwerking (checklist, accordion met controlevragen).
@@ -40,9 +41,14 @@ Antwoord met ALLEEN geldige JSON, zonder uitleg of markdown-hekken.`;
 
 // ── Prompts ─────────────────────────────────────────────────────────────────
 
+/** Meer bron dan dit gaat niet mee: houdt de prompt binnen het contextvenster. */
+export const MAX_SOURCE_CHARS = 60000;
+
 export interface NewCourseRequest {
-  /** Leerplandoelen (vrije tekst, verplicht). */
+  /** Leerplandoelen (vrije tekst). Verplicht als er geen bronmateriaal is. */
   goals: string;
+  /** Eigen cursustekst of pdf-tekst: de AI blijft er inhoudelijk strikt bij. */
+  sourceText?: string;
   audience?: string;
   subject?: string;
   extraWishes?: string;
@@ -59,7 +65,18 @@ export function buildNewCoursePrompt(req: NewCourseRequest): { system: string; p
   if (req.audience?.trim()) parts.push(`Doelgroep: ${req.audience.trim()}`);
   if (req.chapterCount && req.chapterCount > 0) parts.push(`Richtaantal hoofdstukken: ${req.chapterCount}.`);
   if (req.extraWishes?.trim()) parts.push(`Extra wensen van de leerkracht: ${req.extraWishes.trim()}`);
-  parts.push(`\nDeze LEERPLANDOELEN vormen het skelet van de cursus — dek ze allemaal en verwijs ernaar in de "goals" van de secties:\n${req.goals.trim()}`);
+  const source = (req.sourceText ?? '').trim();
+  const goals = req.goals.trim();
+  if (goals) {
+    parts.push(`\nDeze LEERPLANDOELEN vormen het skelet van de cursus — dek ze allemaal en verwijs ernaar in de "goals" van de secties:\n${goals}`);
+  }
+  if (source) {
+    parts.push(
+      `\nBRONMATERIAAL van de leerkracht. Bouw de cursus hieruit op: volg de opbouw van het materiaal voor de hoofdstukken en secties, herschrijf in leerlingtaal, laat niets essentieels weg en voeg géén leerstof toe die er niet in staat.`
+      + (goals ? '' : ' Leid per sectie zelf de "goals" af: korte doelzinnen in leerlingtaal ("Ik kan …").')
+      + `\n<<<BRON\n${source.slice(0, MAX_SOURCE_CHARS)}\nBRON>>>`
+    );
+  }
   parts.push(`\n${BLOCK_SCHEMA}`);
 
   let envelope = `Geef terug: {"course":{"title":"…","subtitle":"…","coverEmoji":"één emoji","chapters":[{"title":"…","emoji":"…","sections":[{"title":"…","goals":["…"],"optional":false,"blocks":[blok,…]}]}]}}`;

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { cycleTheme } from '../lib/theme';
+import { BRAND, BrandMark } from './Brand';
 import { getPrefs, onStorageChange } from '../lib/storage';
 import {
   clearBackupHint, formatPct, onStorageNotice, pendingBackupHint, readStorageHealth,
@@ -148,9 +149,9 @@ export function Layout() {
       <style>{BAR_CSS}</style>
       <a className="skip-link" href="#main">Naar de inhoud</a>
       <header className="topbar">
-        <Link to="/" className="topbar-logo" aria-label="WidgetFabriek — startpagina">
-          <span className="logo-mark" aria-hidden>🧩</span>
-          <span>WidgetFabriek</span>
+        <Link to="/" className="topbar-logo" aria-label={`${BRAND} — startpagina`}>
+          <BrandMark size={32} />
+          <span className="wordmark">Booster<b>z</b></span>
         </Link>
         <nav aria-label="Hoofdnavigatie">
           <NavLink to="/widgets">Mijn widgets</NavLink>

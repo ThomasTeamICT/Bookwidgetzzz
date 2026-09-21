@@ -1,4 +1,4 @@
-// ── Kern-datamodellen van WidgetFabriek ─────────────────────────────────────
+// ── Kern-datamodellen van Boosterz ─────────────────────────────────────
 
 export type WidgetTypeId =
   | 'quiz'

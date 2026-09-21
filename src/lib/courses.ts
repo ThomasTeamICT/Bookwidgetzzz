@@ -483,7 +483,7 @@ export async function exportCourseJson(course: Course): Promise<string> {
   const widgets = referencedWidgetIds(course)
     .map((id) => getWidget(id))
     .filter((x): x is Widget => Boolean(x));
-  const payload = await inlineMedia({ app: 'widgetfabriek', kind: 'cursus', v: 1, course, widgets });
+  const payload = await inlineMedia({ app: 'boosterz', kind: 'cursus', v: 1, course, widgets });
   return JSON.stringify(payload, null, 2);
 }
 

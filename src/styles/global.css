@@ -1,7 +1,18 @@
-/* ── WidgetFabriek ontwerpsysteem ──────────────────────────────────────── */
+/* ── Boosterz ontwerpsysteem ────────────────────────────────────────────── */
+/*
+ * Twee lettertypes: Atkinson Hyperlegible voor lopende tekst (ontworpen voor
+ * leesbaarheid, ook bij dyslexie en op slechte schermen) en Outfit voor koppen,
+ * knoppen en het woordmerk (rond, energiek). Beide vallen terug op de
+ * systeemletter wanneer Google Fonts niet bereikbaar is (schoolnetwerken).
+ *
+ * Kleur: elektrisch violet als merkkleur, "boost"-oranje als accent — enkel
+ * in het beeldmerk, de AI-knoppen en de kopregel van de startpagina, nooit
+ * als betekenisdrager (ok/warn/err blijven groen, amber en rood).
+ */
 
 :root {
-  --font: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Outfit', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
   --radius-s: 8px;
   --radius-m: 12px;
   --radius-l: 18px;
@@ -9,10 +20,12 @@
   --shadow-2: 0 6px 18px rgba(15, 23, 42, 0.1), 0 2px 6px rgba(15, 23, 42, 0.06);
   --shadow-3: 0 18px 46px rgba(15, 23, 42, 0.18);
 
-  --brand: #4f46e5;
-  --brand-strong: #4338ca;
-  --brand-soft: #eef2ff;
-  --accent: #0ea5e9;
+  --brand: #5b3df5;
+  --brand-strong: #4a2fd9;
+  --brand-soft: #eeebff;
+  --accent: #ff6a2a;
+  --accent-soft: #ffede3;
+  --boost: linear-gradient(120deg, var(--brand), var(--accent));
   --ok: #16a34a;
   --ok-soft: #dcfce7;
   --warn: #d97706;
@@ -20,23 +33,24 @@
   --err: #dc2626;
   --err-soft: #fee2e2;
 
-  --bg: #f4f5fb;
+  --bg: #f6f5fc;
   --bg-raised: #ffffff;
-  --bg-sunken: #eceef6;
-  --text: #17203a;
-  --text-soft: #5b6478;
-  --text-faint: #8b93a7;
-  --line: #dfe3ef;
-  --line-strong: #c3c9dc;
+  --bg-sunken: #edebf7;
+  --text: #1a1636;
+  --text-soft: #5a5677;
+  --text-faint: #8d89a6;
+  --line: #e2dff0;
+  --line-strong: #c7c2de;
 
   color-scheme: light;
 }
 
 [data-theme='dark'] {
-  --brand: #818cf8;
-  --brand-strong: #a5b0ff;
-  --brand-soft: #2a2f55;
-  --accent: #38bdf8;
+  --brand: #a394ff;
+  --brand-strong: #b9adff;
+  --brand-soft: #2b2559;
+  --accent: #ff8a52;
+  --accent-soft: #3d2416;
   --ok: #4ade80;
   --ok-soft: #14351f;
   --warn: #fbbf24;
@@ -44,14 +58,14 @@
   --err: #f87171;
   --err-soft: #431418;
 
-  --bg: #0f1220;
-  --bg-raised: #191d31;
-  --bg-sunken: #0b0e19;
-  --text: #e8eaf4;
-  --text-soft: #a7aec4;
-  --text-faint: #737b93;
-  --line: #2b3049;
-  --line-strong: #3d4463;
+  --bg: #100e1f;
+  --bg-raised: #1a1730;
+  --bg-sunken: #0b0a18;
+  --text: #ebe8f7;
+  --text-soft: #aaa5c4;
+  --text-faint: #777291;
+  --line: #2c2847;
+  --line-strong: #403b62;
 
   --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.4);
   --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.45);
@@ -72,7 +86,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4 { line-height: 1.25; margin: 0 0 0.5em; font-weight: 700; }
+h1, h2, h3, h4 { font-family: var(--font-display); line-height: 1.25; margin: 0 0 0.5em; font-weight: 700; letter-spacing: -0.01em; }
 h1 { font-size: 1.7rem; }
 h2 { font-size: 1.3rem; }
 h3 { font-size: 1.08rem; }
@@ -110,7 +124,7 @@ a { color: var(--brand); }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  font: inherit; font-weight: 600; cursor: pointer;
+  font: inherit; font-family: var(--font-display); font-weight: 600; cursor: pointer;
   border: 1px solid transparent; border-radius: var(--radius-s);
   padding: 9px 16px; min-height: 40px;
   background: var(--bg-sunken); color: var(--text);
@@ -124,7 +138,7 @@ a { color: var(--brand); }
 
 .btn-primary { background: var(--brand); color: #fff; }
 .btn-primary:hover { background: var(--brand-strong); }
-[data-theme='dark'] .btn-primary { color: #0f1220; }
+[data-theme='dark'] .btn-primary { color: #100e1f; }
 
 .btn-danger { background: var(--err-soft); color: var(--err); }
 .btn-danger:hover { background: var(--err); color: #fff; }
@@ -263,12 +277,18 @@ input[type='color'] {
 }
 .topbar-logo {
   display: flex; align-items: center; gap: 9px;
-  font-weight: 800; font-size: 1.12rem; color: var(--text); text-decoration: none;
-  letter-spacing: -0.01em;
+  font-family: var(--font-display); font-weight: 800; font-size: 1.18rem;
+  color: var(--text); text-decoration: none; letter-spacing: -0.02em;
 }
-.topbar-logo .logo-mark {
+.topbar-logo .brand-mark { flex: none; }
+.brand-mark { display: block; border-radius: 24%; box-shadow: 0 2px 6px color-mix(in srgb, var(--brand) 35%, transparent); }
+/* Woordmerk: de "z" krijgt de accentkleur — het enige opsmukje van de naam. */
+.wordmark { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; }
+.wordmark b { color: var(--accent); font-weight: inherit; }
+/* Oude emoji-variant blijft bruikbaar voor losse pagina's */
+.logo-mark {
   width: 32px; height: 32px; border-radius: 9px;
-  background: linear-gradient(135deg, var(--brand), var(--accent));
+  background: var(--boost);
   display: grid; place-items: center; color: #fff; font-size: 1.05rem;
 }
 .topbar nav { display: flex; gap: 4px; margin-left: 8px; }
@@ -657,13 +677,21 @@ table.data tbody tr:hover { background: var(--bg-sunken); }
 /* ── Landing ────────────────────────────────────────────────────────────── */
 
 .hero {
-  text-align: center; padding: 66px 22px 46px; max-width: 780px; margin: 0 auto;
+  text-align: center; padding: 58px 22px 46px; max-width: 800px; margin: 0 auto;
+}
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px; margin-bottom: 18px;
+  font-family: var(--font-display); font-weight: 700; font-size: 0.92rem; letter-spacing: 0.02em;
+  color: var(--text-soft); padding: 6px 14px 6px 8px; border-radius: 999px;
+  background: var(--bg-raised); border: 1px solid var(--line);
 }
 .hero h1 {
-  font-size: clamp(2rem, 5.5vw, 3.2rem); letter-spacing: -0.03em; line-height: 1.12;
-  background: linear-gradient(120deg, var(--brand), var(--accent));
+  font-size: clamp(2.2rem, 6vw, 3.6rem); letter-spacing: -0.035em; line-height: 1.06;
+  margin-bottom: 16px; font-weight: 800;
+}
+.hero h1 .boost {
+  background: var(--boost);
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  margin-bottom: 14px;
 }
 .hero p.lede { font-size: 1.15rem; color: var(--text-soft); margin-bottom: 28px; }
 .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
@@ -717,7 +745,7 @@ table.data tbody tr:hover { background: var(--bg-sunken); }
   50% { transform: scale(1.25); opacity: 0.6; }
 }
 .btn-ai {
-  background: linear-gradient(120deg, var(--brand), #9333ea);
+  background: var(--boost);
   color: #fff;
   border: none;
 }

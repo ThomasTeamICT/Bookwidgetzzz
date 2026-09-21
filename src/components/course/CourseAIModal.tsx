@@ -4,7 +4,7 @@ import type { Course, CourseBlock } from '../../lib/courseTypes';
 import { allSections } from '../../lib/courseTypes';
 import { exportCourseJson } from '../../lib/courses';
 import {
-  buildNewCoursePrompt, buildReworkPrompt, buildSectionPrompt,
+  buildNewCoursePrompt, buildReworkPrompt, buildSectionPrompt, MAX_SOURCE_CHARS,
   sanitizeAIBlocks, sanitizeAICourse,
 } from '../../lib/aiCourse';
 import { askAI, extractJson } from '../../lib/ai';
@@ -17,7 +17,7 @@ import { saveWidget } from '../../lib/storage';
 type Mode = 'new' | 'rework' | 'section';
 
 const TITLES: Record<Mode, string> = {
-  new: '✨ Cursus bouwen met AI (vanuit leerplandoelen)',
+  new: '✨ AI-cursusbouwer',
   rework: '✨ Cursus herwerken met AI',
   section: '✨ Sectie vullen met AI',
 };
@@ -47,6 +47,7 @@ export function CourseAIModal({
   const [chapterCount, setChapterCount] = useState(0);
   const [extraWishes, setExtraWishes] = useState('');
   const [withQuizzes, setWithQuizzes] = useState(true);
+  const [sourceNew, setSourceNew] = useState('');
   // invoer (mode 'rework' / 'section')
   const [wishes, setWishes] = useState('');
   const [source, setSource] = useState('');
@@ -68,7 +69,7 @@ export function CourseAIModal({
   );
 
   const canGenerate =
-    mode === 'new' ? goals.trim().length > 0
+    mode === 'new' ? goals.trim().length > 0 || sourceNew.trim().length > 0
     : mode === 'rework' ? Boolean(course)
     : Boolean(course && section);
 
@@ -83,8 +84,8 @@ export function CourseAIModal({
       let acc = '';
       const onDelta = (t: string) => { acc += t; setStream(acc); };
       if (mode === 'new') {
-        const p = buildNewCoursePrompt({ goals, audience, subject, extraWishes, chapterCount, withQuizzes });
-        const full = await askAI({ ...p, task: 'cursus uit leerplandoelen', maxTokens: 32000, onDelta, signal: ctrl.signal });
+        const p = buildNewCoursePrompt({ goals, sourceText: sourceNew, audience, subject, extraWishes, chapterCount, withQuizzes });
+        const full = await askAI({ ...p, task: 'cursus bouwen', maxTokens: 32000, onDelta, signal: ctrl.signal });
         const res = sanitizeAICourse(extractJson(full));
         setPreview({ ...res, warnings: res.warnings });
       } else if (mode === 'rework' && course) {
@@ -164,8 +165,26 @@ export function CourseAIModal({
                   </Field>
                 </div>
                 <Field
-                  label="Leerplandoelen (verplicht)"
-                  hint="Plak hier de doelen uit je leerplan (bv. ZILL, GO!, OVSG, eindtermen). Ze vormen het skelet: elke sectie wordt eraan gekoppeld."
+                  label="Bronmateriaal (aanbevolen)"
+                  hint="Plak je cursustekst, een hoofdstuk uit het handboek of lees een pdf in. De AI bouwt de hoofdstukken en secties op uit dít materiaal en verzint er niets bij."
+                >
+                  <textarea className="textarea" rows={7} value={sourceNew} onChange={(e) => setSourceNew(e.target.value)}
+                    placeholder="Plak hier je eigen tekst — of kies hieronder een pdf." />
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
+                    <PdfImportButton onText={(t) => {
+                      if (sourceNew.trim().length > 200 && !window.confirm('Het bronveld bevat al tekst. Vervangen door de tekst uit de pdf?')) return;
+                      setSourceNew(t);
+                    }} />
+                    <span className="hint">
+                      {sourceNew.length > 0
+                        ? `${sourceNew.length.toLocaleString('nl-BE')} tekens${sourceNew.length > MAX_SOURCE_CHARS ? ` — alleen de eerste ${MAX_SOURCE_CHARS.toLocaleString('nl-BE')} gaan mee; knip lange boeken per hoofdstuk` : ''}`
+                        : 'Werkt met tekst-pdf\u2019s; een gescande pdf (foto\u2019s) bevat geen leesbare tekst.'}
+                    </span>
+                  </div>
+                </Field>
+                <Field
+                  label={sourceNew.trim() ? 'Leerplandoelen (optioneel)' : 'Leerplandoelen (verplicht zonder bronmateriaal)'}
+                  hint="Plak de doelen uit je leerplan (bv. ZILL, GO!, OVSG, eindtermen). Met bronmateriaal erbij worden de secties eraan gekoppeld; zonder bron vormen ze het skelet."
                 >
                   <textarea className="textarea" rows={7} value={goals} onChange={(e) => setGoals(e.target.value)}
                     placeholder={'bv.\n• De leerlingen kunnen de fasen van de waterkringloop benoemen en uitleggen.\n• De leerlingen kunnen verdamping en condensatie onderzoeken met een eenvoudige proef.'} />

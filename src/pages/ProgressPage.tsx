@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { BrandMark } from '../components/Brand';
 import { Link } from 'react-router-dom';
 import { getSubmissions, getWidgets, onStorageChange } from '../lib/storage';
 import type { Submission } from '../lib/types';
@@ -87,7 +88,7 @@ export function ProgressPage() {
     }
     const res = importProgress(tekst);
     if (!res) {
-      toast('Dit is geen geldig voortgangsbestand van WidgetFabriek', 'err');
+      toast('Dit is geen geldig voortgangsbestand van Boosterz', 'err');
       return;
     }
     if (res.imported === 0) {
@@ -131,9 +132,9 @@ export function ProgressPage() {
   return (
     <div className="player-shell" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header className="player-topbar">
-        <Link to="/" className="topbar-logo" style={{ fontSize: '1rem' }}>
-          <span className="logo-mark" aria-hidden style={{ width: 28, height: 28, fontSize: '0.9rem' }}>🧩</span>
-          WidgetFabriek
+        <Link to="/" className="topbar-logo" style={{ fontSize: '1.05rem' }}>
+          <BrandMark size={28} />
+          <span className="wordmark">Booster<b>z</b></span>
         </Link>
         <span className="title">Mijn voortgang</span>
         <Link to="/meedoen" className="btn btn-sm btn-ghost">🎓 Meedoen</Link>

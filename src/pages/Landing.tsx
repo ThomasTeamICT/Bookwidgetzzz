@@ -1,16 +1,19 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { CATEGORIES, WIDGET_TYPES } from '../widgets/registry';
+import { BrandMark } from '../components/Brand';
 
 export function Landing() {
   return (
     <div>
       <section className="hero">
-        <h1>Van bronmateriaal naar lesmateriaal, in enkele minuten</h1>
+        <p className="hero-eyebrow"><BrandMark size={22} /> <span className="wordmark">Booster<b>z</b></span> · voor leerkrachten die hun les willen versnellen</p>
+        <h1>Geef je les een <span className="boost">boost</span>.</h1>
         <p className="lede">
-          Maak quizzen, spelletjes en volledige digitale cursussen. Laat de ✨ AI-assistent het
-          voorbereidende werk doen vanuit jouw eigen cursustekst of leerplandoelen — jij kijkt na
-          en deelt met één code of link. Alles in je browser, zonder account.
+          Van bronmateriaal naar lesmateriaal in enkele minuten: quizzen, spelletjes en volledige
+          digitale cursussen. De ✨ AI-assistent doet het voorbereidende werk vanuit jouw eigen
+          cursustekst, pdf of leerplandoelen — jij kijkt na en deelt met één code of link.
+          Alles in je browser, zonder account.
         </p>
         <div className="hero-actions">
           <Link to="/ai-studio" className="btn btn-ai btn-lg">✨ Maak widgets met AI</Link>
@@ -20,7 +23,7 @@ export function Landing() {
       </section>
 
       <section className="page" aria-labelledby="pijlers-title" style={{ paddingBottom: 6 }}>
-        <h2 id="pijlers-title" className="sr-only">Wat kan WidgetFabriek?</h2>
+        <h2 id="pijlers-title" className="sr-only">Wat kan Boosterz?</h2>
         <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
           <div className="card card-pad">
             <div style={{ fontSize: '1.9rem' }} aria-hidden>✨</div>

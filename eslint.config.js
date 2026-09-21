@@ -1,4 +1,4 @@
-// ESLint (flat config) voor WidgetFabriek.
+// ESLint (flat config) voor Boosterz.
 //
 // Pragmatisch afgesteld: de codebase bestaat al en telt tienduizenden regels.
 // Regels die ECHTE bugs vangen staan op 'error' (kapotte hooks, onbereikbare

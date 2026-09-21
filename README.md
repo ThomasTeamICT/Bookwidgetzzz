@@ -1,6 +1,8 @@
-# 🧩 WidgetFabriek
+# ⚡ Boosterz
 
-Een volledig functionele webapplicatie om **interactieve oefeningen, toetsen, spelletjes én digitale cursussen** voor je klas te maken, te delen en op te volgen — geïnspireerd op het concept van digitale les-widgets. Alles draait 100% in de browser: geen server, geen account, geen installatie.
+**Geef je les een boost.** Een volledig functionele webapplicatie om **interactieve oefeningen, toetsen, spelletjes én digitale cursussen** voor je klas te maken, te delen en op te volgen. Alles draait 100% in de browser: geen server, geen account, geen installatie.
+
+> Boosterz heette tot september 2026 *WidgetFabriek*. De naam en de huisstijl zijn veranderd; de opslag niet: bestaande widgets, cursussen en inzendingen (`wf.*`-sleutels in localStorage, `wf-files` in IndexedDB) blijven gewoon werken, en exportbestanden van vóór de naamsverandering importeren zonder omweg.
 
 ## ✨ Functies
 
@@ -20,8 +22,12 @@ en maximale opvolgbaarheid.
 - **📄 Pdf inlezen als bron**: in de AI-studio, de AI-cursusbouwer en het editorpaneel
   lees je een tekst-pdf met één knop in — de tekst verschijnt in het bronveld en de AI
   gaat ermee aan de slag (volledig client-side, de pdf verlaat het toestel niet).
-- **AI-cursusbouwer**: een volledige cursus genereren **vanuit leerplandoelen** (of een
-  bestaande cursus herwerken / een sectie vullen), optioneel met een oefenquiz per hoofdstuk.
+- **AI-cursusbouwer**: een volledige cursus genereren **vanuit je eigen bronmateriaal**
+  (cursustekst, hoofdstuk uit het handboek of een ingelezen pdf) en/of **leerplandoelen**.
+  De AI volgt de opbouw van het materiaal, herschrijft in leerlingtaal en verzint er niets
+  bij; met leerplandoelen erbij koppelt ze elke sectie aan een doel. Ook: een bestaande
+  cursus herwerken of uitbreiden, één sectie vullen, en optioneel een oefenquiz per
+  hoofdstuk (als ingebedde widgets).
 - **Feedbacksuggesties** bij het nakijken: taakgericht voorstel (wat lukt, wat nog niet,
   volgende stap) — zonder leerlingnaam in de prompt; de leerkracht past aan en beslist.
 - **Eigen sleutel, eigen regie**: werkt met een API-sleutel van Anthropic (Claude),
@@ -133,6 +139,12 @@ Een mislukte chunk-load (bv. door een nieuwe deploy) herstelt zichzelf met één
 herlaadbeurt.
 
 De app gebruikt een **hash-router** en een relatieve basis-URL, dus de `dist/`-map kan op eender welke statische hosting geplaatst worden (GitHub Pages, Netlify, schoolserver, …) — ook in een submap.
+
+## 🎨 Huisstijl
+
+- **Naam en beeldmerk**: Boosterz, met een bliksemschicht op een vlak in het merkverloop (violet → oranje). Het woordmerk schrijft de *z* in de accentkleur. Alles staat in `src/components/Brand.tsx` (`BRAND`, `BrandMark`) en wordt gebruikt in de leerkrachtschil, de leerlingpagina's en de laadschermen.
+- **Kleur**: elektrisch violet (`--brand`) als merkkleur, "boost"-oranje (`--accent`) enkel in het beeldmerk, de AI-knoppen en de kopregel van de startpagina. Betekeniskleuren (ok, warn, err) blijven groen, amber en rood; beide thema's (licht/donker) zijn afgestemd.
+- **Letter**: Atkinson Hyperlegible voor lopende tekst (ontworpen voor leesbaarheid, ook bij dyslexie), Outfit voor koppen, knoppen en het woordmerk. Beide via Google Fonts, met de systeemletter als terugval op netwerken die dat blokkeren.
 
 ## 🗂️ Architectuur
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getWidgetByCode } from '../lib/storage';
+import { BrandMark } from '../components/Brand';
 
 export function JoinPage() {
   const [code, setCode] = useState('');
@@ -32,9 +33,9 @@ export function JoinPage() {
   return (
     <div className="player-shell" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header className="player-topbar">
-        <Link to="/" className="topbar-logo" style={{ fontSize: '1rem' }}>
-          <span className="logo-mark" aria-hidden style={{ width: 28, height: 28, fontSize: '0.9rem' }}>🧩</span>
-          WidgetFabriek
+        <Link to="/" className="topbar-logo" style={{ fontSize: '1.05rem' }}>
+          <BrandMark size={28} />
+          <span className="wordmark">Booster<b>z</b></span>
         </Link>
       </header>
       <div style={{ flex: 1, display: 'grid', placeItems: 'center', padding: 20 }}>

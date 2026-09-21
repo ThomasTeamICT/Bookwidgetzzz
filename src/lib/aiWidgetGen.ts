@@ -99,7 +99,7 @@ export interface WidgetGenRequest {
 
 export function buildWidgetGenPrompt(req: WidgetGenRequest): { system: string; prompt: string } {
   const docs = req.types.filter(isGenType).map((t) => SCHEMA_DOCS[t]).filter(Boolean).join('\n\n');
-  const system = `Je bent een ervaren Vlaamse leerkracht en toetsontwikkelaar die lesmateriaal maakt voor WidgetFabriek.
+  const system = `Je bent een ervaren Vlaamse leerkracht en toetsontwikkelaar die lesmateriaal maakt voor Boosterz.
 Kwaliteitsregels:
 - Schrijf in helder Nederlands (Vlaanderen), afgestemd op de doelgroep.
 - Meerkeuze: afleiders zijn plausibele misvattingen, nooit flauwekul; geen "alle bovenstaande"; de juiste optie is niet systematisch de langste.

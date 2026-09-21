@@ -200,7 +200,7 @@ export function AISettingsPage() {
           <p style={{ marginTop: 0 }}>
             Je gebruikt je <strong>eigen API-sleutel</strong>; die wordt enkel in de browser van dit
             toestel bewaard. Aanvragen gaan <strong>rechtstreeks van je browser naar de gekozen
-            aanbieder</strong> — er zit geen server van WidgetFabriek tussen.
+            aanbieder</strong> — er zit geen server van Boosterz tussen.
           </p>
 
           {fromLink && (

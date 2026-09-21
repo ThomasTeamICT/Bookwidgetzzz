@@ -40,7 +40,7 @@ export const BLOCK_META: Record<CourseBlockType, { icon: string; name: string; b
   table: { icon: '📋', name: 'Tabel', blurb: 'Eenvoudige tabel met optionele kopregel.' },
   terms: { icon: '📖', name: 'Begrippen', blurb: 'Begrippenlijst met term en uitleg.' },
   checklist: { icon: '☑️', name: 'Afvinklijst', blurb: 'Lijstje dat de leerling zelf afvinkt (telt mee in de voortgang).' },
-  widget: { icon: '🧩', name: 'Widget', blurb: 'Een oefening of toets uit WidgetFabriek, inline afspeelbaar.' },
+  widget: { icon: '🧩', name: 'Widget', blurb: 'Een oefening of toets uit Boosterz, inline afspeelbaar.' },
 };
 
 /** Volgorde voor het blokkenpalet. */

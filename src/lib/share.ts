@@ -94,7 +94,7 @@ export function decodeSubmission(code: string): Submission | null {
 }
 
 export function exportWidgetJson(widget: Widget): string {
-  return JSON.stringify({ app: 'widgetfabriek', v: 1, widget }, null, 2);
+  return JSON.stringify({ app: 'boosterz', v: 1, widget }, null, 2);
 }
 
 /** Exportbestand mét media als data-URL (zie encodeWidgetToUrlWithMedia). */
@@ -155,7 +155,7 @@ export async function exportFolderPack(folderName: string, widgets: Widget[], au
   const copies = await inlineMedia(widgets);
   return JSON.stringify(
     {
-      app: 'widgetfabriek',
+      app: 'boosterz',
       kind: 'pakket',
       v: 1,
       meta: {

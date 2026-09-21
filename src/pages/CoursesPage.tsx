@@ -73,8 +73,8 @@ export function CoursesPage() {
           <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>📥 Importeren</button>
           <input ref={fileRef} type="file" accept="application/json,.json" hidden
             onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f); e.target.value = ''; }} />
-          <button className="btn btn-ai" onClick={() => setAiOpen(true)} title="Een volledige cursus laten bouwen vanuit je leerplandoelen">
-            ✨ Met AI (uit leerplandoelen)
+          <button className="btn btn-ai" onClick={() => setAiOpen(true)} title="Een volledige cursus laten bouwen vanuit je cursustekst, een pdf of je leerplandoelen">
+            ✨ AI-cursusbouwer
           </button>
           <button className="btn btn-primary" onClick={() => setNewOpen(true)}>➕ Nieuwe cursus</button>
         </div>
@@ -84,10 +84,10 @@ export function CoursesPage() {
         <EmptyState icon="📚" title="Nog geen cursussen">
           <p>
             Bouw een digitale cursus met hoofdstukken, tekst, video en ingebedde oefeningen —
-            of laat de AI een voorzet maken vanuit je leerplandoelen.
+            of laat de AI-cursusbouwer een voorzet maken vanuit je cursustekst, een pdf of je leerplandoelen.
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn btn-ai" onClick={() => setAiOpen(true)}>✨ Met AI</button>
+            <button className="btn btn-ai" onClick={() => setAiOpen(true)}>✨ AI-cursusbouwer</button>
             <button className="btn btn-primary" onClick={() => setNewOpen(true)}>➕ Zelf bouwen</button>
           </div>
         </EmptyState>

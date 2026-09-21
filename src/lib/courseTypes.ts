@@ -2,7 +2,7 @@
 //
 // Een cursus = hoofdstukken → secties → blokken. Blokken zijn de bouwstenen
 // van de inhoud; het krachtigste blok is 'widget', dat een bestaande
-// WidgetFabriek-widget inline afspeelbaar maakt (met echte inzendingen).
+// Boosterz-widget inline afspeelbaar maakt (met echte inzendingen).
 
 export type CourseBlockType =
   | 'heading'     // tussenkop
@@ -21,7 +21,7 @@ export type CourseBlockType =
   | 'table'       // eenvoudige tabel
   | 'terms'       // begrippenlijst
   | 'checklist'   // afvinklijst voor de leerling (telt mee in voortgang)
-  | 'widget';     // ingebedde WidgetFabriek-widget
+  | 'widget';     // ingebedde Boosterz-widget
 
 export interface BlockBase {
   id: string;

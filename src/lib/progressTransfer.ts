@@ -14,7 +14,7 @@ import { inlineMedia } from './mediaStore';
 const KIND = 'voortgang';
 
 interface ProgressFile {
-  app: 'widgetfabriek';
+  app: 'boosterz';
   kind: typeof KIND;
   v: 1;
   naam: string;
@@ -35,7 +35,7 @@ export async function exportProgress(studentName: string): Promise<string> {
     (s) => s.studentName.trim().toLowerCase() === key
   );
   const file: ProgressFile = {
-    app: 'widgetfabriek',
+    app: 'boosterz',
     kind: KIND,
     v: 1,
     naam,

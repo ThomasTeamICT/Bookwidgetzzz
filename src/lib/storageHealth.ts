@@ -1,6 +1,6 @@
 // ── Opslaggezondheid: hoeveel ruimte is er nog, en overleeft ze de vakantie? ─
 //
-// Alle gebruikersdata van WidgetFabriek staat op het toestel zelf: widgets,
+// Alle gebruikersdata van Boosterz staat op het toestel zelf: widgets,
 // cursussen, inzendingen en voortgang in localStorage, pdf's en ingeleverde
 // bestanden in IndexedDB. Er is geen server, dus geen back-up. Twee dingen
 // kunnen die data stilletjes doen verdwijnen:

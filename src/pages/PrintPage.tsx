@@ -75,7 +75,7 @@ export function PrintPage() {
         })}
 
         <footer style={{ marginTop: 34, borderTop: '1px solid #d1d5db', paddingTop: 8, fontSize: '0.8rem', color: '#6b7280' }}>
-          Gemaakt met WidgetFabriek · code {widget.code}
+          Gemaakt met Boosterz · code {widget.code}
         </footer>
       </div>
     </div>

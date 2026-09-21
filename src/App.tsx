@@ -6,6 +6,7 @@ import { Landing } from './pages/Landing';
 import { PlayerPage } from './pages/PlayerPage';
 import { OpenSharedPage } from './pages/OpenSharedPage';
 import { JoinPage } from './pages/JoinPage';
+import { BrandMark } from './components/Brand';
 import { migrateDataUrls, pruneOrphanMedia } from './lib/mediaStore';
 import { onStorageChange } from './lib/storage';
 
@@ -57,7 +58,7 @@ const CoursePrintPage = lazyRetry(() => import('./pages/CoursePrintPage').then((
 function PageLoader() {
   return (
     <div style={{ display: 'grid', placeItems: 'center', minHeight: '50vh' }} role="status" aria-label="Pagina wordt geladen">
-      <span className="ai-pulse" style={{ fontSize: '2rem' }} aria-hidden>🧩</span>
+      <BrandMark size={44} pulse />
     </div>
   );
 }
@@ -68,7 +69,7 @@ function LoadError() {
   return (
     <div style={{ display: 'grid', placeItems: 'center', minHeight: '60vh', padding: 20 }}>
       <div className="card card-pad" style={{ maxWidth: 440, width: '100%', textAlign: 'center' }}>
-        <div style={{ fontSize: '2.4rem' }} aria-hidden>🧩</div>
+        <div style={{ display: 'grid', placeItems: 'center', marginBottom: 10 }}><BrandMark size={48} /></div>
         <h1 style={{ fontSize: '1.3rem' }}>Er ging iets mis bij het laden</h1>
         <p style={{ color: 'var(--text-soft)' }}>
           Waarschijnlijk is er net een nieuwe versie van de app verschenen. Opnieuw laden lost dit meestal op.

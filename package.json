@@ -1,8 +1,8 @@
 {
-  "name": "widgetfabriek",
+  "name": "boosterz",
   "private": true,
   "version": "1.0.0",
-  "description": "WidgetFabriek — interactieve oefeningen en spelletjes maken voor de klas (BookWidgets-achtige webapp)",
+  "description": "Boosterz — geef je les een boost: interactieve oefeningen, spelletjes en digitale cursussen voor de klas, met AI-hulp vanuit eigen bronmateriaal",
   "type": "module",
   "scripts": {
     "dev": "vite",
