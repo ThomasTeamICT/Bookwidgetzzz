@@ -128,6 +128,8 @@ export function PrivacyPage() {
           <li><strong>Widgets</strong> ({widgets.length}): jouw oefeningen.</li>
           <li><strong>Afbeeldingen, audio en bijlagen</strong> ({media.count}, {formatBytes(media.bytes)}): apart bewaard in de bestandsopslag van de browser (IndexedDB), samen met geüploade pdf's en ingeleverde bestanden.</li>
           <li><strong>Cursussen &amp; leesvoortgang</strong>: je cursusinhoud en, per leerling(naam), welke secties gelezen zijn en hoelang.</li>
+          <li><strong>Klassen &amp; opdrachten</strong>: klaslijsten (namen en eventueel klasnummers van leerlingen), de opdrachten per klas en, op een leerlingtoestel, de gekozen naam uit de klaslijst. Een klaslijst zijn persoonsgegevens van minderjarigen: deel klaslinks en klaspakketten alleen met de klas zelf.</li>
+          <li><strong>Leerplannen</strong>: doelenlijsten die je zelf invoerde of inlas — geen persoonsgegevens.</li>
           <li><strong>Inzendingen</strong> ({subs.length}, van {names.size} {names.size === 1 ? 'naam' : 'verschillende namen'}): naam, antwoorden, score, tijdstip en duur.</li>
           <li><strong>Tussentijds werk</strong>: automatisch opgeslagen antwoorden zodat leerlingen kunnen hervatten.</li>
           <li><strong>Notities &amp; deadlines</strong>: privénotities van leerlingen bij cursussen en de einddeadline per leerling bij oefeningen met tijdslimiet.</li>

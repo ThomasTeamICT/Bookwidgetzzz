@@ -154,11 +154,12 @@ export function Layout() {
           <span className="wordmark">Booster<b>z</b></span>
         </Link>
         <nav aria-label="Hoofdnavigatie">
-          <NavLink to="/widgets">Mijn widgets</NavLink>
-          <NavLink to="/nieuw">Nieuwe widget</NavLink>
-          <NavLink to="/cursussen">Cursussen</NavLink>
-          <NavLink to="/ai-studio" title="Widgets maken met AI vanuit je bronmateriaal">✨ AI-studio</NavLink>
+          <NavLink to="/widgets" title="Oefeningen, toetsen en spelletjes">Widgets</NavLink>
+          <NavLink to="/cursussen" title="Digitale cursussen">Cursussen</NavLink>
+          <NavLink to="/leerplannen" title="Leerplannen en doelenlijsten: de ruggengraat van cursussen en oefeningen">Leerplannen</NavLink>
+          <NavLink to="/klassen" title="Klassen, opdrachten en opvolging per leerling">Klassen</NavLink>
           <NavLink to="/resultaten">Resultaten</NavLink>
+          <NavLink to="/ai-studio" title="Widgets maken met AI vanuit je bronmateriaal">✨ AI-studio</NavLink>
           <NavLink to="/hulp" title="Aan de slag en veelgestelde vragen">Hulp</NavLink>
           <NavLink to="/privacy" title="Privacy en gegevensbeheer">Privacy</NavLink>
         </nav>
