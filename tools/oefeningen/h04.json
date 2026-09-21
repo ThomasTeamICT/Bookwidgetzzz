@@ -1,0 +1,361 @@
+{
+  "hoofdstuk": "04",
+  "oefeningen": [
+    {
+      "sectie": "1.3",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: cel, doorsnede en vergroting",
+      "toelichting": "Vijf vragen over de cel als bouwsteen, over doorsneden en over macro- en microscopisch.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Waarom noemen we de cel het kleinste levende bouwsteentje van een organisme?",
+            "options": [
+              "Omdat het het kleinste deel is dat nog alle kenmerken van leven vertoont, zoals zich delen en stofwisseling.",
+              "Omdat er niets kleiners bestaat dan een cel.",
+              "Omdat een cel uit levende moleculen bestaat.",
+              "Omdat je een cel met het blote oog kunt zien."
+            ],
+            "correctIndex": 0,
+            "explanation": "Moleculen en atomen zijn kleiner dan een cel, maar op zichzelf levenloos. Pas samen in een cel vormen die levenloze stoffen iets dat leeft: de cel is de overgang tussen levenloos en levend."
+          },
+          {
+            "type": "mc",
+            "prompt": "Je snijdt ronde schijfjes van een komkommer. Welke doorsnede maak je dan?",
+            "options": [
+              "Een dwarse doorsnede: je snijdt loodrecht op de lengte.",
+              "Een overlangse doorsnede: je snijdt in de lengterichting.",
+              "Allebei tegelijk.",
+              "Geen van beide; schijfjes zijn geen doorsnede."
+            ],
+            "correctIndex": 0,
+            "hint": "Welke vorm heeft het snijvlak?",
+            "explanation": "Een dwarse doorsnede staat loodrecht op de lange as en geeft een rond of ovaal snijvlak. Snijd je de komkommer in de lengte doormidden, dan krijg je een langwerpig snijvlak: dat is een overlangse doorsnede."
+          },
+          {
+            "type": "sort",
+            "prompt": "Kun je dit met het blote oog zien, of heb je een microscoop nodig?",
+            "categories": ["Macroscopisch (blote oog)", "Microscopisch (microscoop nodig)"],
+            "items": [
+              {"text": "Een mier op de stoep", "category": "Macroscopisch (blote oog)"},
+              {"text": "De huid van je hand", "category": "Macroscopisch (blote oog)"},
+              {"text": "Het hart van een konijn", "category": "Macroscopisch (blote oog)"},
+              {"text": "Een cel uit je wangslijmvlies", "category": "Microscopisch (microscoop nodig)"},
+              {"text": "Een bacterie in vijverwater", "category": "Microscopisch (microscoop nodig)"},
+              {"text": "De losse cellen in spierweefsel", "category": "Microscopisch (microscoop nodig)"}
+            ],
+            "explanation": "Macroscopisch betekent: zichtbaar met het blote oog, zoals hele organismen en organen. Microscopisch betekent: pas zichtbaar met loep of microscoop, zoals cellen en bacteriën."
+          },
+          {
+            "type": "tf",
+            "prompt": "Een mier is microscopisch klein, want ze is veel kleiner dan jij.",
+            "answer": false,
+            "explanation": "Klein is niet hetzelfde als microscopisch. Je ziet een mier zonder hulpmiddel, dus ze is macroscopisch. Een cel of een bacterie zie je pas met een microscoop."
+          },
+          {
+            "type": "short",
+            "prompt": "Welk hulpmiddel gebruik je om de cellen van een dun uienvliesje te bekijken?",
+            "accepted": ["microscoop", "een microscoop", "de microscoop", "lichtmicroscoop", "een lichtmicroscoop"],
+            "explanation": "Cellen zijn microscopisch klein. Met een (licht)microscoop en een druppel kleurstof op een objectglaasje zie je de uicellen netjes naast elkaar liggen."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "2.2",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: van cel tot orgaan",
+      "toelichting": "Zes vragen over de onderdelen van een cel en over weefsels en organen.",
+      "config": {
+        "questions": [
+          {
+            "type": "table",
+            "prompt": "Vul de tabel aan met ja of nee: waar vind je dit celonderdeel?",
+            "columns": ["Celonderdeel", "Dierlijke cel", "Plantencel"],
+            "rows": [
+              {"cells": ["Celkern", "ja", ""], "answers": [null, null, "ja"]},
+              {"cells": ["Cytoplasma", "ja", ""], "answers": [null, null, "ja"]},
+              {"cells": ["Celwand", "", "ja"], "answers": [null, "nee", null]},
+              {"cells": ["Bladgroenkorrels", "", ""], "answers": [null, "nee", "ja"]},
+              {"cells": ["Grote vacuole", "nee", ""], "answers": [null, null, "ja"]}
+            ],
+            "explanation": "Beide celtypes hebben een celmembraan, cytoplasma, een celkern en mitochondriën. Alleen plantencellen hebben daarnaast een celwand, bladgroenkorrels en een grote vacuole."
+          },
+          {
+            "type": "multi",
+            "prompt": "Een plantencel blijft stevig, ook al is ze maar een piepklein bouwsteentje. Welke twee onderdelen zorgen daarvoor?",
+            "options": [
+              "De celwand rondom het celmembraan",
+              "De vacuole die van binnenuit tegen de celwand duwt",
+              "De bladgroenkorrels",
+              "De celkern"
+            ],
+            "correctIndices": [0, 1],
+            "explanation": "De celwand van cellulose geeft de plantencel vorm en stevigheid, en de met vocht gevulde vacuole duwt tegen die wand. Bladgroenkorrels doen aan fotosynthese en de celkern stuurt de cel aan."
+          },
+          {
+            "type": "mc",
+            "prompt": "Onder de microscoop zie je regelmatige, rechthoekige cellen die netjes naast elkaar liggen, elk met een duidelijke rand en een donker bolletje erin. Wat bekijk je?",
+            "options": [
+              "Plantencellen van een uienvliesje: je ziet de celwand en de celkern.",
+              "Dierlijke cellen uit een wangslijmvlies.",
+              "Een druppel zuiver water.",
+              "Een stukje metaal onder vergroting."
+            ],
+            "correctIndex": 0,
+            "explanation": "De rechte, regelmatige randen zijn celwanden, en die hebben alleen plantencellen. Dierlijke cellen zoals wangslijmvliescellen hebben een onregelmatiger vorm en alleen een dun membraan."
+          },
+          {
+            "type": "mc",
+            "prompt": "De biceps in je bovenarm bevat spierweefsel, pezen (bindweefsel), bloedvaten en zenuwen. Wat is de biceps dus?",
+            "options": [
+              "Een orgaan, want meerdere soorten weefsels werken er samen voor één functie.",
+              "Een weefsel, want alle cellen erin zijn spiercellen.",
+              "Een cel, want hij kan samentrekken.",
+              "Een orgaanstelsel, want hij bestaat uit meerdere delen."
+            ],
+            "correctIndex": 0,
+            "explanation": "Een weefsel bestaat uit gelijksoortige cellen; een orgaan bestaat uit meerdere soorten weefsels die samen een taak vervullen. De biceps buigt je arm en is dus een orgaan."
+          },
+          {
+            "type": "tf",
+            "prompt": "Om de afzonderlijke cellen van een weefsel te kunnen zien, heb je een microscoop nodig.",
+            "answer": true,
+            "explanation": "Weefsels zijn microscopisch: de losse cellen zie je pas onder de microscoop. Een orgaan is meestal macroscopisch, dus met het blote oog zichtbaar."
+          },
+          {
+            "type": "dropdown",
+            "prompt": "Kies telkens het juiste onderdeel van de cel.",
+            "text": "De {celkern|vacuole|celwand} stuurt de werking van de cel aan en bevat het DNA. Het verbranden van voedingsstoffen gebeurt in de {mitochondriën|bladgroenkorrels|celkern}. In plantencellen vindt de fotosynthese plaats in de {bladgroenkorrels|mitochondriën|vacuole}.",
+            "shuffle": true,
+            "explanation": "De celkern is het regelcentrum met het DNA, de mitochondriën zijn de energiecentrales waar de celademhaling gebeurt, en de bladgroenkorrels maken met zonlicht glucose in plantencellen."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "3.2",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: organen en stelsels",
+      "toelichting": "Vijf vragen over de inwendige bouw van een zoogdier en over de orgaanstelsels.",
+      "config": {
+        "questions": [
+          {
+            "type": "sort",
+            "prompt": "Ligt dit in de borstholte of in de buikholte?",
+            "categories": ["Borstholte", "Buikholte"],
+            "items": [
+              {"text": "De longen", "category": "Borstholte"},
+              {"text": "Het hart", "category": "Borstholte"},
+              {"text": "De luchtpijp", "category": "Borstholte"},
+              {"text": "De maag", "category": "Buikholte"},
+              {"text": "De lever", "category": "Buikholte"},
+              {"text": "De nieren", "category": "Buikholte"},
+              {"text": "De urineblaas", "category": "Buikholte"}
+            ],
+            "hint": "Het middenrif is de grens.",
+            "explanation": "De borstholte ligt boven het middenrif en bevat onder meer hart, longen, luchtpijp en slokdarm. Onder het middenrif ligt de buikholte met maag, darmen, lever, nieren en blaas."
+          },
+          {
+            "type": "order",
+            "prompt": "Zet de organisatieniveaus van een meercellig organisme van klein naar groot.",
+            "items": ["Cel", "Weefsel", "Orgaan", "Orgaanstelsel", "Organisme"],
+            "explanation": "Gelijksoortige cellen vormen een weefsel, verschillende weefsels vormen een orgaan, samenwerkende organen vormen een stelsel, en alle stelsels samen vormen het organisme."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom liggen het hart en de longen achter de ribbenkast?",
+            "options": [
+              "De ribben beschermen deze belangrijke organen.",
+              "De ribben pompen mee met het hart.",
+              "De ribben maken het bloed aan.",
+              "De ribben scheiden de borstholte van de buikholte."
+            ],
+            "correctIndex": 0,
+            "explanation": "De ribbenkast (ribben en borstbeen) beschermt hart en longen. De scheiding tussen borst- en buikholte gebeurt niet door de ribben maar door het middenrif."
+          },
+          {
+            "type": "multi",
+            "prompt": "Welke organen horen bij het spijsverteringsstelsel?",
+            "options": ["De maag", "De dunne darm", "De lever", "De longen", "De nieren"],
+            "correctIndices": [0, 1, 2],
+            "explanation": "Mond, slokdarm, maag, darmen, lever en alvleesklier breken samen het voedsel af en nemen de voedingsstoffen op. De longen horen bij het ademhalingsstelsel en de nieren bij het uitscheidingsstelsel."
+          },
+          {
+            "type": "marktext",
+            "prompt": "Duid alle organen aan die tot het spijsverteringsstelsel behoren.",
+            "text": "Het voedsel gaat van de [mond] naar de [slokdarm] en komt zo in de [maag]. De longen nemen ondertussen zuurstof op. In de [dunne darm] worden de voedingsstoffen in het bloed opgenomen. De nieren maken urine. In de [dikke darm] wordt water aan de resten onttrokken.",
+            "penalizeWrong": false,
+            "explanation": "Mond, slokdarm, maag, dunne darm en dikke darm volgen elkaar op in het spijsverteringsstelsel. Longen (ademhalingsstelsel) en nieren (uitscheidingsstelsel) horen bij andere stelsels."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "4.",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: de cel als motor van je lichaam",
+      "toelichting": "Vier vragen over de celademhaling en over de samenwerking tussen cel en stelsels.",
+      "config": {
+        "questions": [
+          {
+            "type": "gap",
+            "prompt": "Vul aan wat er bij de celademhaling gebeurt.",
+            "text": "In de mitochondriën wordt glucose verbrand met [zuurstof]. Daarbij komt [energie] vrij. De afvalstoffen die daarbij ontstaan, zijn koolstofdioxide en [water].",
+            "explanation": "Celademhaling: glucose + zuurstof → koolstofdioxide + water, met energie (en warmte) als opbrengst. De cel gebruikt die energie voor haar eigen taak."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom ga je sneller ademen en klopt je hart sneller wanneer je hardloopt?",
+            "options": [
+              "Je spiercellen hebben meer zuurstof en glucose nodig en moeten meer koolstofdioxide kwijt.",
+              "Je spiercellen maken tijdens het lopen zelf zuurstof aan.",
+              "Je longen worden groter naarmate je langer loopt.",
+              "Je spiercellen hebben geen energie nodig, alleen warmte."
+            ],
+            "correctIndex": 0,
+            "explanation": "Hardlopende spiercellen verbranden veel meer glucose met zuurstof. Sneller ademen voert meer zuurstof aan en meer CO₂ af; een sneller kloppend hart brengt dat allemaal vlugger ter plaatse."
+          },
+          {
+            "type": "match",
+            "prompt": "Welke weg legt elke stof af in je lichaam?",
+            "pairs": [
+              {"left": "Zuurstof", "right": "Komt via de longen in het bloed en zo bij elke cel"},
+              {"left": "Glucose", "right": "Komt via de darmen in het bloed"},
+              {"left": "Koolstofdioxide", "right": "Gaat van de cel naar het bloed en wordt uitgeademd"},
+              {"left": "Overtollig water", "right": "Verlaat het lichaam via de nieren als urine"}
+            ],
+            "explanation": "Het ademhalingsstelsel levert zuurstof, het spijsverteringsstelsel levert voedingsstoffen, en het bloedvatenstelsel brengt alles rond en voert het afval naar longen en nieren."
+          },
+          {
+            "type": "tf",
+            "prompt": "Een spiercel diep in je arm haalt haar zuurstof en voedingsstoffen rechtstreeks uit de lucht en uit je voedsel, zonder tussenkomst van het bloed.",
+            "answer": false,
+            "explanation": "Elke cel krijgt haar grondstoffen via het bloed. Het bloedvatenstelsel verbindt alle cellen met de longen en de darmen, en voert hun afvalstoffen weer af."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "worksheet",
+      "titel": "Werkblad: samenwerken in je lichaam",
+      "toelichting": "Vier opdrachten over de samenhang tussen cellen, organen en stelsels.",
+      "config": {
+        "questions": [
+          {
+            "type": "long",
+            "prompt": "Leg uit waarom je tijdens het hardlopen sneller ademt én meer zweet. Gebruik in je antwoord het woord spiercellen.",
+            "modelAnswer": "Tijdens het hardlopen verbranden je spiercellen veel meer glucose met zuurstof om energie te krijgen. Daardoor heb je meer zuurstof nodig en ontstaat er meer koolstofdioxide: je ademt sneller om zuurstof aan te voeren en CO₂ af te voeren. Bij die verbranding komt ook extra warmte vrij; door te zweten raak je die warmte weer kwijt.",
+            "rubric": [
+              {"criterion": "Verklaart het sneller ademen met meer zuurstof nodig en meer CO₂ af te voeren", "points": 1},
+              {"criterion": "Verklaart het zweten met de warmte die bij de verbranding vrijkomt", "points": 1}
+            ],
+            "explanation": "De behoefte van de cellen stuurt de werking van de organen: longen, hart en zweetklieren passen zich aan zodat de spiercellen kunnen blijven werken."
+          },
+          {
+            "type": "table",
+            "prompt": "Vul in op welk organisatieniveau elk voorbeeld hoort: cel, weefsel, orgaan of stelsel.",
+            "columns": ["Voorbeeld", "Niveau"],
+            "rows": [
+              {"cells": ["Eén spiercel", ""], "answers": [null, "cel"]},
+              {"cells": ["Het spierweefsel in je arm", ""], "answers": [null, "weefsel"]},
+              {"cells": ["De maag", ""], "answers": [null, "orgaan"]},
+              {"cells": ["Het hart", ""], "answers": [null, "orgaan"]},
+              {"cells": ["Mond, slokdarm, maag, darmen en lever samen", ""], "answers": [null, "stelsel"]}
+            ],
+            "explanation": "Cellen met dezelfde vorm en functie vormen een weefsel; meerdere weefsels vormen een orgaan; organen die samen één hoofdfunctie vervullen vormen een orgaanstelsel."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul aan hoe een cel aan haar grondstoffen komt en haar afval kwijtraakt.",
+            "text": "Zuurstof komt via het [ademhalingsstelsel] in het bloed. Voedingsstoffen zoals glucose komen via het [spijsverteringsstelsel] in het bloed. De koolstofdioxide die in de cel ontstaat, wordt door het bloed naar de [longen] gebracht om uitgeademd te worden.",
+            "explanation": "De stelsels verbinden elke cel met de buitenwereld: ze voeren aan wat de cel nodig heeft en voeren af wat ze niet meer kan gebruiken."
+          },
+          {
+            "type": "long",
+            "prompt": "Noem twee afvalstoffen die in je cellen ontstaan, en zeg telkens via welk orgaan of stelsel die het lichaam verlaten.",
+            "modelAnswer": "Koolstofdioxide ontstaat bij de celademhaling: het gaat van de cel naar het bloed en verlaat het lichaam via de longen, bij het uitademen. Water is de tweede afvalstof: het teveel verlaat het lichaam via het uitscheidingsstelsel (de nieren, als urine) en deels via het zweet in de huid.",
+            "rubric": [
+              {"criterion": "Noemt koolstofdioxide met de longen als uitweg", "points": 1},
+              {"criterion": "Noemt water met de nieren/urine of de huid/zweet als uitweg", "points": 1}
+            ],
+            "explanation": "Bij de verbranding in de mitochondriën ontstaan koolstofdioxide en water. Zonder afvoer zouden de cellen als het ware verstikken."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Kernbegrippen",
+      "plaats": "einde",
+      "type": "hangman",
+      "titel": "Galgje: bouwstenen van organismen",
+      "toelichting": "Raad het woord letter per letter. De tip verwijst naar een voorbeeld uit het hoofdstuk.",
+      "config": {
+        "words": [
+          {"word": "CELKERN", "hint": "Het donkere bolletje dat je in een uicel ziet liggen"},
+          {"word": "CELWAND", "hint": "Stevig omhulsel dat alleen plantencellen hebben"},
+          {"word": "VACUOLE", "hint": "Vochtblaas die van binnenuit tegen de celwand duwt"},
+          {"word": "CYTOPLASMA", "hint": "Gelachtige celinhoud rond de celkern"},
+          {"word": "MIDDENRIF", "hint": "Spierwand tussen de borstholte en de buikholte"},
+          {"word": "WEEFSEL", "hint": "Dit vormen spiercellen met dezelfde vorm en functie samen"},
+          {"word": "GLUCOSE", "hint": "De brandstof die in de mitochondriën verbrand wordt"},
+          {"word": "ZUURSTOF", "hint": "Gas dat de cel nodig heeft om die brandstof te verbranden"}
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "exitticket",
+      "titel": "Exit-ticket hoofdstuk 4",
+      "toelichting": "Vier vragen om te checken of je de kern van dit hoofdstuk beheerst.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Waarom kan een spiercel niet overleven zonder het transportstelsel?",
+            "options": [
+              "Omdat het bloed haar zuurstof en glucose brengt en haar afvalstoffen wegvoert.",
+              "Omdat het bloed de spiercel doet samentrekken.",
+              "Omdat het bloed de taak van de celkern overneemt.",
+              "Omdat het bloed de cel beschermt tegen de kou."
+            ],
+            "correctIndex": 0,
+            "explanation": "Elke cel heeft zuurstof en voedingsstoffen nodig en moet haar CO₂ en overtollig water kwijt. Het bloedvatenstelsel verzorgt precies die aan- en afvoer."
+          },
+          {
+            "type": "tf",
+            "prompt": "Een plantencel heeft een celwand en bladgroenkorrels; een dierlijke cel heeft die niet.",
+            "answer": true,
+            "explanation": "Celmembraan, cytoplasma, celkern en mitochondriën hebben beide celtypes. De celwand, de bladgroenkorrels en de grote vacuole zijn extra structuren van de plantencel."
+          },
+          {
+            "type": "short",
+            "prompt": "In welk celonderdeel vindt de celademhaling plaats?",
+            "accepted": ["mitochondriën", "mitochondrien", "de mitochondriën", "de mitochondrien", "mitochondrie", "mitochondrium"],
+            "explanation": "De mitochondriën zijn de energiecentrales van de cel: daar wordt glucose met zuurstof verbrand zodat er energie vrijkomt."
+          },
+          {
+            "type": "mc",
+            "prompt": "Wat is het verschil tussen een orgaan en een orgaanstelsel?",
+            "options": [
+              "Een orgaan is één afgebakend lichaamsdeel; een orgaanstelsel is een groep organen die samen één hoofdfunctie vervullen.",
+              "Een orgaanstelsel is kleiner dan een orgaan.",
+              "Een orgaan bestaat uit één soort cellen, een orgaanstelsel uit twee soorten.",
+              "Er is geen verschil, het zijn twee woorden voor hetzelfde."
+            ],
+            "correctIndex": 0,
+            "explanation": "De maag is bijvoorbeeld één orgaan; samen met mond, slokdarm, darmen en lever vormt ze het spijsverteringsstelsel, dat voedsel afbreekt en opneemt."
+          }
+        ]
+      }
+    }
+  ]
+}

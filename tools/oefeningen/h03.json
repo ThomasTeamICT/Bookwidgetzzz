@@ -1,0 +1,372 @@
+{
+  "hoofdstuk": "03",
+  "oefeningen": [
+    {
+      "sectie": "1.3",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: materie en haar toestanden",
+      "toelichting": "Vijf vragen over materie, stoffen en de drie aggregatietoestanden.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Waarom is lucht materie, ook al kun je ze niet zien?",
+            "options": [
+              "Omdat lucht massa heeft en ruimte inneemt.",
+              "Omdat lucht altijd in beweging is.",
+              "Omdat lucht uit één enkele stof bestaat.",
+              "Omdat lucht een eigen vaste vorm heeft."
+            ],
+            "correctIndex": 0,
+            "hint": "Denk aan de opgeblazen ballon.",
+            "explanation": "Materie is alles wat massa heeft en ruimte inneemt. Een opgeblazen ballon wordt groter en voelt strak aan: de lucht erin neemt duidelijk plaats in, ook al zie je ze niet."
+          },
+          {
+            "type": "sort",
+            "prompt": "In welke toestand bevindt deze stof zich bij kamertemperatuur (ongeveer 20 °C)?",
+            "categories": ["Vaste stof", "Vloeistof", "Gas"],
+            "items": [
+              {"text": "Een houten lat", "category": "Vaste stof"},
+              {"text": "Een glazen beker", "category": "Vaste stof"},
+              {"text": "Water in een glas", "category": "Vloeistof"},
+              {"text": "Olie in een fles", "category": "Vloeistof"},
+              {"text": "De lucht in een voetbal", "category": "Gas"},
+              {"text": "Waterdamp boven een kokende pan", "category": "Gas"}
+            ],
+            "explanation": "Een vaste stof houdt haar eigen vorm, een vloeistof neemt de vorm van het vat aan maar houdt haar volume, en een gas verspreidt zich door de hele ruimte."
+          },
+          {
+            "type": "multi",
+            "prompt": "Welke van deze bestaan uit meer dan één stof?",
+            "options": [
+              "Een balpen met een plastic omhulsel, een metalen veer en inkt",
+              "Een glazen drinkbeker",
+              "Een potlood met hout, grafiet, een metalen ringetje en een gommetje",
+              "Een gouden ring",
+              "Een mens"
+            ],
+            "correctIndices": [0, 2, 4],
+            "explanation": "De balpen en het potlood zijn samengesteld uit verschillende materialen. Een glazen beker (glas) en een gouden ring (goud) bestaan uit één stof. Organismen bestaan altijd uit meerdere stoffen: water, vetten, eiwitten, suikers en mineralen."
+          },
+          {
+            "type": "tf",
+            "prompt": "Een ijsblokje, vloeibaar water en waterdamp zijn alle drie dezelfde stof.",
+            "answer": true,
+            "explanation": "Het blijft telkens water: alleen de toestand verschilt (vast, vloeibaar of gasvormig). Dezelfde stof kan in verschillende aggregatietoestanden voorkomen."
+          },
+          {
+            "type": "short",
+            "prompt": "Welke stof kom je in het dagelijks leven in alle drie de toestanden tegen: vast, vloeibaar én gasvormig?",
+            "accepted": ["water", "h2o", "het water"],
+            "explanation": "Water ken je als ijs (vast), als vloeibaar water in een glas en als waterdamp (gas), bijvoorbeeld boven een kokende pan."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "2.2",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: het deeltjesmodel",
+      "toelichting": "Vier vragen over moleculen en over de manier waarop we ze voorstellen.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Je roert een lepel suiker door hete thee. De korrels zijn verdwenen, maar de thee smaakt overal zoet. Hoe verklaar je dat?",
+            "options": [
+              "Het suikerklontje valt uiteen in losse moleculen die zich door de hele thee verspreiden.",
+              "De suiker verdampt en verdwijnt uit de thee.",
+              "De suiker zakt naar de bodem en vormt daar een laagje.",
+              "De suiker verandert in water, maar de smaak blijft achter."
+            ],
+            "correctIndex": 0,
+            "explanation": "Suiker bestaat uit moleculen die veel te klein zijn om te zien. Ze verdwijnen niet: ze verspreiden zich tussen de watermoleculen door de hele kop, en daarom proef je overal zoet."
+          },
+          {
+            "type": "tf",
+            "prompt": "Moleculen zijn zo klein dat je ze met een gewoon vergrootglas niet kunt zien.",
+            "answer": true,
+            "explanation": "In één druppel water zitten al miljarden moleculen. Zonder speciale apparatuur kun je ze niet afzonderlijk zien; daarom werken we met een model."
+          },
+          {
+            "type": "mc",
+            "prompt": "In een tekening met het deeltjesmodel liggen de bolletjes dicht tegen elkaar, netjes geordend in een rooster. Welke toestand stelt die tekening voor?",
+            "options": [
+              "Een vaste stof",
+              "Een vloeistof",
+              "Een gas",
+              "Een lege ruimte zonder materie"
+            ],
+            "correctIndex": 0,
+            "explanation": "In een vaste stof zitten de deeltjes dicht opeen en netjes geordend. In een vloeistof liggen ze ook dicht bij elkaar, maar rommelig, en in een gas zweven ze ver uit elkaar."
+          },
+          {
+            "type": "dropdown",
+            "prompt": "Kies telkens het juiste woord over het deeltjesmodel.",
+            "text": "In het deeltjesmodel stellen we elke molecule voor als een klein {bolletje|blokje|streepje}. Zo'n model is een {vereenvoudiging|foto|meting} van de werkelijkheid, maar het helpt ons om te begrijpen wat we {niet kunnen zien|altijd zien|kunnen wegen}.",
+            "shuffle": true,
+            "explanation": "Net zoals een wereldbol een model is van de aarde, is het deeltjesmodel een vereenvoudigde voorstelling. Het maakt begrijpelijk wat met het blote oog onzichtbaar blijft."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "3.4",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: vast, vloeibaar of gas?",
+      "toelichting": "Zes vragen over de eigenschappen van de drie toestanden en over de beweging van de deeltjes.",
+      "config": {
+        "questions": [
+          {
+            "type": "table",
+            "prompt": "Vul de tabel aan met ja of nee.",
+            "columns": ["Toestand", "Eigen vorm?", "Vast volume?", "Gemakkelijk samen te drukken?"],
+            "rows": [
+              {"cells": ["Vaste stof", "", "ja", "nee"], "answers": [null, "ja", null, null]},
+              {"cells": ["Vloeistof", "nee", "", ""], "answers": [null, null, "ja", "nee"]},
+              {"cells": ["Gas", "", "nee", ""], "answers": [null, "nee", null, "ja"]}
+            ],
+            "hint": "Denk aan de ruimte tussen de deeltjes.",
+            "explanation": "Een vaste stof heeft een eigen vorm en volume en is nauwelijks samendrukbaar. Een vloeistof heeft geen eigen vorm maar wel een vast volume en is ook bijna niet samendrukbaar. Een gas heeft geen van beide en is wél gemakkelijk samen te drukken, want er zit veel lege ruimte tussen de deeltjes."
+          },
+          {
+            "type": "mc",
+            "prompt": "Je giet 100 ml limonade uit een hoog, smal glas in een brede kom. Wat verandert er?",
+            "options": [
+              "Alleen de vorm verandert; het volume blijft 100 ml.",
+              "Alleen het volume verandert; de vorm blijft gelijk.",
+              "De vorm én het volume veranderen.",
+              "Er verandert niets."
+            ],
+            "correctIndex": 0,
+            "explanation": "Een vloeistof neemt de vorm van het vat aan: in de kom spreidt ze zich plat uit. De hoeveelheid blijft wel gelijk, want een vloeistof heeft een vast volume."
+          },
+          {
+            "type": "marktext",
+            "prompt": "Duid alle zinsdelen aan die over een gas gaan.",
+            "text": "Een vloeistof heeft een vast volume. Een gas [vult de hele ruimte] waarin het zit. In een vaste stof trillen de deeltjes op hun plaats. Een gas is [gemakkelijk samen te drukken]. Een vloeistof vormt een vlakke bovenkant. In een gas zitten de deeltjes [ver uit elkaar] en bewegen ze [zeer snel].",
+            "penalizeWrong": false,
+            "explanation": "Een gas vult de volledige beschikbare ruimte, is gemakkelijk samen te persen en heeft deeltjes die ver uit elkaar zitten en zeer snel bewegen. De andere zinnen gaan over vloeistoffen en vaste stoffen."
+          },
+          {
+            "type": "tf",
+            "prompt": "In een vaste stof staan de deeltjes helemaal stil.",
+            "answer": false,
+            "explanation": "De deeltjes trillen op hun vaste plaats in het rooster. Deeltjes staan nooit helemaal stil: zelfs in een stuk ijs trillen de watermoleculen nog."
+          },
+          {
+            "type": "mc",
+            "prompt": "Je laat een druppel blauwe inkt in een glas water vallen en roert niet. Na een tijdje is al het water lichtblauw. Hoe komt dat?",
+            "options": [
+              "De deeltjes van water en inkt bewegen voortdurend en botsen, waardoor ze zich vanzelf mengen.",
+              "De inkt is zwaarder dan water en zakt naar de bodem.",
+              "Het water heeft de inkt omgezet in een nieuwe stof.",
+              "De inkt verdampt en komt zo overal in het glas terecht."
+            ],
+            "correctIndex": 0,
+            "explanation": "Dit heet diffusie: doordat de deeltjes constant bewegen en tegen elkaar botsen, verspreidt de kleurstof zich vanzelf tot ze overal gelijk verdeeld is."
+          },
+          {
+            "type": "short",
+            "prompt": "Hoe noem je het verschijnsel waarbij de deeltjes van twee stoffen zich vanzelf mengen, zoals een geur die zich door de kamer verspreidt?",
+            "accepted": ["diffusie", "de diffusie"],
+            "explanation": "Diffusie is het vanzelf mengen van stoffen doordat hun deeltjes voortdurend bewegen. Zonder roeren verspreidt inkt zich in water en geur in de lucht."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "5.2",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: warmte, faseovergang of nieuwe stof?",
+      "toelichting": "Zes vragen over de invloed van temperatuur en over het verschil tussen faseovergang en stofomzetting.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "In welk glas verspreidt een druppel kleurstof zich het snelst: in warm of in koud water?",
+            "options": [
+              "In het warme water, omdat de deeltjes daar sneller bewegen.",
+              "In het koude water, omdat de deeltjes daar dichter bij elkaar zitten.",
+              "In beide glazen even snel, want je roert niet.",
+              "In het koude water, omdat kou de kleurstof doet uitzetten."
+            ],
+            "correctIndex": 0,
+            "explanation": "Hoe hoger de temperatuur, hoe meer energie de deeltjes hebben en hoe sneller ze bewegen. Daardoor botsen ze vaker en mengt de kleurstof zich sneller door het water."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom gaat een vastzittend metalen deksel makkelijker open nadat je het even onder heet water hield?",
+            "options": [
+              "Het metaal zet uit door de warmte terwijl het glas nauwelijks uitzet, waardoor de sluiting losser wordt.",
+              "Het metaal krimpt door de warmte en laat daardoor los.",
+              "De lucht in de pot verdwijnt door het warme water.",
+              "Het glas zet veel sterker uit dan het metaal."
+            ],
+            "correctIndex": 0,
+            "hint": "Wat doet warmte met de omvang van metaal?",
+            "explanation": "Bijna alle materialen zetten uit bij warmte: de deeltjes trillen harder en komen iets verder uit elkaar. Het metalen deksel wordt een fractie groter, het glazen potje nauwelijks, dus de sluiting zit minder strak."
+          },
+          {
+            "type": "sort",
+            "prompt": "Gaat het om een faseovergang (alleen een andere toestand) of om een stofomzetting (nieuwe stoffen)?",
+            "categories": ["Faseovergang", "Stofomzetting"],
+            "items": [
+              {"text": "Sneeuw smelt op een warme dag tot water.", "category": "Faseovergang"},
+              {"text": "Een blad papier verbrandt tot as en rook.", "category": "Stofomzetting"},
+              {"text": "Een ijzeren spijker krijgt buiten een bruine roestlaag.", "category": "Stofomzetting"},
+              {"text": "Waterdamp vormt druppels op een koud raam.", "category": "Faseovergang"},
+              {"text": "Gesmolten kaarsvet koelt af en wordt weer hard.", "category": "Faseovergang"},
+              {"text": "Een ei wordt gebakken in een hete pan.", "category": "Stofomzetting"}
+            ],
+            "explanation": "Bij een faseovergang blijven de moleculen dezelfde en verandert alleen de toestand; je kunt de verandering meestal omkeren. Bij een stofomzetting ontstaan er nieuwe stoffen met andere eigenschappen, en dat is meestal niet meer om te keren."
+          },
+          {
+            "type": "order",
+            "prompt": "Je legt een ijsblokje in een pannetje en blijft verwarmen. Zet de gebeurtenissen in de juiste volgorde.",
+            "items": [
+              "Het ijsblokje smelt tot vloeibaar water.",
+              "Het water wordt warmer en de moleculen bewegen sneller.",
+              "Het water kookt en verdampt tot waterdamp.",
+              "Boven de pan condenseert de damp tot druppels op een koud deksel."
+            ],
+            "explanation": "Smelten (vast → vloeibaar), dan opwarmen, dan verdampen (vloeibaar → gas) en ten slotte condenseren (gas → vloeibaar) tegen het koude deksel. In elke stap blijft het dezelfde stof: water."
+          },
+          {
+            "type": "tf",
+            "prompt": "Bij een faseovergang ontstaan er nieuwe stoffen.",
+            "answer": false,
+            "explanation": "Bij een faseovergang blijven de moleculen precies dezelfde; ze liggen of bewegen alleen anders. Nieuwe stoffen ontstaan pas bij een stofomzetting (chemische reactie)."
+          },
+          {
+            "type": "multi",
+            "prompt": "Aan welke tekenen kun je merken dat er een stofomzetting gebeurd is?",
+            "options": [
+              "Er ontstaan gasbelletjes.",
+              "Er is een duidelijke kleurverandering.",
+              "Er komt warmte of licht vrij.",
+              "De stof heeft de vorm van het vat aangenomen.",
+              "De vloeistof is in een ander glas gegoten."
+            ],
+            "correctIndices": [0, 1, 2],
+            "explanation": "Gasbelletjes, kleurverandering, warmte of licht, een nieuwe geur of een neerslag wijzen op een chemische reactie. De vorm aannemen van een vat of overgieten verandert de stof zelf niet."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "worksheet",
+      "titel": "Werkblad: materie in het dagelijks leven",
+      "toelichting": "Vier opdrachten waarin je het deeltjesmodel toepast op alledaagse situaties.",
+      "config": {
+        "questions": [
+          {
+            "type": "long",
+            "prompt": "Je komt thuis en ruikt de geur van versgebakken koekjes al voor je de keuken binnenkomt. Leg met het deeltjesmodel uit hoe dat komt.",
+            "modelAnswer": "De koekjes geven geurstoffen af als gas. Die deeltjes bewegen voortdurend en zeer snel alle kanten op, en ze botsen tegen de luchtdeeltjes. Zo mengen ze zich vanzelf met de lucht (diffusie) en verspreiden ze zich door het hele huis, tot ze ook in de gang bij je neus komen.",
+            "rubric": [
+              {"criterion": "Zegt dat de geurdeeltjes (gas) voortdurend en snel bewegen", "points": 1},
+              {"criterion": "Legt uit dat ze zich daardoor mengen met de lucht en door de hele ruimte verspreiden", "points": 1}
+            ],
+            "explanation": "Een gas vult de volledige ruimte doordat zijn deeltjes vrij en snel bewegen. Dat vanzelf mengen heet diffusie."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul aan wat er met de deeltjes en met het volume gebeurt als je een stof verwarmt.",
+            "text": "Als de temperatuur stijgt, bewegen de deeltjes [sneller]. Ze komen daardoor iets verder uit elkaar en de stof [zet uit]. Bij afkoelen gebeurt het omgekeerde: de deeltjes bewegen trager en de stof [krimpt].",
+            "explanation": "Warmte geeft de deeltjes meer energie, dus ze bewegen sneller en nemen meer plaats in. Daarom zetten spoorrails en bruggen uit bij hitte en klimt de vloeistof in een thermometer."
+          },
+          {
+            "type": "number",
+            "prompt": "Een vloeistofthermometer staat 's morgens op 12 °C en 's middags op 25,5 °C. Met hoeveel graden Celsius is de temperatuur gestegen?",
+            "answer": 13.5,
+            "tolerance": 0.1,
+            "explanation": "25,5 °C − 12 °C = 13,5 °C. Doordat de vloeistof bij verwarming uitzet, klimt ze hoger in het dunne buisje: zo werkt een thermometer."
+          },
+          {
+            "type": "long",
+            "prompt": "Sneeuw smelt tot water, en een blad papier verbrandt tot as en rook. Leg voor allebei uit of het om een faseovergang of om een stofomzetting gaat, en waarom.",
+            "modelAnswer": "Smeltende sneeuw is een faseovergang: de sneeuw wordt vloeibaar water, maar het blijven dezelfde watermoleculen. Er ontstaat geen nieuwe stof en je kunt het water gewoon weer laten bevriezen. Papier dat verbrandt is een stofomzetting: er ontstaan nieuwe stoffen (as, rook en gassen) met heel andere eigenschappen, en je kunt er geen papier meer van maken.",
+            "rubric": [
+              {"criterion": "Smelten juist benoemd als faseovergang, met uitleg (zelfde stof, andere toestand, omkeerbaar)", "points": 1},
+              {"criterion": "Verbranden juist benoemd als stofomzetting, met uitleg (nieuwe stoffen, onomkeerbaar)", "points": 1}
+            ],
+            "explanation": "De sleutelvraag is telkens: veranderen de moleculen zelf? Zo nee, dan is het een faseovergang. Zo ja, dan ontstaan er nieuwe stoffen en gaat het om een stofomzetting."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Kernbegrippen",
+      "plaats": "einde",
+      "type": "memory",
+      "titel": "Memory: verandering en voorbeeld",
+      "toelichting": "Zoek bij elke verandering het voorbeeld uit het dagelijks leven.",
+      "config": {
+        "pairs": [
+          {"a": "Smelten", "b": "Een ijsblokje wordt vloeibaar water"},
+          {"a": "Stollen", "b": "Gesmolten kaarsvet wordt weer hard"},
+          {"a": "Verdampen", "b": "Een plas regenwater droogt op in de zon"},
+          {"a": "Condenseren", "b": "Damp wordt druppels op een koud raam"},
+          {"a": "Uitzetten", "b": "Een deksel wordt groter in heet water"},
+          {"a": "Stofomzetting", "b": "Hout verbrandt tot as en rook"},
+          {"a": "Diffusie", "b": "Inkt mengt zich vanzelf door water"}
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "exitticket",
+      "titel": "Exit-ticket hoofdstuk 3",
+      "toelichting": "Vier vragen om te checken of je de kern van dit hoofdstuk beheerst.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Welke uitspraak over de deeltjes in materie klopt?",
+            "options": [
+              "In een gas bewegen de deeltjes snel en vrij, met veel lege ruimte ertussen.",
+              "In een vaste stof staan de deeltjes volledig stil.",
+              "In een vloeistof zitten de deeltjes even ver uit elkaar als in een gas.",
+              "In een gas liggen de deeltjes netjes geordend in een rooster."
+            ],
+            "correctIndex": 0,
+            "explanation": "Gasdeeltjes vliegen snel en in rechte lijnen rond tot ze botsen; daartussen zit veel lege ruimte. In een vaste stof trillen de deeltjes op hun plaats en in een vloeistof schuiven ze dicht langs elkaar."
+          },
+          {
+            "type": "tf",
+            "prompt": "Als je een gas verwarmt in een ruimte waarin het vrij kan uitzetten, neemt het een groter volume in.",
+            "answer": true,
+            "explanation": "Bij hogere temperatuur bewegen de gasdeeltjes sneller en nemen ze meer ruimte in. Kun je het gas niet laten uitzetten, dan stijgt in plaats daarvan de druk."
+          },
+          {
+            "type": "short",
+            "prompt": "Op een koude ochtend zie je druppels aan de binnenkant van het raam. Welke faseovergang is hier gebeurd?",
+            "accepted": ["condenseren", "condensatie", "het condenseren", "condenseren."],
+            "hint": "Van gas naar vloeistof.",
+            "explanation": "Waterdamp uit de lucht koelt af tegen het koude glas en wordt vloeibaar water: dat is condenseren (gas → vloeibaar)."
+          },
+          {
+            "type": "mc",
+            "prompt": "Bij welke verandering ontstaan er nieuwe stoffen?",
+            "options": [
+              "Een ijzeren spijker roest.",
+              "Een ijsblokje smelt.",
+              "Water bevriest tot ijs.",
+              "Alcohol verdampt uit een open flesje."
+            ],
+            "correctIndex": 0,
+            "explanation": "Roesten is een stofomzetting: het bruine roest is een nieuwe stof met andere eigenschappen dan ijzer. De drie andere zijn faseovergangen, waarbij de stof dezelfde blijft."
+          }
+        ]
+      }
+    }
+  ]
+}

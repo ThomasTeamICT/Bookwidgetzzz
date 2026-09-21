@@ -1,0 +1,324 @@
+{
+  "hoofdstuk": "02",
+  "oefeningen": [
+    {
+      "sectie": "1.3",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: wie eet wie?",
+      "toelichting": "Zes vragen over voedselrelaties, ketens, piramides en de factoren in een biotoop.",
+      "config": {
+        "questions": [
+          {
+            "type": "order",
+            "prompt": "Zet de schakels van deze kringloop in de juiste volgorde, te beginnen bij de producent.",
+            "items": [
+              "Gras: de producent, maakt zelf voedsel",
+              "Konijn: consument van de eerste orde, eet het gras",
+              "Vos: consument van de tweede orde, eet het konijn",
+              "Bacteriën en schimmels: reducenten, breken de dode vos af",
+              "Voedingsstoffen in de bodem: het gras kan er weer mee groeien"
+            ],
+            "hint": "Een keten start altijd bij een plant.",
+            "explanation": "Een voedselketen begint altijd met een plant (producent), daarna volgen de consumenten. Reducenten breken dode resten af tot voedingsstoffen in de bodem, waarmee planten opnieuw kunnen groeien: zo is de kringloop rond."
+          },
+          {
+            "type": "mc",
+            "prompt": "In de voedselketen gras → konijn → vos: wat betekent de pijl tussen gras en konijn?",
+            "options": [
+              "wordt gegeten door",
+              "eet",
+              "leeft samen met",
+              "verandert in"
+            ],
+            "correctIndex": 0,
+            "explanation": "De pijl wijst van het organisme dat gegeten wordt naar het organisme dat eet. Het gras wordt dus gegeten door het konijn."
+          },
+          {
+            "type": "sort",
+            "prompt": "In welke groep hoort elk organisme thuis?",
+            "categories": ["Producent", "Consument", "Reducent"],
+            "items": [
+              {"text": "Grasplant in de weide", "category": "Producent"},
+              {"text": "Waterplant in de vijver", "category": "Producent"},
+              {"text": "Konijn", "category": "Consument"},
+              {"text": "Vos", "category": "Consument"},
+              {"text": "Bacterie in de bodem", "category": "Reducent"},
+              {"text": "Schimmel op dood hout", "category": "Reducent"}
+            ],
+            "explanation": "Producenten (planten) maken zelf voedsel via fotosynthese, consumenten eten andere organismen, en reducenten zoals bacteriën en schimmels breken dood materiaal af tot voedingsstoffen."
+          },
+          {
+            "type": "dropdown",
+            "prompt": "Kies telkens het juiste woord over de voedselpiramide.",
+            "text": "Onderaan de voedselpiramide staan de {producenten|roofdieren|reducenten}. Naar de top toe worden de aantallen meestal {kleiner|groter|even groot}, want bij elke stap van de keten gaat er {energie|water|zuurstof} verloren, bijvoorbeeld als warmte.",
+            "shuffle": true,
+            "explanation": "Er zijn heel veel planten nodig om een klein aantal roofdieren te voeden, juist omdat er bij elke stap energie verloren gaat als warmte."
+          },
+          {
+            "type": "tf",
+            "prompt": "Een voedselketen kan evengoed starten bij een roofdier als bij een plant.",
+            "answer": false,
+            "explanation": "Een voedselketen begint altijd met een plant: de producent maakt zelf voedsel en vormt zo de basis van de hele keten."
+          },
+          {
+            "type": "mc",
+            "prompt": "Door een lange droogte groeien er in een gebied veel minder planten. Wat gebeurt er daarna volgens de tekst?",
+            "options": [
+              "Eerst daalt het aantal konijnen, daarna ook het aantal vossen.",
+              "Eerst daalt het aantal vossen, daarna ook het aantal konijnen.",
+              "Alleen de planten lijden eronder; de dieren merken er niets van.",
+              "De konijnen schakelen over op het eten van vossen."
+            ],
+            "correctIndex": 0,
+            "hint": "Volg de keten van onder naar boven.",
+            "explanation": "Droogte is een abiotische factor. Minder planten betekent minder voedsel voor de planteneters, dus de konijnen worden schaarser. Daardoor vinden ook hun jagers, de vossen, minder voedsel."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "2.3",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: aangepast aan je biotoop",
+      "toelichting": "Vijf vragen over evolutie en over aanpassingen bij planten en dieren.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Waarom vergroot een witte wintervacht de overlevingskans van een haas in een besneeuwd gebied?",
+            "options": [
+              "Hij valt minder op in de sneeuw, waardoor roofdieren hem moeilijker zien.",
+              "Witte haren groeien sneller dan bruine haren.",
+              "Door zijn witte vacht heeft de haas minder voedsel nodig.",
+              "Met een witte vacht kan de haas sneller lopen op sneeuw."
+            ],
+            "correctIndex": 0,
+            "explanation": "Net als bij de ijsbeer werkt de witte kleur als camouflage in de sneeuw. Hazen die minder opvallen, overleven vaker en geven dat kenmerk door aan hun jongen."
+          },
+          {
+            "type": "tf",
+            "prompt": "Een dier beslist zelf om een nuttige aanpassing te ontwikkelen wanneer zijn omgeving verandert.",
+            "answer": false,
+            "explanation": "Dieren en planten kiezen hun kenmerken niet bewust. Er bestaat variatie, en de best aangepaste individuen overleven vaker en planten zich voort: dat is natuurlijke selectie."
+          },
+          {
+            "type": "multi",
+            "prompt": "Welke kenmerken helpen een cactus om te overleven in een droge woestijn?",
+            "options": [
+              "Dikke, vlezige stengels waarin water wordt opgeslagen",
+              "Stekels in plaats van bladeren, waardoor er minder water verdampt",
+              "Zeer diepe of brede wortels om elke druppel water op te nemen",
+              "Grote, platte bladeren die op het water drijven",
+              "Een dikke speklaag onder de huid"
+            ],
+            "correctIndices": [0, 1, 2],
+            "explanation": "De cactus slaat water op in zijn stengel, verliest weinig water door zijn stekels en vangt met brede of diepe wortels elke druppel op. Drijvende bladeren horen bij waterplanten en een speklaag bij de ijsbeer."
+          },
+          {
+            "type": "marktext",
+            "prompt": "Duid alle aanpassingen aan die de ijsbeer helpen overleven in zijn koude biotoop.",
+            "text": "De ijsbeer heeft een [dikke vacht] en daaronder een [dikke speklaag]. Hij leeft op het ijs en jaagt op zeehonden. Zijn [witte kleur] zorgt ervoor dat prooien hem niet zien aankomen, en zijn [grote poten] met haren aan de onderkant geven grip op glad ijs.",
+            "penalizeWrong": false,
+            "explanation": "De vacht en de speklaag houden lichaamswarmte vast, de witte kleur camoufleert in de sneeuw, en de grote behaarde poten geven grip en verdelen het gewicht als sneeuwschoenen."
+          },
+          {
+            "type": "short",
+            "prompt": "Met welk lichaamsdeel halen vissen zuurstof uit het water?",
+            "accepted": ["kieuwen", "de kieuwen", "met kieuwen", "kieuw"],
+            "hint": "Een vis kan onder water 'ademen' met deze organen.",
+            "explanation": "Vissen zijn aangepast aan het leven onder water: met hun kieuwen halen ze het zuurstofgas uit het water. Een stroomlijnvorm en vinnen helpen hen bovendien om te zwemmen."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "3.3",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: biodiversiteit onder druk",
+      "toelichting": "Vijf vragen over biodiversiteit, het belang ervan en de invloed van de mens.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "In welk gebied is de biodiversiteit het hoogst?",
+            "options": [
+              "Een tropisch regenwoud met duizenden soorten insecten, vogels, zoogdieren en bomen",
+              "Een tarweveld waar bijna alleen tarwe groeit, met wat onkruid en insecten",
+              "Een grasveld dat elke week kort gemaaid wordt",
+              "Een parking met hier en daar wat gras tussen de tegels"
+            ],
+            "correctIndex": 0,
+            "explanation": "Biodiversiteit is het aantal verschillende soorten in een gebied. In een regenwoud leven duizenden soorten naast elkaar; op de andere plaatsen is het aantal soorten sterk beperkt."
+          },
+          {
+            "type": "sort",
+            "prompt": "Schaadt of beschermt de mens hiermee de biodiversiteit?",
+            "categories": ["Schaadt de biodiversiteit", "Beschermt de biodiversiteit"],
+            "items": [
+              {"text": "Een bos kappen om er akkers van te maken", "category": "Schaadt de biodiversiteit"},
+              {"text": "Een natuurreservaat oprichten", "category": "Beschermt de biodiversiteit"},
+              {"text": "Pesticiden en plastic in het milieu brengen", "category": "Schaadt de biodiversiteit"},
+              {"text": "Meer vis vangen dan er bij komt", "category": "Schaadt de biodiversiteit"},
+              {"text": "Een kweekprogramma voor een bedreigde diersoort", "category": "Beschermt de biodiversiteit"},
+              {"text": "Bossen en visbestanden duurzaam beheren", "category": "Beschermt de biodiversiteit"}
+            ],
+            "explanation": "Habitatverlies, vervuiling en overexploitatie doen de biodiversiteit dalen. Natuurreservaten, beschermingsprogramma's en duurzaam beheer helpen ze juist vooruit."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom zou het verdwijnen van de bijen grote gevolgen hebben voor onze voedselvoorziening?",
+            "options": [
+              "Omdat bijen veel planten bestuiven, waardoor er fruit en groenten kunnen groeien.",
+              "Omdat honing ons belangrijkste voedsel is.",
+              "Omdat bijen de bodem omwoelen zodat planten beter wortelen.",
+              "Omdat bijen alle plaaginsecten opeten."
+            ],
+            "correctIndex": 0,
+            "explanation": "Bijen zorgen voor de bestuiving van onder meer fruitbomen en groenteplanten. Zonder bestuiving mislukken veel oogsten: het verdwijnen van één soort raakt zo de hele voedselketen én de mens."
+          },
+          {
+            "type": "tf",
+            "prompt": "Een gebied met veel verschillende soorten is beter bestand tegen een nieuwe ziekte of tegen klimaatverandering dan een gebied met maar één soort.",
+            "answer": true,
+            "explanation": "Bij hoge biodiversiteit is de kans groter dat sommige soorten de verandering aankunnen, en kan een andere soort de rol van een weggevallen soort deels overnemen. Bij een monocultuur kan het hele systeem instorten."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom kan een invasieve exoot de lokale biodiversiteit sterk verstoren?",
+            "options": [
+              "Omdat die soort in het nieuwe gebied vaak geen natuurlijke vijanden heeft en inheemse soorten verdringt.",
+              "Omdat die soort altijd giftig is voor mensen.",
+              "Omdat die soort meteen uitsterft in het nieuwe gebied.",
+              "Omdat die soort geen voedsel nodig heeft."
+            ],
+            "correctIndex": 0,
+            "explanation": "Invasieve exoten worden door de mens (vaak onbedoeld) naar een nieuw gebied gebracht. Zonder natuurlijke vijanden breiden ze zich sterk uit en duwen ze inheemse soorten weg."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "worksheet",
+      "titel": "Werkblad: het weiland naast het bos",
+      "toelichting": "Pas je kennis over voedselrelaties, factoren en biodiversiteit toe op één gebied.",
+      "config": {
+        "questions": [
+          {
+            "type": "info",
+            "prompt": "**De situatie.** In een weiland naast een bos groeien grassen en klaver. Er leven konijnen, muizen en vossen. In de bodem zitten regenwormen, bacteriën en schimmels. Langs het weiland loopt een beek."
+          },
+          {
+            "type": "table",
+            "prompt": "Vul in of het om een biotische of een abiotische factor gaat.",
+            "columns": ["Factor in het weiland", "Biotisch of abiotisch?"],
+            "rows": [
+              {"cells": ["De hoeveelheid regen die valt", ""], "answers": [null, "abiotisch"]},
+              {"cells": ["De vossen die op konijnen jagen", ""], "answers": [null, "biotisch"]},
+              {"cells": ["De temperatuur in de winter", ""], "answers": [null, "abiotisch"]},
+              {"cells": ["De schimmels in de bodem", ""], "answers": [null, "biotisch"]},
+              {"cells": ["Het bodemtype: zand of klei", ""], "answers": [null, "abiotisch"]}
+            ],
+            "explanation": "Biotische factoren zijn invloeden van levende wezens, abiotische factoren zijn niet-levend: weer, temperatuur, licht, water en bodem."
+          },
+          {
+            "type": "long",
+            "prompt": "Een ziekte doodt bijna alle konijnen in het weiland. Leg uit welk gevolg dat heeft voor het gras en voor de vossen.",
+            "modelAnswer": "Er wordt veel minder gras opgegeten, dus het gras kan welig groeien en neemt toe. De vossen verliezen een belangrijke prooi: ze vinden minder voedsel, waardoor hun aantal daalt of ze moeten overschakelen op andere prooien zoals muizen.",
+            "rubric": [
+              {"criterion": "Legt uit dat het gras minder opgegeten wordt en dus toeneemt", "points": 1},
+              {"criterion": "Legt uit dat de vossen minder voedsel vinden, waardoor hun aantal daalt of ze andere prooien zoeken", "points": 1}
+            ],
+            "explanation": "In een voedselketen werkt een verandering twee kanten op: minder planteneters betekent meer planten én minder voedsel voor de roofdieren erboven."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul de regels over een voedselketen aan.",
+            "text": "Een voedselketen begint altijd met een [plant]. De pijl wijst telkens naar het organisme dat [eet]. Dode planten en dieren worden afgebroken door bacteriën en schimmels, de [reducenten].",
+            "explanation": "De producent staat vooraan, de pijl betekent 'wordt gegeten door' en wijst dus naar de eter, en de reducenten maken van dode resten weer voedingsstoffen voor de bodem."
+          },
+          {
+            "type": "long",
+            "prompt": "Noem twee manieren waarop de mens de biodiversiteit schaadt en één manier waarop de mens ze beschermt. Leg telkens in één zin uit hoe dat komt.",
+            "modelAnswer": "Schaden: (1) habitatverlies, bijvoorbeeld een bos kappen voor akkers of woningen, waardoor soorten hun leefgebied verliezen; (2) vervuiling, bijvoorbeeld pesticiden die naast plaaginsecten ook nuttige insecten zoals bijen doden. Beschermen: natuurreservaten oprichten, waar planten en dieren ongestoord kunnen leven.",
+            "rubric": [
+              {"criterion": "Twee correcte negatieve invloeden, elk met uitleg", "points": 1},
+              {"criterion": "Eén correcte manier van bescherming met uitleg", "points": 1}
+            ],
+            "explanation": "De negatieve invloeden uit dit hoofdstuk zijn habitatverlies, vervuiling, overexploitatie, invasieve soorten en klimaatverandering. Positieve maatregelen zijn reservaten, beschermingsprogramma's, duurzaam beheer en milieumaatregelen."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Kernbegrippen",
+      "plaats": "einde",
+      "type": "crossword",
+      "titel": "Kruiswoordraadsel: ecologie in voorbeelden",
+      "toelichting": "Elke aanwijzing is een voorbeeld uit het hoofdstuk. Welk woord hoort erbij?",
+      "config": {
+        "entries": [
+          {"word": "PRODUCENT", "clue": "Dit is het gras in de keten gras → konijn → vos."},
+          {"word": "REDUCENT", "clue": "Een bodembacterie of een schimmel die een dode vos afbreekt, noem je zo."},
+          {"word": "VOEDSELWEB", "clue": "Alle voedselketens van een weiland die door elkaar lopen, vormen dit."},
+          {"word": "PIRAMIDE", "clue": "Voorstelling met veel planten onderaan en weinig roofdieren bovenaan."},
+          {"word": "CAMOUFLAGE", "clue": "Hiervoor zorgt de witte vacht van de ijsbeer in de sneeuw."},
+          {"word": "BESTUIVING", "clue": "Dit doen bijen bij fruitbomen, waardoor er fruit kan groeien."},
+          {"word": "EVOLUTIE", "clue": "Het proces waardoor giraffen na vele generaties een erg lange nek kregen."},
+          {"word": "ONTBOSSING", "clue": "In de Amazone wordt bos gekapt voor landbouw: dat heet zo."}
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "exitticket",
+      "titel": "Exit-ticket hoofdstuk 2",
+      "toelichting": "Vier vragen om te checken of je de kern van dit hoofdstuk beheerst.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "In een vijver verdwijnen door vervuiling bijna alle waterplanten. Wat is het meest waarschijnlijke gevolg?",
+            "options": [
+              "Ook de dieren die van die planten leven, nemen in aantal af.",
+              "De vissen beginnen zelf voedsel te maken via fotosynthese.",
+              "De biodiversiteit van de vijver stijgt.",
+              "Er verandert niets aan de voedselketens in de vijver."
+            ],
+            "correctIndex": 0,
+            "explanation": "Waterplanten zijn de producenten: zij vormen de basis van elke voedselketen in de vijver. Vallen zij weg, dan hebben de planteneters geen voedsel meer, en daarna ook hun jagers niet."
+          },
+          {
+            "type": "tf",
+            "prompt": "Aanpassingen ontstaan doordat organismen met gunstige kenmerken vaker overleven en zich voortplanten.",
+            "answer": true,
+            "explanation": "Dat is natuurlijke selectie: gunstige kenmerken worden vaker doorgegeven, waardoor de soort na vele generaties beter bij zijn biotoop past."
+          },
+          {
+            "type": "multi",
+            "prompt": "Wat zijn voordelen van een hoge biodiversiteit in een gebied?",
+            "options": [
+              "Het gebied is beter bestand tegen ziektes en veranderingen.",
+              "Valt één soort weg, dan kan een andere soort haar rol deels overnemen.",
+              "Er is meer kans op nuttige grondstoffen en medicijnen uit de natuur.",
+              "Er groeien minder verschillende planten, dus er is minder concurrentie."
+            ],
+            "correctIndices": [0, 1, 2],
+            "explanation": "Veel soorten houden elkaar in evenwicht, maken het geheel weerbaar en leveren voedsel, zuurstof, grondstoffen en medicijnen. Minder soorten is juist een nadeel."
+          },
+          {
+            "type": "short",
+            "prompt": "Hoe noem je een beschermd gebied waar planten en dieren ongestoord kunnen leven?",
+            "accepted": ["natuurreservaat", "een natuurreservaat", "natuurreservaten", "reservaat", "nationaal park", "een nationaal park"],
+            "explanation": "In een natuurreservaat of nationaal park laat de mens de natuur met rust. Dat is een van de manieren om de biodiversiteit te beschermen."
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,354 @@
+{
+  "hoofdstuk": "01",
+  "oefeningen": [
+    {
+      "sectie": "1.3",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: van vraag naar plan",
+      "toelichting": "Vijf korte vragen over de onderzoeksvraag, de hypothese en de benodigdheden.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Welke onderzoeksvraag kun je het best zelf onderzoeken in de klas?",
+            "options": [
+              "Waarom is de natuur zo mooi?",
+              "Beschimmelen boterhammen sneller in de koelkast of op kamertemperatuur?",
+              "Beschimmelen boterhammen snel en smaken ze daarna nog lekker?",
+              "Hoeveel weegt de zwaarste walvis ter wereld?"
+            ],
+            "correctIndex": 1,
+            "hint": "Denk aan de vier eisen: specifiek, enkelvoudig, meetbaar en uitvoerbaar.",
+            "explanation": "Deze vraag vergelijkt twee duidelijke situaties (specifiek), stelt maar één vraag (enkelvoudig), je kunt de dagen tot de eerste schimmel tellen (meetbaar) en je hebt er maar twee boterhammen voor nodig (uitvoerbaar). Vraag 1 is te vaag, vraag 3 stelt twee vragen tegelijk en vraag 4 kun je alleen opzoeken."
+          },
+          {
+            "type": "tf",
+            "prompt": "Bij één onderzoeksvraag is er altijd maar één hypothese mogelijk.",
+            "answer": false,
+            "explanation": "Bij dezelfde vraag kunnen verschillende leerlingen een andere verwachting hebben: de ene denkt dat de kamerboterham sneller beschimmelt, de andere de koelkastboterham. Het experiment wijst uit welke voorspelling klopt."
+          },
+          {
+            "type": "dropdown",
+            "prompt": "Kies telkens het juiste woord over de hypothese.",
+            "text": "Een hypothese is een {voorlopig antwoord|eindantwoord|meetresultaat} op je onderzoeksvraag. Je baseert ze op {voorkennis en ervaring|toeval|de mening van je vrienden}, en ze moet {toetsbaar|geheim|ingewikkeld} zijn: je kunt met een experiment nagaan of ze klopt.",
+            "shuffle": true,
+            "explanation": "Een hypothese is je verwachting vooraf, gebaseerd op wat je al weet, en je moet ze met een proef kunnen testen. Het is dus meer dan zomaar gokken."
+          },
+          {
+            "type": "multi",
+            "prompt": "Welke zinnen zijn bruikbare hypothesen bij de vraag: Beschimmelen boterhammen sneller in de koelkast of op kamertemperatuur?",
+            "options": [
+              "Ik denk dat de boterham op kamertemperatuur sneller beschimmelt, omdat warmte schimmelgroei bevordert.",
+              "Ik denk dat de boterham in de koelkast sneller beschimmelt, omdat het daar vochtiger is.",
+              "Boterhammen worden soms beschimmeld.",
+              "De boterham op kamertemperatuur had na twee dagen schimmel."
+            ],
+            "correctIndices": [0, 1],
+            "hint": "Een hypothese voorspelt iets én geeft een reden.",
+            "explanation": "De eerste twee zinnen voorspellen een antwoord en geven een reden; ze mogen allebei, want verschillende mensen mogen een andere verwachting hebben. Zin 3 voorspelt niets en zin 4 is een waarneming achteraf, geen verwachting vooraf."
+          },
+          {
+            "type": "short",
+            "prompt": "Je wil onderzoeken of water sneller verdampt in de zon dan in de schaduw. Welk meetinstrument zet je op je lijst van benodigdheden om de temperatuur op beide plaatsen te meten?",
+            "accepted": ["thermometer", "een thermometer", "de thermometer", "thermometers"],
+            "hint": "Welk toestel meet graden Celsius?",
+            "explanation": "Temperatuur meet je met een thermometer, in graden Celsius (°C). Je bepaalt je benodigdheden door je werkwijze stap voor stap te overlopen en bij elke stap het passende instrument te kiezen."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "1.6",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: uitvoeren, waarnemen en besluiten",
+      "toelichting": "Vijf vragen over het uitvoeren van een werkwijze, het noteren van waarnemingen en het formuleren van een besluit.",
+      "config": {
+        "questions": [
+          {
+            "type": "order",
+            "prompt": "Zet de stappen van de werkwijze van het boterhammen-experiment in de juiste volgorde.",
+            "items": [
+              "Neem twee verse boterhammen van hetzelfde brood.",
+              "Stop boterham A in een afgesloten zakje en leg ze in de koelkast.",
+              "Stop boterham B in een identiek zakje en bewaar ze op kamertemperatuur.",
+              "Controleer elke dag op een vast tijdstip beide boterhammen op schimmel.",
+              "Noteer je waarnemingen per dag in een tabel.",
+              "Vergelijk op het einde beide boterhammen en bepaal waar de schimmel het eerst verscheen."
+            ],
+            "hint": "Vergelijken doe je pas nadat je alles genoteerd hebt.",
+            "explanation": "Eerst zorg je dat beide boterhammen gelijk zijn, daarna zet je ze in de twee situaties die je vergelijkt, vervolgens observeer en noteer je elke dag, en pas op het einde vergelijk je de resultaten."
+          },
+          {
+            "type": "marktext",
+            "prompt": "Duid alle kwantitatieve waarnemingen aan: de waarnemingen waarbij je meet met een getal en een eenheid.",
+            "text": "De watertemperatuur is [15,3°C]. Het water ruikt modderig. De vijver is op die plek [120cm] diep. Er drijven groene algen op het oppervlak. De luxmeter geeft [500lux] aan.",
+            "penalizeWrong": false,
+            "explanation": "Kwantitatieve waarnemingen zijn metingen met een getal én een eenheid. 'Ruikt modderig' en 'groene algen' beschrijf je met woorden: dat zijn kwalitatieve waarnemingen."
+          },
+          {
+            "type": "mc",
+            "prompt": "Tijdens het boterhammen-experiment ligt de boterham in de keuken in de volle zon, terwijl die in de koelkast in het donker ligt. Waarom is dat een probleem?",
+            "options": [
+              "Er verandert nu meer dan één factor tegelijk: niet alleen de temperatuur, maar ook het licht.",
+              "Schimmel groeit alleen in het donker, dus het experiment is zinloos.",
+              "Je mag je waarnemingen dan niet meer in een tabel noteren.",
+              "Je hypothese wordt daardoor automatisch juist."
+            ],
+            "correctIndex": 0,
+            "explanation": "In een eerlijk experiment verander je maar één factor tegelijk en houd je alle andere omstandigheden gelijk. Met twee verschillen weet je niet meer waardoor het resultaat komt."
+          },
+          {
+            "type": "mc",
+            "prompt": "Resultaat: de boterham op kamertemperatuur had na 2 dagen schimmel, die in de koelkast pas na 5 dagen. Welk besluit past het best bij dit resultaat?",
+            "options": [
+              "Een boterham bevat suikers en zetmeel, en daar houdt schimmel van.",
+              "Boterhammen beschimmelen sneller op kamertemperatuur dan in de koelkast.",
+              "In een koelkast groeit nooit schimmel.",
+              "Schimmel groeit even snel op beide plaatsen."
+            ],
+            "correctIndex": 1,
+            "hint": "Een besluit is het antwoord op de onderzoeksvraag.",
+            "explanation": "Een goed besluit beantwoordt rechtstreeks de onderzoeksvraag en gebruikt alleen je eigen waarnemingen. Antwoord 1 is misschien juist, maar zegt niets over waar de schimmel het eerst kwam; antwoord 3 gaat verder dan je waarnemingen, want er kwam wél schimmel in de koelkast, alleen later."
+          },
+          {
+            "type": "tf",
+            "prompt": "Een waarneming die niet past bij je hypothese, laat je beter weg uit je verslag.",
+            "answer": false,
+            "explanation": "Je noteert eerlijk wat je ziet, ook als het niet is wat je verwachtte. Een hypothese mag weerlegd worden: dat hoort bij wetenschappelijk onderzoek."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "2.4",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: de biotoop onderzoeken",
+      "toelichting": "Zes vragen over biotische en abiotische factoren, determineren en meten.",
+      "config": {
+        "questions": [
+          {
+            "type": "sort",
+            "prompt": "Sorteer deze kenmerken van een vijverbiotoop.",
+            "categories": ["Biotische factor (levend)", "Abiotische factor (niet-levend)"],
+            "items": [
+              {"text": "Waterlelies en riet", "category": "Biotische factor (levend)"},
+              {"text": "De temperatuur van het water", "category": "Abiotische factor (niet-levend)"},
+              {"text": "Muggenlarven en waterjuffers", "category": "Biotische factor (levend)"},
+              {"text": "De pH van het water", "category": "Abiotische factor (niet-levend)"},
+              {"text": "Bacteriën in het water", "category": "Biotische factor (levend)"},
+              {"text": "De hoeveelheid licht in het water", "category": "Abiotische factor (niet-levend)"},
+              {"text": "De modderige bodem", "category": "Abiotische factor (niet-levend)"},
+              {"text": "Kikkers en stekelbaarsjes", "category": "Biotische factor (levend)"}
+            ],
+            "explanation": "Biotische factoren zijn alle levende wezens: planten, dieren, schimmels en bacteriën. Abiotische factoren zijn de niet-levende omstandigheden zoals water, temperatuur, licht, bodem en zuurtegraad."
+          },
+          {
+            "type": "table",
+            "prompt": "Vul aan met welk meetinstrument je deze abiotische factor meet.",
+            "columns": ["Abiotische factor", "Meetinstrument", "Eenheid"],
+            "rows": [
+              {"cells": ["Temperatuur van het water", "", "°C"], "answers": [null, "thermometer", null]},
+              {"cells": ["Lichtsterkte", "", "lux"], "answers": [null, "luxmeter", null]},
+              {"cells": ["Luchtvochtigheid", "", "%"], "answers": [null, "hygrometer", null]},
+              {"cells": ["Windsterkte", "", "m/s"], "answers": [null, "anemometer", null]}
+            ],
+            "hint": "De namen van de toestellen staan in 2.4.",
+            "explanation": "Elke factor heeft zijn eigen toestel: een thermometer voor temperatuur (°C), een luxmeter voor lichtsterkte (lux), een hygrometer voor luchtvochtigheid (%) en een anemometer voor wind (m/s of Beaufort)."
+          },
+          {
+            "type": "order",
+            "prompt": "Je hebt aan de vijver een onbekend waterinsect opgeschept. Zet de stappen van het determineren in de juiste volgorde.",
+            "items": [
+              "Bekijk het dier goed en noteer de kenmerken die je ziet.",
+              "Vraag 1 van de sleutel: heeft het insect zichtbare vleugels? Nee.",
+              "Vraag 2: steekt er achteraan een lang buisje uit? Ja.",
+              "Vraag 3: heeft het vooraan grijppoten zoals een schorpioen? Ja.",
+              "De sleutel geeft de naam: waterschorpioen."
+            ],
+            "explanation": "Een determinatiesleutel werkt stap voor stap: eerst kijk je goed naar de kenmerken, dan beantwoord je de vragen één voor één, en zo kom je uiteindelijk bij de naam van de soort uit."
+          },
+          {
+            "type": "tf",
+            "prompt": "Als je de temperatuur van twee plekken wil vergelijken, meet je het best op hetzelfde moment van de dag.",
+            "answer": true,
+            "explanation": "Zo vergelijk je eerlijk. Meet je 's morgens op de ene plek en 's middags op de andere, dan kan het verschil door het tijdstip komen in plaats van door de plek."
+          },
+          {
+            "type": "number",
+            "prompt": "Aan de vijver meet je in de volle zon 20000 lux. Op 50 cm diepte meet je nog 500 lux. Hoeveel keer kleiner is de lichtsterkte onder water?",
+            "answer": 40,
+            "tolerance": 0,
+            "hint": "Deel de grootste waarde door de kleinste.",
+            "explanation": "20000 lux : 500 lux = 40. Het water dempt het licht dus 40 keer. Daarom kunnen waterplanten niet op elke diepte groeien."
+          },
+          {
+            "type": "short",
+            "prompt": "Welk meetinstrument gebruik je om te weten of er genoeg zuurstofgas in het vijverwater zit voor de vissen?",
+            "accepted": ["zuurstofmeter", "een zuurstofmeter", "de zuurstofmeter", "zuurstofmeters"],
+            "explanation": "Het zuurstofgehalte van water meet je met een zuurstofmeter. Dat is een belangrijke abiotische factor, want vissen halen hun zuurstof uit het water."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "worksheet",
+      "titel": "Werkblad: jouw eigen onderzoek",
+      "toelichting": "Werk de volledige onderzoeksmethode uit voor één proef, van hypothese tot reflectie.",
+      "config": {
+        "questions": [
+          {
+            "type": "info",
+            "prompt": "**Onderzoeksvraag:** Verdampt water sneller in de zon dan in de schaduw?\n\nJe zet twee identieke bekertjes met elk 100 ml water buiten: één in de volle zon en één in de schaduw. Na drie dagen meet je hoeveel water er nog in elk bekertje zit. Gebruik deze proef bij de vragen hieronder."
+          },
+          {
+            "type": "long",
+            "prompt": "Schrijf een hypothese bij deze onderzoeksvraag. Zeg wat je verwacht én waarom je dat verwacht.",
+            "modelAnswer": "Ik verwacht dat het water in de zon sneller verdampt dan het water in de schaduw, omdat het in de zon warmer is en warmte het verdampen versnelt.",
+            "rubric": [
+              {"criterion": "Geeft een duidelijke voorspelling: welk bekertje verliest het snelst water", "points": 1},
+              {"criterion": "Geeft een reden op basis van voorkennis (zon = warmer)", "points": 1}
+            ],
+            "explanation": "Een hypothese is een voorlopig antwoord met een reden erbij, en ze is toetsbaar: met deze proef kun je nagaan of ze klopt."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul de regel voor een eerlijk experiment aan.",
+            "text": "In een goed experiment verander je maar [één] factor tegelijk. Alle andere omstandigheden houd je [gelijk], zodat je zeker weet waardoor het verschil komt.",
+            "explanation": "Hier is de plaats (zon of schaduw) de enige factor die verschilt. De bekertjes, de hoeveelheid water en de tijd zijn voor allebei hetzelfde."
+          },
+          {
+            "type": "number",
+            "prompt": "Na drie dagen zit er in het bekertje in de zon nog 62 ml water en in dat in de schaduw nog 87 ml. Hoeveel milliliter water is er in de zon méér verdampt dan in de schaduw?",
+            "answer": 25,
+            "tolerance": 0,
+            "hint": "Reken eerst per bekertje uit hoeveel water er verdwenen is.",
+            "explanation": "In de zon verdampte 100 − 62 = 38 ml, in de schaduw 100 − 87 = 13 ml. Het verschil is 38 − 13 = 25 ml."
+          },
+          {
+            "type": "long",
+            "prompt": "Schrijf een goed besluit bij dit resultaat. Zeg er ook bij of je hypothese bevestigd of weerlegd werd.",
+            "modelAnswer": "Water verdampt sneller in de zon dan in de schaduw: na drie dagen was er in de zon 38 ml verdampt en in de schaduw maar 13 ml. Dat bevestigt mijn hypothese dat warmte het verdampen versnelt.",
+            "rubric": [
+              {"criterion": "Het besluit beantwoordt de onderzoeksvraag en steunt op de meetresultaten", "points": 1},
+              {"criterion": "Vermeldt of de hypothese bevestigd of weerlegd is", "points": 1}
+            ],
+            "explanation": "Een besluit geeft kort antwoord op de onderzoeksvraag, verwijst naar je waarnemingen en voegt geen nieuwe feiten toe die je niet gemeten hebt."
+          },
+          {
+            "type": "long",
+            "prompt": "Reflecteer op deze proef: noem één sterk punt van de opzet en één verbeterpunt, en leg telkens uit waarom.",
+            "modelAnswer": "Sterk punt: beide bekertjes waren identiek en bevatten evenveel water, dus alleen de plaats verschilde en de vergelijking is eerlijk. Verbeterpunt: ik gebruikte maar één bekertje per plaats. Met drie bekertjes per plaats zijn de resultaten betrouwbaarder. Ook zou ik elke dag de temperatuur meten en noteren.",
+            "rubric": [
+              {"criterion": "Noemt een sterk punt met uitleg", "points": 1},
+              {"criterion": "Noemt een verbeterpunt dat het onderzoek betrouwbaarder of eerlijker maakt", "points": 1}
+            ],
+            "explanation": "Bij reflectie denk je na over de betrouwbaarheid (zou ik hetzelfde resultaat krijgen bij herhaling?), over de eerlijkheid van de opzet en over wat je een volgende keer anders doet."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Kernbegrippen",
+      "plaats": "einde",
+      "type": "wordsearch",
+      "titel": "Woordzoeker: onderzoeken en biotoop",
+      "toelichting": "Zoek twaalf woorden uit dit hoofdstuk in het rooster.",
+      "config": {
+        "words": [
+          "HYPOTHESE",
+          "BIOTOOP",
+          "BESLUIT",
+          "WERKWIJZE",
+          "REFLECTIE",
+          "WAARNEMING",
+          "LUXMETER",
+          "THERMOMETER",
+          "HYGROMETER",
+          "ABIOTISCH",
+          "BIOTISCH",
+          "DETERMINEREN"
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "memory",
+      "titel": "Memory: factor en meetinstrument",
+      "toelichting": "Zoek bij elke abiotische factor het toestel waarmee je ze meet.",
+      "config": {
+        "pairs": [
+          {"a": "Temperatuur", "b": "Thermometer (°C)"},
+          {"a": "Lichtsterkte", "b": "Luxmeter (lux)"},
+          {"a": "Luchtvochtigheid", "b": "Hygrometer (%)"},
+          {"a": "Windsterkte", "b": "Anemometer (m/s)"},
+          {"a": "Zuurtegraad van water", "b": "pH-strip of pH-meter"},
+          {"a": "Geluidsniveau", "b": "Geluidsmeter (decibel)"},
+          {"a": "Zuurstofgas in water", "b": "Zuurstofmeter"},
+          {"a": "Diepte van de vijver", "b": "Meetlat (cm)"}
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "exitticket",
+      "titel": "Exit-ticket hoofdstuk 1",
+      "toelichting": "Vier vragen om te checken of je de kern van dit hoofdstuk beheerst.",
+      "config": {
+        "questions": [
+          {
+            "type": "order",
+            "prompt": "Zet de stappen van een wetenschappelijk onderzoek in de juiste volgorde.",
+            "items": [
+              "Een onderzoeksvraag stellen",
+              "Een hypothese bedenken",
+              "De benodigdheden verzamelen",
+              "De werkwijze stap voor stap uitvoeren",
+              "Waarnemingen doen en noteren",
+              "Een besluit formuleren",
+              "Reflecteren op het onderzoek"
+            ],
+            "explanation": "Dit is de volledige onderzoeksmethode uit 1.8: van vraag, hypothese en materiaal, over uitvoering en waarneming, naar besluit en reflectie."
+          },
+          {
+            "type": "mc",
+            "prompt": "Wat is het verschil tussen een hypothese en een besluit?",
+            "options": [
+              "Een hypothese is je verwachting vooraf; een besluit is het antwoord na je waarnemingen.",
+              "Een hypothese schrijf je na het experiment, een besluit ervoor.",
+              "Een hypothese is altijd juist, een besluit kan fout zijn.",
+              "Een hypothese is een meting, een besluit is een tekening."
+            ],
+            "correctIndex": 0,
+            "explanation": "De hypothese bedenk je vóór de proef, op basis van wat je al weet. Het besluit schrijf je ná de proef en het steunt op je waarnemingen; daarin zeg je ook of je hypothese klopte."
+          },
+          {
+            "type": "short",
+            "prompt": "Noem één abiotische factor die je in een bosbiotoop kunt meten.",
+            "accepted": [
+              "temperatuur", "de temperatuur", "luchttemperatuur", "bodemtemperatuur",
+              "licht", "lichtsterkte", "de lichtsterkte", "hoeveelheid licht",
+              "vochtigheid", "luchtvochtigheid", "bodemvocht",
+              "zuurgraad", "ph", "de ph", "zuurtegraad",
+              "geluid", "geluidsniveau", "wind", "windsterkte", "bodemtype"
+            ],
+            "hint": "Denk aan iets niet-levends dat je met een toestel kunt meten.",
+            "explanation": "Abiotische factoren zijn niet-levend: temperatuur, licht, vochtigheid, zuurtegraad, wind, geluid of bodemtype. Bij elke factor hoort een passend meetinstrument."
+          },
+          {
+            "type": "tf",
+            "prompt": "Een biotoop bestaat alleen uit de levende wezens die er voorkomen.",
+            "answer": false,
+            "explanation": "Een biotoop is het geheel: de biotische factoren (planten, dieren, schimmels, bacteriën) én de abiotische factoren (licht, temperatuur, water, bodem). De organismen zijn aangepast aan die niet-levende omstandigheden."
+          }
+        ]
+      }
+    }
+  ]
+}
