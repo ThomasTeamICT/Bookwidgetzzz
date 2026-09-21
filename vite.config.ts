@@ -21,6 +21,8 @@ import react from '@vitejs/plugin-react';
 const BUDGETS: { test: RegExp; label: string; maxKb: number }[] = [
   { test: /^assets\/index-[\w-]+\.js$/, label: 'hoofdbundel (kritieke leerlingpad)', maxKb: 320 },
   { test: /^assets\/pdf-[\w-]+\.js$/, label: 'pdf.js (lui geladen)', maxKb: 560 },
+  { test: /mammoth/i, label: 'mammoth (.docx-import, lui geladen)', maxKb: 720 },
+  { test: /jsqr/i, label: 'jsQR (QR-scanner, lui geladen)', maxKb: 130 },
 ];
 /** Alle overige js-chunks: paginachunks en widgetmodules. */
 const DEFAULT_MAX_KB = 80;

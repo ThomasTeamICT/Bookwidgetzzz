@@ -79,8 +79,10 @@ export interface CourseSection {
   id: string;
   title: string;
   blocks: CourseBlock[];
-  /** Leerdoelen van deze sectie (voor feed-up en de doelendekking). */
+  /** Leerdoelen van deze sectie in vrije tekst (voor feed-up en de doelendekking). */
   goals?: string[];
+  /** Codes van leerplandoelen (lib/curriculumTypes.ts) waaraan deze sectie werkt. */
+  goalCodes?: string[];
   /** Verdiepings-/keuzesectie: telt niet mee voor "cursus afgewerkt". */
   optional?: boolean;
 }
@@ -111,6 +113,8 @@ export interface Course {
   code: string;
   chapters: CourseChapter[];
   settings: CourseSettings;
+  /** Leerplan waarop de cursus gebouwd is (voor dekking en goalCode-lookup). */
+  curriculumId?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -132,6 +136,9 @@ export interface CourseProgress {
   courseId: string;
   courseCode: string;
   studentName: string;
+  /** Klas en leerling uit de klaslijst, als de leerling via een klascode werkte. */
+  classId?: string;
+  studentId?: string;
   /** Per sectie-id. */
   sections: Record<string, SectionProgress>;
   /** Laatst bekeken sectie (om verder te lezen). */

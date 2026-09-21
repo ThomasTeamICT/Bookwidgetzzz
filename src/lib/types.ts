@@ -77,6 +77,8 @@ export interface Widget<TConfig = unknown> {
   code: string;
   createdAt: number;
   updatedAt: number;
+  /** Leerplan waaraan de vragen gekoppeld zijn (goalCode-lookup). */
+  curriculumId?: string;
 }
 
 export interface Folder {
@@ -112,6 +114,9 @@ export interface Submission {
   teacherFeedback?: string;
   /** Aantal keren dat de leerling het venster verliet (toetsmodus). */
   focusLosses?: number;
+  /** Klas en leerling uit de klaslijst, als de leerling via een klascode werkte. */
+  classId?: string;
+  studentId?: string;
 }
 
 // ── Quiz / werkblad / exitticket ────────────────────────────────────────────
@@ -154,8 +159,10 @@ export interface QuestionBase {
    * Heeft voorrang op het oudere enkelvoudige hint-veld.
    */
   hints?: string[];
-  /** Leerdoel waar deze vraag bij hoort (voor score-per-doel). */
+  /** Leerdoel waar deze vraag bij hoort (vrije tekst, voor score-per-doel). */
   goal?: string;
+  /** Code van een leerplandoel (zie lib/curriculumTypes.ts), bv. "WIS 2.3". */
+  goalCode?: string;
   /** Niveaulaag voor routes binnen één widget. */
   level?: 'basis' | 'kern' | 'uitbreiding';
   /** Steuntaalversie van de vraag (vertaling/eenvoudiger taal); standaard verborgen. */
