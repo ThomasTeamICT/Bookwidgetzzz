@@ -10,6 +10,7 @@ import { Field, ImagePicker, Modal, useToast } from '../components/ui';
 import { EditorProps, ItemHeader, moveItem, PlayerProps, ResultHero } from './shared';
 import { clearProgress, loadProgress, saveProgress } from '../lib/autosave';
 import { getWidgets } from '../lib/storage';
+import { allGoalOptions, findGoalByCode } from '../lib/curriculum';
 import { loadA11y } from '../components/A11yMenu';
 import type { Widget } from '../lib/types';
 import { EXTRA_QTYPES, extraQType } from './qtypes';
@@ -642,11 +643,59 @@ function BulkImportModal({ onImport, onClose }: { onImport: (qs: Question[]) => 
   );
 }
 
+/** "De leerlingen kunnen …" afkappen voor een keuzelijst. */
+function shortGoalText(text: string, max = 70): string {
+  const t = text.trim().replace(/\s+/g, ' ');
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
+}
+
+/**
+ * Leerplandoel per vraag: een code uit je leerplannen (lib/curriculum.ts).
+ * Leeg mag altijd — het vrije doelveld ernaast blijft even goed werken. Staat
+ * er een bekende code, dan tonen we de doeltekst eronder, zodat je ziet dát
+ * het de juiste is; een onbekende code krijgt een zichtbare melding (niet
+ * alleen een kleur).
+ */
+function GoalCodeField({ value, hasOptions, onChange }: {
+  value: string;
+  hasOptions: boolean;
+  onChange: (code: string) => void;
+}) {
+  const hit = value.trim() ? findGoalByCode(value) : undefined;
+  return (
+    <Field
+      label="Leerplandoel (optioneel)"
+      hint={hasOptions
+        ? 'Kies een code uit je leerplan; de score per doel loopt hierlangs.'
+        : 'Nog geen leerplan op dit toestel — je mag een code vrij intypen.'}
+    >
+      <div>
+        <input
+          className="input input-sm"
+          list="wf-goalcodes"
+          value={value}
+          placeholder='bv. "NW 2.3"'
+          aria-label="Leerplandoel: code uit je leerplan"
+          style={{ minWidth: 220 }}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        {value.trim() !== '' && (
+          <span className="hint" style={{ display: 'block', marginTop: 3 }}>
+            {hit ? `✓ ${shortGoalText(hit.goal.text, 90)}` : '⚠️ Deze code staat in geen enkel leerplan op dit toestel.'}
+          </span>
+        )}
+      </div>
+    </Field>
+  );
+}
+
 export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState<'bank' | 'bulk' | null>(null);
   const toast = useToast();
   const qs = config.questions;
+  // Alle doelen uit alle leerplannen op dit toestel; leeg als er nog geen is.
+  const goalOptions = useMemo(() => allGoalOptions(), []);
 
   const update = (i: number, q: Question) => {
     const questions = qs.slice();
@@ -671,6 +720,12 @@ export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
       <datalist id="wf-goals">
         {[...new Set(config.questions.map((q) => q.goal).filter((g): g is string => !!g && g.trim() !== ''))].map((g) => (
           <option key={g} value={g} />
+        ))}
+      </datalist>
+      {/* gedeelde suggestielijst voor leerplandoelen (codes uit je leerplannen) */}
+      <datalist id="wf-goalcodes">
+        {goalOptions.map((o) => (
+          <option key={`${o.curriculumId}:${o.goal.code}`} value={o.goal.code} label={shortGoalText(o.goal.text)} />
         ))}
       </datalist>
       <label className="checkbox-row" style={{ marginBottom: 4 }}>
@@ -833,6 +888,11 @@ export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
                         style={{ minWidth: 220 }}
                         onChange={(e) => update(i, { ...q, goal: e.target.value })} />
                     </Field>
+                    <GoalCodeField
+                      value={q.goalCode ?? ''}
+                      hasOptions={goalOptions.length > 0}
+                      onChange={(goalCode) => update(i, { ...q, goalCode: goalCode || undefined })}
+                    />
                     <Field label="Niveau (voor routes)" hint="Zonder niveau telt de vraag mee in elke route.">
                       <div style={{ display: 'flex', gap: 6 }}>
                         {([undefined, 'basis', 'kern', 'uitbreiding'] as const).map((lv) => (

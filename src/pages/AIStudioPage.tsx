@@ -6,6 +6,7 @@ import type {
   PollConfig, QuizConfig, ScrambleConfig, SpinnerConfig, SplitWorksheetConfig,
   TimelineConfig, WebquestConfig, Widget, WidgetTypeId, WordsearchConfig,
 } from '../lib/types';
+import type { Curriculum, CurriculumGoal } from '../lib/curriculumTypes';
 import { askAI, extractJson } from '../lib/ai';
 import { AI_GEN_TYPES, buildWidgetGenPrompt, sanitizeGeneratedWidgets } from '../lib/aiWidgetGen';
 import type { GeneratedResult } from '../lib/aiWidgetGen';
@@ -13,6 +14,9 @@ import { AIErrorBox, AIGate, AIReviewNote, AIWorkingBox } from '../components/ai
 import { PdfImportButton } from '../components/PdfImportButton';
 import { CheckRow, Field, useToast } from '../components/ui';
 import { getFolders, saveFolder, saveWidget } from '../lib/storage';
+import { getCurricula, goalLabel, normalizeGoalCode } from '../lib/curriculum';
+import { widgetGoalCodes } from '../lib/goals';
+import { takeHandoff } from '../lib/handoff';
 import { getTypeDef } from '../widgets/registry';
 import { lintQuiz } from '../lib/linter';
 import type { LintWarning } from '../lib/linter';
@@ -131,7 +135,7 @@ function lintFor(w: Widget): LintWarning[] | null {
 
 const STEPS = [
   { nr: 1, title: 'Plak je tekst', text: 'Een hoofdstuk, artikel of stuk cursus — of beschrijf gewoon wat je wil.' },
-  { nr: 2, title: 'Kies widgettypes', text: 'Quiz, flitskaarten, kruiswoordraadsel … meerdere tegelijk kan.' },
+  { nr: 2, title: 'Kies widgettypes', text: 'Quiz, flitskaarten, kruiswoordraadsel … meerdere tegelijk kan. Leerplandoelen aanvinken mag ook.' },
   { nr: 3, title: 'Kijk na en bewaar', text: 'Jij beslist wat goed genoeg is; bijschaven kan altijd in de editor.' },
 ];
 
@@ -151,6 +155,10 @@ export function AIStudioPage() {
   const [differentiate, setDifferentiate] = useState(false);
   const [types, setTypes] = useState<WidgetTypeId[]>(['quiz']);
 
+  // leerplandoelen: het leerplan waaraan gewerkt wordt + de aangevinkte codes
+  const [curriculumId, setCurriculumId] = useState('');
+  const [goalCodes, setGoalCodes] = useState<string[]>([]);
+
   // verloop
   const [phase, setPhase] = useState<Phase>('idle');
   const [stream, setStream] = useState('');
@@ -169,6 +177,28 @@ export function AIStudioPage() {
   useEffect(() => () => ctrlRef.current?.abort(), []);
 
   const folders: Folder[] = useMemo(() => getFolders(), [phase]);
+  const curricula: Curriculum[] = useMemo(() => getCurricula(), []);
+  const curriculum = curricula.find((c) => c.id === curriculumId);
+  /** De aangevinkte doelen, met hun tekst — zo gaan ze mee in de prompt. */
+  const chosenGoals = useMemo(() => {
+    if (!curriculum) return [];
+    const wanted = new Set(goalCodes.map(normalizeGoalCode));
+    return curriculum.goals
+      .filter((g) => wanted.has(normalizeGoalCode(g.code)))
+      .map((g) => ({ code: g.code, text: g.text }));
+  }, [curriculum, goalCodes]);
+
+  // Bronmateriaal dat op de importpagina klaargezet werd, één keer ophalen.
+  useEffect(() => {
+    const h = takeHandoff();
+    if (!h) return;
+    setSource(h.source);
+    if (h.title) setWish((w) => (w.trim() ? w : `Oefeningen bij “${h.title}”`));
+    if (h.curriculumId) setCurriculumId(h.curriculumId);
+    if (h.goalCodes?.length) setGoalCodes(h.goalCodes);
+    toast(`Bron uit ${h.origin || h.title || 'het importeren'} geladen — lees ze even na`, 'ok');
+  }, [toast]);
+
   const canGenerate = types.length > 0 && (source.trim() !== '' || wish.trim() !== '');
   const sourceTooLong = source.length > MAX_SOURCE_COMFORT;
   const checkedCount = result ? result.widgets.filter((w) => checked[w.id]).length : 0;
@@ -208,8 +238,10 @@ export function AIStudioPage() {
       itemCount,
       audience,
       goals,
+      goalCodes: chosenGoals.length > 0 ? chosenGoals : undefined,
       differentiate,
     });
+    const allowedGoalCodes = chosenGoals.map((g) => g.code);
     let acc = '';
     askAI({
       system,
@@ -220,7 +252,7 @@ export function AIStudioPage() {
       onDelta: (t) => { acc += t; setStream(acc); },
     })
       .then((full) => {
-        const res = sanitizeGeneratedWidgets(extractJson(full));
+        const res = sanitizeGeneratedWidgets(extractJson(full), { allowedGoalCodes });
         if (res.widgets.length === 0) {
           setError(res.warnings.join(' ') || 'De AI leverde geen bruikbare widgets op. Probeer het opnieuw.');
           setPhase('idle');
@@ -254,7 +286,14 @@ export function AIStudioPage() {
     }
     const toSave = result.widgets
       .filter((w) => checked[w.id])
-      .map((w) => ({ ...w, title: w.title.trim() || getTypeDef(w.type).name, folderId: targetFolder }));
+      .map((w) => ({
+        ...w,
+        title: w.title.trim() || getTypeDef(w.type).name,
+        folderId: targetFolder,
+        // Zonder leerplan blijft het veld weg; met leerplan weten de resultaten
+        // later bij welke doelenlijst de codes horen.
+        ...(curriculumId ? { curriculumId } : {}),
+      }));
     toSave.forEach((w) => saveWidget(w));
     setSaved(toSave);
     setNewFolderName('');
@@ -392,6 +431,14 @@ export function AIStudioPage() {
                   aria-label="Leerdoelen, één per lijn"
                 />
               </Field>
+
+              <GoalPicker
+                curricula={curricula}
+                curriculumId={curriculumId}
+                onCurriculum={(id) => { setCurriculumId(id); setGoalCodes([]); }}
+                selected={goalCodes}
+                onSelected={setGoalCodes}
+              />
 
               <CheckRow
                 checked={differentiate}
@@ -532,6 +579,18 @@ export function AIStudioPage() {
                     </ul>
                   )}
 
+                  {(() => {
+                    const codes = widgetGoalCodes(w);
+                    if (codes.length === 0) return null;
+                    return (
+                      <div style={{ paddingLeft: 30, display: 'grid', gap: 2 }}>
+                        {codes.map((code) => (
+                          <span key={code} className="hint">🎯 {goalLabel(code, curriculumId || undefined)}</span>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
                   {lint && lint.length > 0 && (
                     <div style={{ borderTop: '1px dashed var(--line)', paddingTop: 8, display: 'grid', gap: 3 }}>
                       {lint.map((lw, i) => (
@@ -637,6 +696,131 @@ export function AIStudioPage() {
         meegestuurd. De voorstellen verschijnen eerst hier en jij kijkt alles na vóór je het met
         leerlingen gebruikt.
       </p>
+    </div>
+  );
+}
+
+// ── Leerplandoelen kiezen ───────────────────────────────────────────────────
+//
+// Bewust een eigen, eenvoudige keuze-UI: een leerplan kiezen en daarna per
+// thema aanvinken waaraan deze oefeningen werken. De aangevinkte codes gaan
+// mee in de prompt; de AI mag uitsluitend uit die lijst kiezen.
+
+function GoalPicker({
+  curricula, curriculumId, onCurriculum, selected, onSelected,
+}: {
+  curricula: Curriculum[];
+  curriculumId: string;
+  onCurriculum: (id: string) => void;
+  selected: string[];
+  onSelected: (codes: string[]) => void;
+}) {
+  const curriculum = curricula.find((c) => c.id === curriculumId);
+  const themes = useMemo(() => {
+    const map = new Map<string, CurriculumGoal[]>();
+    for (const g of curriculum?.goals ?? []) {
+      const key = g.theme?.trim() || 'Overige doelen';
+      const list = map.get(key);
+      if (list) list.push(g);
+      else map.set(key, [g]);
+    }
+    return [...map.entries()];
+  }, [curriculum]);
+
+  const chosen = new Set(selected.map(normalizeGoalCode));
+  const has = (code: string) => chosen.has(normalizeGoalCode(code));
+  const toggle = (code: string, on: boolean) =>
+    onSelected(on ? [...selected, code] : selected.filter((c) => normalizeGoalCode(c) !== normalizeGoalCode(code)));
+  const setTheme = (goals: CurriculumGoal[], on: boolean) => {
+    const codes = goals.map((g) => g.code);
+    const rest = selected.filter((c) => !codes.some((x) => normalizeGoalCode(x) === normalizeGoalCode(c)));
+    onSelected(on ? [...rest, ...codes] : rest);
+  };
+
+  return (
+    <div className="field" style={{ marginTop: 10 }}>
+      <label htmlFor={curricula.length > 0 ? 'ai-leerplan' : undefined}>Leerplandoelen (optioneel)</label>
+      {curricula.length === 0 ? (
+        <span className="hint">
+          Je hebt nog geen leerplan op dit toestel. <Link to="/leerplannen">Voeg er een toe</Link> als je vragen
+          automatisch aan leerplandoelen wil koppelen — het hoeft niet: het vrije doelveld hierboven werkt ook.
+        </span>
+      ) : (
+        <>
+          <select
+            id="ai-leerplan"
+            className="select"
+            value={curriculumId}
+            onChange={(e) => onCurriculum(e.target.value)}
+            style={{ maxWidth: 480 }}
+          >
+            <option value="">Geen leerplan — geen doelcodes</option>
+            {curricula.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.title} — {c.subject}, {c.level} ({c.goals.length} doelen)
+              </option>
+            ))}
+          </select>
+          {curriculum && (
+            <>
+              <span className="hint">
+                Vink aan waaraan deze oefeningen werken. De AI mag alleen uit deze doelen kiezen en hangt de
+                code aan de vragen — zo zie je bij de resultaten meteen de score per leerplandoel.
+              </span>
+              <div role="group" aria-label="Leerplandoelen aanvinken" style={{ display: 'grid', gap: 6, marginTop: 4 }}>
+                {themes.map(([theme, goals]) => {
+                  const picked = goals.filter((g) => has(g.code)).length;
+                  return (
+                    <details key={theme} open={themes.length === 1 || picked > 0}>
+                      <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>
+                        {theme} <span className="hint">({picked}/{goals.length} gekozen)</span>
+                      </summary>
+                      <div style={{ padding: '6px 0 6px 4px' }}>
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+                          <button type="button" className="btn btn-sm btn-quiet" onClick={() => setTheme(goals, true)}>
+                            Alles in dit thema
+                          </button>
+                          {picked > 0 && (
+                            <button type="button" className="btn btn-sm btn-quiet" onClick={() => setTheme(goals, false)}>
+                              Niets
+                            </button>
+                          )}
+                        </div>
+                        {goals.map((g) => (
+                          <label key={g.id || g.code} className="checkbox-row">
+                            <input
+                              type="checkbox"
+                              checked={has(g.code)}
+                              onChange={(e) => toggle(g.code, e.target.checked)}
+                            />
+                            <span>
+                              <strong>{g.code}</strong> — {g.text}
+                              {g.level === 'uitbreiding' && <span className="badge" style={{ marginLeft: 6 }}>uitbreiding</span>}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </details>
+                  );
+                })}
+              </div>
+              <span className="hint" aria-live="polite">
+                {selected.length === 0
+                  ? 'Nog geen doelen gekozen — de vragen krijgen dan geen doelcode.'
+                  : `${selected.length} ${selected.length === 1 ? 'doel' : 'doelen'} gekozen.`}
+                {selected.length > 0 && (
+                  <>
+                    {' '}
+                    <button type="button" className="btn btn-sm btn-quiet" onClick={() => onSelected([])}>
+                      Selectie wissen
+                    </button>
+                  </>
+                )}
+              </span>
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }

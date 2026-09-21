@@ -5,6 +5,7 @@ import { getTypeDef } from '../widgets/registry';
 import { formatDate, pct } from '../lib/utils';
 import { EmptyState } from '../components/ui';
 import { gradeQuestion } from '../lib/grading';
+import { goalLabel, normalizeGoalCode } from '../lib/curriculum';
 import type { Question, QuizConfig, Submission, Widget } from '../lib/types';
 
 // widgets met een QuizConfig-achtige 'questions'-lijst (zelfde set als ResultsPage)
@@ -89,6 +90,10 @@ export function ResultsOverviewPage() {
 // ── Leerdoelen over widgets heen ────────────────────────────────────────────
 
 interface GoalAgg {
+  /** Wat de leerkracht leest: de doeltekst bij een leerplancode, anders de vrije tag. */
+  label: string;
+  /** De leerplancode, of null bij een vrije doel-tag. */
+  code: string | null;
   earned: number;
   max: number;
   /** Widgets die (met beoordeelde antwoorden) aan dit doel bijdragen. */
@@ -105,9 +110,20 @@ interface StudentRow {
   perGoal: Map<string, { earned: number; max: number }>;
 }
 
+/** Aan welk doel telt deze vraag mee? De leerplancode gaat vóór de vrije tag. */
+function goalKeyOf(q: Question): string | null {
+  if (q.goalCode?.trim()) return `code:${normalizeGoalCode(q.goalCode)}`;
+  if (q.goal?.trim()) return `vrij:${q.goal.trim()}`;
+  return null;
+}
+
 /**
- * Aggregatie van leerdoel-tags (q.goal) over alle quiz-achtige widgets heen:
- * totale beheersing per doel + uitklapbare heatmap leerlingen × doelen.
+ * Aggregatie van leerdoelen over alle quiz-achtige widgets heen: totale
+ * beheersing per doel + uitklapbare heatmap leerlingen × doelen.
+ *
+ * Een vraag telt mee onder haar leerplandoel (goalCode) als die er is, anders
+ * onder haar vrije doel-tag (goal). Dezelfde code in twee verschillende
+ * widgets is dus één rij — daar is de code net voor bedoeld.
  */
 function CrossWidgetGoals({ items }: { items: { widget: Widget; subs: Submission[] }[] }) {
   const goals = new Map<string, GoalAgg>();
@@ -118,8 +134,8 @@ function CrossWidgetGoals({ items }: { items: { widget: Widget; subs: Submission
     const questions = (widget.config as Partial<QuizConfig>).questions ?? [];
     const tagged = questions
       .filter((q): q is Question => !!q && q.type !== 'info')
-      .map((q) => ({ q, goal: (q.goal ?? '').trim() }))
-      .filter((t) => t.goal !== '');
+      .map((q) => ({ q, goal: goalKeyOf(q) }))
+      .filter((t): t is { q: Question; goal: string } => t.goal !== null);
     if (tagged.length === 0) continue;
 
     for (const s of subs) {
@@ -130,7 +146,15 @@ function CrossWidgetGoals({ items }: { items: { widget: Widget; subs: Submission
 
         let agg = goals.get(goal);
         if (!agg) {
-          agg = { earned: 0, max: 0, widgetIds: new Set(), subIds: new Set() };
+          // Het etiket wordt bepaald door de eerste widget die dit doel draagt:
+          // die kent het leerplan waaruit de code komt.
+          const rest = goal.slice(5); // "code:" en "vrij:" zijn allebei 5 tekens
+          const code = goal.startsWith('code:') ? rest : null;
+          agg = {
+            label: code ? goalLabel(code, widget.curriculumId) : rest,
+            code,
+            earned: 0, max: 0, widgetIds: new Set(), subIds: new Set(),
+          };
           goals.set(goal, agg);
         }
 
@@ -163,7 +187,9 @@ function CrossWidgetGoals({ items }: { items: { widget: Widget; subs: Submission
   // alleen tonen als er minstens één doel-tag met inzendingen bestaat
   if (goals.size === 0) return null;
 
-  const goalNames = [...goals.keys()].sort((a, b) => a.localeCompare(b, 'nl'));
+  const goalNames = [...goals.keys()].sort((a, b) =>
+    (goals.get(a)!.label).localeCompare(goals.get(b)!.label, 'nl')
+  );
   const studentRows = [...students.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name, 'nl'));
 
   const cellColor = (p: number | null) =>
@@ -180,6 +206,8 @@ function CrossWidgetGoals({ items }: { items: { widget: Widget; subs: Submission
       </summary>
       <p className="hint" style={{ margin: '8px 0 14px' }}>
         Dit zijn <strong>indicaties</strong>, samengeteld over alle widgets waarvan vragen dit leerdoel dragen.
+        Vragen met een <strong>leerplandoelcode</strong> tellen over widgets heen samen; vragen met alleen een
+        vrije doel-tag blijven op hun eigen naam staan.
         Nog niet beoordeelde antwoorden tellen niet mee. Gebruik ze als startpunt voor een gesprek, niet als eindoordeel.
       </p>
 
@@ -189,15 +217,18 @@ function CrossWidgetGoals({ items }: { items: { widget: Widget; subs: Submission
         return (
           <div key={goal} style={{ marginBottom: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontWeight: 600, marginBottom: 3 }}>
-              <span>{goal}</span>
+              <span>
+                {agg.code && <span className="badge badge-brand" style={{ marginRight: 6 }}>leerplan</span>}
+                {agg.label}
+              </span>
               <span style={{ color: cellText(p) }}>{p === null ? '— nog te beoordelen' : `${p}%`}</span>
             </div>
             <div
               className="progressbar"
               role="img"
               aria-label={p === null
-                ? `Leerdoel ${goal}: nog geen beoordeelde antwoorden`
-                : `Leerdoel ${goal}: ${p} procent beheersing`}
+                ? `Leerdoel ${agg.label}: nog geen beoordeelde antwoorden`
+                : `Leerdoel ${agg.label}: ${p} procent beheersing`}
             >
               <div style={{ width: `${p ?? 0}%`, background: barColor(p) }} />
             </div>
@@ -218,7 +249,10 @@ function CrossWidgetGoals({ items }: { items: { widget: Widget; subs: Submission
               <thead>
                 <tr>
                   <th>Leerling</th>
-                  {goalNames.map((g) => <th key={g}>{g}</th>)}
+                  {goalNames.map((g) => {
+                    const agg = goals.get(g)!;
+                    return <th key={g} title={agg.label}>{agg.code ?? agg.label}</th>;
+                  })}
                 </tr>
               </thead>
               <tbody>

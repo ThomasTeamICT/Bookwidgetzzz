@@ -7,7 +7,7 @@
 // Elke actie toont ALTIJD eerst een voorstel; pas bij "Toepassen" krijgt de
 // aanroeper de volledige nieuwe config via onApply(config, samenvatting).
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type {
   GapQuestion, MCQuestion, MultiQuestion, Question, VideoCheckpoint, Widget, WidgetTypeId,
@@ -19,6 +19,7 @@ import {
   sanitizeQuestion, sanitizeQuestions,
 } from '../lib/aiWidgetGen';
 import { uid } from '../lib/utils';
+import { getCurricula, normalizeGoalCode } from '../lib/curriculum';
 import { getTypeDef } from '../widgets/registry';
 import { Field, EmptyState, Modal, useToast } from './ui';
 import { AIErrorBox, AIGate, AIReviewNote, AIWorkingBox } from './aiCommon';
@@ -300,7 +301,7 @@ export function AIEditorPanel({ widget, onClose, onApply }: {
   const questions: Question[] = Array.isArray(cfg.questions) ? (cfg.questions as Question[]) : [];
   const mcqs = questions.filter((q): q is MCQuestion | MultiQuestion => q.type === 'mc' || q.type === 'multi');
 
-  const [mode, setMode] = useState<'menu' | 'form-questions' | 'form-items' | 'form-video'>('menu');
+  const [mode, setMode] = useState<'menu' | 'form-questions' | 'form-items' | 'form-video' | 'form-goals'>('menu');
   const [busy, setBusy] = useState(false);
   const [stream, setStream] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -314,6 +315,10 @@ export function AIEditorPanel({ widget, onClose, onApply }: {
   const [source, setSource] = useState(() =>
     widget.type === 'splitworksheet' ? str(asRec(asRec(widget.config).source).text) : ''
   );
+
+  // Formulier "koppel aan leerplandoelen"
+  const curricula = useMemo(() => getCurricula(), []);
+  const [goalCurriculumId, setGoalCurriculumId] = useState(() => widget.curriculumId ?? '');
 
   useEffect(() => () => ctrlRef.current?.abort(), []);
 
@@ -642,6 +647,131 @@ ${payload}`;
     });
   }
 
+  // ── Actie 5: vragen aan leerplandoelen koppelen ───────────────────────────
+
+  function runGoalLink() {
+    const curriculum = curricula.find((c) => c.id === goalCurriculumId);
+    if (!curriculum || curriculum.goals.length === 0) {
+      setError('Kies eerst een leerplan dat doelen bevat.');
+      return;
+    }
+    const targets = questions.filter((q) => q.type !== 'info');
+    if (targets.length === 0) return;
+    // Zelfde afspraak als bij de andere acties: afbeeldingen gaan niet mee.
+    const payload = JSON.stringify(
+      {
+        questions: targets.map((q) => ({
+          id: q.id,
+          type: q.type,
+          prompt: q.prompt,
+          ...(q.type === 'gap' ? { text: (q as GapQuestion).text } : {}),
+          ...(q.type === 'mc' || q.type === 'multi'
+            ? { options: (q as MCQuestion | MultiQuestion).options }
+            : {}),
+          ...(q.goal ? { goal: q.goal } : {}),
+        })),
+      },
+      (key, value) => {
+        if (key === 'imageUrl' || key === 'image') return undefined;
+        if (isMediaUrl(value)) return '[afbeelding]';
+        return value;
+      }
+    );
+    const doelen = curriculum.goals.map((g) => `- ${g.code}: ${g.text}`).join('\n');
+    const system = `Je bent een ervaren Vlaamse leerkracht die vragen aan leerplandoelen koppelt.
+Je verandert NOOIT de vragen zelf. Antwoord met ALLEEN geldige JSON (geen uitleg, geen markdown).`;
+    const prompt = `Koppel elke vraag hieronder aan HOOGSTENS één leerplandoel.
+Regels:
+- Gebruik EXACT dezelfde "id"-waarden als in de invoer.
+- "goalCode" is LETTERLIJK een code uit de lijst hieronder. Verzin nooit een code.
+- Past geen enkel doel echt bij een vraag, laat die vraag dan gewoon weg uit je antwoord.
+- Liever niets dan een gezochte koppeling: de leerkracht rapporteert hierop.
+Antwoord met ALLEEN JSON: {"koppelingen":[{"id":"…","goalCode":"…"}]}
+
+=== LEERPLANDOELEN (${curriculum.title}) ===
+${doelen}
+
+=== VRAGEN (JSON) ===
+${payload}`;
+
+    runAI('vragen aan leerplandoelen koppelen', system, prompt, (full) => {
+      const json = extractJson(full);
+      const o = asRec(json);
+      const arr = Array.isArray(json)
+        ? json
+        : Array.isArray(o.koppelingen)
+          ? o.koppelingen
+          : Array.isArray(o.questions)
+            ? o.questions
+            : [];
+      // Alleen codes die écht in dit leerplan staan; de originele schrijfwijze wint.
+      const allowed = new Map(curriculum.goals.map((g) => [normalizeGoalCode(g.code), g.code]));
+      const wanted = new Map<string, string>();
+      let invalid = 0;
+      for (const it of arr) {
+        const r = asRec(it);
+        const id = str(r.id);
+        const raw = str(r.goalCode ?? r.code).trim();
+        if (!id || !raw) continue;
+        const code = allowed.get(normalizeGoalCode(raw));
+        if (!code) {
+          invalid++;
+          continue;
+        }
+        wanted.set(id, code);
+      }
+
+      const rows: React.ReactNode[] = [];
+      let changed = 0;
+      const newQuestions = questions.map((q) => {
+        const code = wanted.get(q.id);
+        if (!code || q.type === 'info') return q;
+        if (q.goalCode && normalizeGoalCode(q.goalCode) === normalizeGoalCode(code)) return q;
+        changed++;
+        const goalText = curriculum.goals.find((g) => normalizeGoalCode(g.code) === normalizeGoalCode(code))?.text ?? '';
+        rows.push(
+          <PreviewCard key={q.id}>
+            <strong style={{ fontWeight: 600 }}>{q.prompt || (q.type === 'gap' ? (q as GapQuestion).text : '')}</strong>
+            <span className="hint">
+              🎯 <strong>{code}</strong> — {shortText(goalText, 110)}
+              {q.goalCode ? ` (was ${q.goalCode})` : ''}
+            </span>
+          </PreviewCard>
+        );
+        return { ...q, goalCode: code } as Question;
+      });
+
+      if (changed === 0) {
+        throw new AIError(
+          invalid > 0
+            ? 'De AI stelde alleen codes voor die niet in dit leerplan staan. Probeer het opnieuw of kies een ander leerplan.'
+            : 'De AI vond geen passende leerplandoelen bij deze vragen. Probeer het opnieuw of kies een ander leerplan.'
+        );
+      }
+
+      const warnings: string[] = [];
+      if (invalid > 0) {
+        warnings.push(
+          `${invalid} voorgestelde ${invalid === 1 ? 'code stond' : 'codes stonden'} niet in dit leerplan en ${invalid === 1 ? 'is' : 'zijn'} genegeerd.`
+        );
+      }
+      const untagged = newQuestions.filter((q) => q.type !== 'info' && !q.goalCode).length;
+      if (untagged > 0) {
+        warnings.push(`${untagged} ${untagged === 1 ? 'vraag blijft' : 'vragen blijven'} zonder doelcode — die tellen niet mee in de score per leerplandoel.`);
+      }
+      if (widget.curriculumId !== curriculum.id) {
+        warnings.push(`Zet “${curriculum.title}” daarna ook als leerplan van deze widget bij de instellingen, zodat de doeltekst overal meegetoond wordt.`);
+      }
+
+      return {
+        config: { ...cfg, questions: newQuestions },
+        summary: `${changed} ${changed === 1 ? 'vraag' : 'vragen'} aan een leerplandoel gekoppeld`,
+        details: <>{rows}</>,
+        warnings,
+      };
+    });
+  }
+
   // ── Actie: items bijmaken (niet-quiz genereerbare types) ──────────────────
 
   function runAddItems() {
@@ -919,6 +1049,50 @@ ${source.trim()}
         </div>
       </div>
     );
+  } else if (mode === 'form-goals') {
+    const curriculum = curricula.find((c) => c.id === goalCurriculumId);
+    const taggable = questions.filter((q) => q.type !== 'info');
+    body = (
+      <div style={{ display: 'grid', gap: 4 }}>
+        <div>
+          <button className="btn btn-sm btn-quiet" onClick={() => setMode('menu')}>← Terug</button>
+        </div>
+        <h3 style={{ margin: '4px 0 10px' }}>🎯 Vragen aan leerplandoelen koppelen</h3>
+        <p className="hint" style={{ marginTop: 0 }}>
+          De AI krijgt je {taggable.length} {taggable.length === 1 ? 'vraag' : 'vragen'} (zonder afbeeldingen) en de
+          doelenlijst van het gekozen leerplan. Ze mag alleen codes uit die lijst gebruiken — alle andere worden
+          weggegooid. Je ziet het voorstel eerst.
+        </p>
+        <Field label="Leerplan" hint="De doelen van dit leerplan zijn de enige codes die de AI mag gebruiken.">
+          <select
+            className="select"
+            value={goalCurriculumId}
+            onChange={(e) => setGoalCurriculumId(e.target.value)}
+          >
+            <option value="">Kies een leerplan…</option>
+            {curricula.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.title} — {c.subject}, {c.level} ({c.goals.length} doelen)
+              </option>
+            ))}
+          </select>
+        </Field>
+        {curriculum && curriculum.goals.length === 0 && (
+          <p className="hint" style={{ color: 'var(--warn)' }}>
+            ⚠️ Dit leerplan bevat nog geen doelen. Vul het eerst aan bij <Link to="/leerplannen">Leerplannen</Link>.
+          </p>
+        )}
+        <div>
+          <button
+            className="btn btn-primary"
+            disabled={!curriculum || curriculum.goals.length === 0 || taggable.length === 0}
+            onClick={runGoalLink}
+          >
+            ✨ Voorstel maken
+          </button>
+        </div>
+      </div>
+    );
   } else if (mode === 'form-questions' || mode === 'form-items') {
     const forQuestions = mode === 'form-questions';
     body = (
@@ -1005,6 +1179,18 @@ ${source.trim()}
               onClick={runDistractors}
               disabled={mcqs.length === 0}
               disabledHint="Geen meerkeuzevragen in deze widget."
+            />
+            <ActionCard
+              icon="🎯"
+              title="Koppel vragen aan leerplandoelen"
+              desc="Hangt aan elke vraag een doelcode uit je leerplan — de basis voor score per leerplandoel."
+              onClick={() => setMode('form-goals')}
+              disabled={realQuestions.length === 0 || curricula.length === 0}
+              disabledHint={
+                curricula.length === 0
+                  ? 'Nog geen leerplan op dit toestel — voeg er eerst een toe bij Leerplannen.'
+                  : 'Nog geen vragen om te koppelen.'
+              }
             />
           </>
         ) : isVideoQuiz ? (

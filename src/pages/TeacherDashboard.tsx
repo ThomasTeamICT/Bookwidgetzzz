@@ -116,9 +116,12 @@ export function TeacherDashboard() {
           <p className="sub">{widgets.length} widget{widgets.length === 1 ? '' : 's'} · alles lokaal opgeslagen in deze browser</p>
         </div>
         <div className="page-head-actions">
-          <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>📥 Importeren</button>
+          <button className="btn btn-ghost" onClick={() => fileRef.current?.click()} title="Een widget of vakgroeppakket uit een json-bestand">📥 Importeren</button>
           <input ref={fileRef} type="file" accept="application/json,.json" hidden
             onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f); e.target.value = ''; }} />
+          <Link to="/importeren" className="btn btn-ghost" title="Tekst uit een Word-document, pdf of webpagina halen en er materiaal van maken">
+            📄 Uit docx/pdf/tekst
+          </Link>
           <Link to="/ai-studio" className="btn btn-ai" title="Widgets laten maken vanuit je bronmateriaal">✨ Maak met AI</Link>
           <Link to="/nieuw" className="btn btn-primary">+ Nieuwe widget</Link>
         </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getSubmissions, getWidget, saveWidget } from '../lib/storage';
 import { getTypeDef } from '../widgets/registry';
+import { getCurricula } from '../lib/curriculum';
 import type { Widget } from '../lib/types';
 import { CheckRow, Field, Modal, useToast } from '../components/ui';
 import { ShareModal } from '../components/ShareModal';
@@ -280,6 +281,7 @@ function SettingsPanel({ widget, onChange }: { widget: Widget; onChange: (w: Wid
         <textarea className="textarea" rows={2} value={s.instructions} placeholder="bv. Je mag je woordenboek gebruiken."
           onChange={(e) => set({ instructions: e.target.value })} />
       </Field>
+      <CurriculumField widget={widget} onChange={onChange} />
 
       <hr className="divider" />
       <h3>Gedrag</h3>
@@ -329,5 +331,34 @@ function SettingsPanel({ widget, onChange }: { widget: Widget; onChange: (w: Wid
         </div>
       </Field>
     </div>
+  );
+}
+
+/**
+ * Leerplan van deze widget. De vragen dragen een doelcode (goalCode); dit veld
+ * zegt uit wélke doelenlijst die codes komen, zodat de resultaten de doeltekst
+ * kunnen tonen in plaats van alleen de code.
+ */
+function CurriculumField({ widget, onChange }: { widget: Widget; onChange: (w: Widget) => void }) {
+  const curricula = useMemo(() => getCurricula(), []);
+  if (curricula.length === 0) return null;
+  return (
+    <Field
+      label="Leerplan (optioneel)"
+      hint="Bepaalt bij welke doelenlijst de doelcodes van je vragen horen — je ziet de doeltekst dan overal mee."
+    >
+      <select
+        className="select"
+        value={widget.curriculumId ?? ''}
+        onChange={(e) => onChange({ ...widget, curriculumId: e.target.value || undefined })}
+      >
+        <option value="">Geen leerplan</option>
+        {curricula.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.title} — {c.subject}, {c.level}
+          </option>
+        ))}
+      </select>
+    </Field>
   );
 }

@@ -11,6 +11,7 @@ import type {
   Question, QuestionType, Widget, WidgetTypeId, QuizConfig,
 } from './types';
 import { uid } from './utils';
+import { normalizeGoalCode } from './curriculum';
 import { createWidget, getTypeDef } from '../widgets/registry';
 
 // ── Welke types kan de AI zinvol genereren? ─────────────────────────────────
@@ -47,7 +48,8 @@ const QUESTION_DOC = `Een "vraag" is een JSON-object met "type" en "prompt" plus
 Genereer NOOIT vragen van het type "rating", "upload" of "imagepoint": die vereisen een mening, een ingeleverd bestand of een afbeelding en kunnen niet zinvol door jou ingevuld worden.
 Elke vraag mag ook hebben: "points" (getal, standaard 1), "explanation" (uitleg bij feedback),
 "hints" (oplopende hulpstapjes: eerst strategie, dan aanwijzing, max 3),
-"goal" (kort leerdoel), "level" ("basis"|"kern"|"uitbreiding"), "support" (eenvoudiger geformuleerde versie van de vraag).`;
+"goal" (kort leerdoel in eigen woorden), "level" ("basis"|"kern"|"uitbreiding"), "support" (eenvoudiger geformuleerde versie van de vraag),
+"goalCode" (UITSLUITEND een code die letterlijk in de meegegeven lijst leerplandoelen staat; is er geen lijst of past geen enkel doel, laat het veld dan weg — verzin nooit een code).`;
 
 const SCHEMA_DOCS: Partial<Record<WidgetTypeId, string>> = {
   quiz: `"quiz" — config: {"questions":[vraag,…],"layout":"single","glossary":[{"term":"…","uitleg":"…"}]}
@@ -93,6 +95,12 @@ export interface WidgetGenRequest {
   audience?: string;
   /** Leerdoelen om vragen aan te koppelen (vrije tekst). */
   goals?: string;
+  /**
+   * Leerplandoelen met hun code (lib/curriculum.ts). De AI mag "goalCode"
+   * alleen met een code uit déze lijst invullen; zo blijft de koppeling tussen
+   * vraag, resultaat en leerplan betrouwbaar.
+   */
+  goalCodes?: { code: string; text: string }[];
   /** Ook differentiatie meenemen (hints, steuntaal, niveaus)? */
   differentiate?: boolean;
 }
@@ -114,6 +122,13 @@ Kwaliteitsregels:
   if (req.audience?.trim()) parts.push(`Doelgroep: ${req.audience.trim()}`);
   if (req.itemCount && req.itemCount > 0) parts.push(`Richtaantal vragen/items per widget: ${req.itemCount}.`);
   if (req.goals?.trim()) parts.push(`Koppel vragen waar mogelijk aan deze leerdoelen (vul het veld "goal" in):\n${req.goals.trim()}`);
+  if (req.goalCodes && req.goalCodes.length > 0) {
+    parts.push(
+      `Leerplandoelen: koppel elke vraag aan HOOGSTENS één doel hieronder via het veld "goalCode".\n` +
+        `Gebruik de code exact zoals ze hier staat; past geen enkel doel, laat "goalCode" dan weg. Verzin nooit een code.\n` +
+        req.goalCodes.map((g) => `- ${g.code}: ${g.text}`).join('\n')
+    );
+  }
   if (req.differentiate) {
     parts.push(`Differentiatie: geef bij elke vraag "hints" (max 3 oplopende hulpstapjes: strategie → aanwijzing → bijna-antwoord), een "support"-versie in eenvoudiger taal, en tag vragen met "level" (basis/kern/uitbreiding).`);
   }
@@ -158,8 +173,32 @@ function mapOptions(raw: unknown): { options: string[]; map: Map<number, number>
   return { options, map };
 }
 
+/** Opties die de sanering strenger maken dan de AI zelf is. */
+export interface SanitizeOptions {
+  /**
+   * Toegelaten leerplandoelcodes. Staat er een lijst, dan wordt elke andere
+   * (verzonnen of verkeerd overgeschreven) code weggelaten — liever geen
+   * koppeling dan een koppeling naar een doel dat niet bestaat. Zonder lijst
+   * blijft een code staan zoals ze binnenkwam, genormaliseerd.
+   */
+  allowedGoalCodes?: string[];
+}
+
+/** Doelcode overnemen, maar alleen als ze binnen de toegelaten lijst valt. */
+function pickGoalCode(raw: unknown, opts?: SanitizeOptions): string | undefined {
+  const value = str(raw).trim();
+  if (!value) return undefined;
+  const code = normalizeGoalCode(value);
+  const allowed = opts?.allowedGoalCodes;
+  if (allowed && allowed.length > 0) {
+    const ok = allowed.some((c) => normalizeGoalCode(c) === code);
+    if (!ok) return undefined;
+  }
+  return code;
+}
+
 /** Zet één AI-vraag om naar een geldige Question, of null als het niet lukt. */
-export function sanitizeQuestion(raw: unknown): Question | null {
+export function sanitizeQuestion(raw: unknown, opts?: SanitizeOptions): Question | null {
   if (!raw || typeof raw !== 'object') return null;
   const q = raw as Record<string, unknown>;
   const type = str(q.type) as QuestionType;
@@ -176,6 +215,7 @@ export function sanitizeQuestion(raw: unknown): Question | null {
     hint: str(q.hint) || undefined,
     hints: strArr(q.hints).slice(0, 3),
     goal: str(q.goal).trim() || undefined,
+    goalCode: pickGoalCode(q.goalCode ?? q.goalcode ?? q.leerplandoel, opts),
     level: (['basis', 'kern', 'uitbreiding'] as const).find((l) => l === q.level),
     support: str(q.support) || undefined,
   };
@@ -342,9 +382,9 @@ export function sanitizeQuestion(raw: unknown): Question | null {
   }
 }
 
-export function sanitizeQuestions(raw: unknown): Question[] {
+export function sanitizeQuestions(raw: unknown, opts?: SanitizeOptions): Question[] {
   if (!Array.isArray(raw)) return [];
-  return raw.map(sanitizeQuestion).filter((q): q is Question => q !== null);
+  return raw.map((r) => sanitizeQuestion(r, opts)).filter((q): q is Question => q !== null);
 }
 
 function sanitizeGlossary(raw: unknown): { term: string; uitleg: string }[] | undefined {
@@ -375,14 +415,14 @@ function puzzleWord(w: string): string {
     .slice(0, 15);
 }
 
-type ConfigSanitizer = (cfg: Record<string, unknown>) => Record<string, unknown> | null;
+type ConfigSanitizer = (cfg: Record<string, unknown>, opts: SanitizeOptions) => Record<string, unknown> | null;
 
 const CONFIG_SANITIZERS: Partial<Record<WidgetTypeId, ConfigSanitizer>> = {
-  quiz: (c) => quizFamily(c, 'single'),
-  worksheet: (c) => quizFamily(c, 'scroll'),
-  exitticket: (c) => quizFamily(c, 'single'),
-  splitworksheet: (c) => {
-    const questions = sanitizeQuestions(c.questions);
+  quiz: (c, o) => quizFamily(c, 'single', o),
+  worksheet: (c, o) => quizFamily(c, 'scroll', o),
+  exitticket: (c, o) => quizFamily(c, 'single', o),
+  splitworksheet: (c, o) => {
+    const questions = sanitizeQuestions(c.questions, o);
     const s = (c.source && typeof c.source === 'object' ? c.source : {}) as Record<string, unknown>;
     const text = str(s.text ?? c.text);
     if (questions.length === 0 || !text.trim()) return null;
@@ -557,8 +597,12 @@ const CONFIG_SANITIZERS: Partial<Record<WidgetTypeId, ConfigSanitizer>> = {
   },
 };
 
-function quizFamily(c: Record<string, unknown>, layout: 'single' | 'scroll'): Record<string, unknown> | null {
-  const questions = sanitizeQuestions(c.questions);
+function quizFamily(
+  c: Record<string, unknown>,
+  layout: 'single' | 'scroll',
+  opts?: SanitizeOptions
+): Record<string, unknown> | null {
+  const questions = sanitizeQuestions(c.questions, opts);
   if (questions.length === 0) return null;
   const cfg: QuizConfig = {
     questions,
@@ -580,7 +624,7 @@ export interface GeneratedResult {
  * Zet de JSON-envelop van de AI om naar échte, opslaanbare widgets.
  * Ongeldige onderdelen worden overgeslagen met een leesbare waarschuwing.
  */
-export function sanitizeGeneratedWidgets(raw: unknown): GeneratedResult {
+export function sanitizeGeneratedWidgets(raw: unknown, opts: SanitizeOptions = {}): GeneratedResult {
   const warnings: string[] = [];
   const list = Array.isArray(raw)
     ? raw
@@ -601,7 +645,7 @@ export function sanitizeGeneratedWidgets(raw: unknown): GeneratedResult {
     }
     const rawCfg = (w.config && typeof w.config === 'object' ? w.config : {}) as Record<string, unknown>;
     const sanitizer = CONFIG_SANITIZERS[type];
-    const cfg = sanitizer ? sanitizer(rawCfg) : null;
+    const cfg = sanitizer ? sanitizer(rawCfg, opts) : null;
     if (!cfg) {
       warnings.push(`De inhoud van de ${getTypeDef(type).name.toLowerCase()} was onvolledig en is overgeslagen.`);
       continue;

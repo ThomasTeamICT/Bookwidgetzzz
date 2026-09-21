@@ -8,6 +8,7 @@ import { csvCell, downloadFile, formatDate, formatDuration, normalizeAnswer, pct
 import { ConfirmModal, EmptyState, Modal, ScoreRing, useToast } from '../components/ui';
 import { gradeQuestion } from '../lib/grading';
 import { decodeSubmission } from '../lib/share';
+import { goalLabel, normalizeGoalCode } from '../lib/curriculum';
 import { isRenderableMedia } from '../lib/mediaStore';
 import { uid } from '../lib/utils';
 import { askAI, hasAIKey } from '../lib/ai';
@@ -1089,16 +1090,54 @@ function DistractorBars({ q, subs }: { q: Question; subs: Submission[] }) {
   );
 }
 
-/** Aggregatie per leerdoel + heatmap leerlingen × doelen. */
+/**
+ * Aggregatie per leerdoel + heatmap leerlingen × doelen.
+ *
+ * Een vraag hangt bij voorkeur aan een leerplandoel (goalCode): dat is de code
+ * die overal in de app dezelfde betekenis heeft. Staat er geen code, dan valt
+ * de vraag terug op de vrije doel-tag (goal), zodat oudere widgets blijven
+ * rapporteren zoals voorheen. Beide soorten staan naast elkaar in dezelfde
+ * tabel; bij een code tonen we de doeltekst uit het leerplan.
+ */
+interface GoalRow {
+  /** Unieke sleutel: "code:NW 2.3" of "vrij:Werkwoordspelling". */
+  key: string;
+  /** De leerplancode, of null bij een vrije doel-tag. */
+  code: string | null;
+  /** Wat de leerkracht leest. */
+  label: string;
+}
+
+/** Aan welk doel telt deze vraag mee? Leerplancode gaat vóór de vrije tag. */
+function goalKeyOf(q: Question): string | null {
+  if (q.goalCode?.trim()) return `code:${normalizeGoalCode(q.goalCode)}`;
+  if (q.goal?.trim()) return `vrij:${q.goal.trim()}`;
+  return null;
+}
+
+function goalRowsOf(questions: Question[], curriculumId?: string): GoalRow[] {
+  const rows: GoalRow[] = [];
+  const seen = new Set<string>();
+  for (const q of questions) {
+    const key = goalKeyOf(q);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const rest = key.slice(5); // "code:" en "vrij:" zijn allebei 5 tekens
+    const code = key.startsWith('code:') ? rest : null;
+    rows.push({ key, code, label: code ? goalLabel(code, curriculumId) : rest });
+  }
+  return rows;
+}
+
 function GoalStats({ widget, subs }: { widget: Widget; subs: Submission[] }) {
   const questions = (widget.config as QuizConfig).questions.filter((q) => q.type !== 'info');
-  const goals = [...new Set(questions.map((q) => q.goal?.trim()).filter((g): g is string => !!g))];
+  const goals = goalRowsOf(questions, widget.curriculumId);
   if (goals.length === 0 || subs.length === 0) return null;
 
-  const scoreFor = (s: Submission, goal: string) => {
+  const scoreFor = (s: Submission, key: string) => {
     let earned = 0, max = 0;
     for (const q of questions) {
-      if (q.goal?.trim() !== goal) continue;
+      if (goalKeyOf(q) !== key) continue;
       if (s.itemScores && !(q.id in s.itemScores)) continue;
       const sc = s.itemScores?.[q.id] ?? gradeQuestion(q, s.answers[q.id]);
       if (sc.mode === 'pending') continue;
@@ -1115,13 +1154,16 @@ function GoalStats({ widget, subs }: { widget: Widget; subs: Submission[] }) {
   return (
     <div className="card card-pad" style={{ marginBottom: 14 }}>
       <h3>🎯 Beheersing per leerdoel</h3>
-      {goals.map((goal) => {
-        const ps = subs.map((s) => scoreFor(s, goal)).filter((p): p is number => p !== null);
+      {goals.map((g) => {
+        const ps = subs.map((s) => scoreFor(s, g.key)).filter((p): p is number => p !== null);
         const avg = ps.length > 0 ? Math.round(ps.reduce((a, b) => a + b, 0) / ps.length) : null;
         return (
-          <div key={goal} style={{ marginBottom: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, marginBottom: 3 }}>
-              <span>{goal}</span>
+          <div key={g.key} style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontWeight: 600, marginBottom: 3 }}>
+              <span>
+                {g.code && <span className="badge badge-brand" style={{ marginRight: 6 }}>leerplan</span>}
+                {g.label}
+              </span>
               <span style={{ color: avg === null ? 'var(--text-faint)' : cellText(avg) }}>{avg === null ? '—' : `${avg}% gem.`}</span>
             </div>
             <div className="progressbar">
@@ -1139,7 +1181,7 @@ function GoalStats({ widget, subs }: { widget: Widget; subs: Submission[] }) {
             <thead>
               <tr>
                 <th>Leerling</th>
-                {goals.map((g) => <th key={g}>{g}</th>)}
+                {goals.map((g) => <th key={g.key} title={g.label}>{g.code ?? g.label}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -1147,9 +1189,9 @@ function GoalStats({ widget, subs }: { widget: Widget; subs: Submission[] }) {
                 <tr key={s.id} style={{ cursor: 'default' }}>
                   <td><strong>{s.studentName}</strong></td>
                   {goals.map((g) => {
-                    const p = scoreFor(s, g);
+                    const p = scoreFor(s, g.key);
                     return (
-                      <td key={g} style={{ background: cellColor(p), color: cellText(p), fontWeight: 700, textAlign: 'center' }}>
+                      <td key={g.key} style={{ background: cellColor(p), color: cellText(p), fontWeight: 700, textAlign: 'center' }}>
                         {p === null ? '—' : `${p}%`}
                       </td>
                     );
