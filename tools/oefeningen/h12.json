@@ -1,0 +1,324 @@
+{
+  "hoofdstuk": "12",
+  "oefeningen": [
+    {
+      "sectie": "1.2",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: krachten herkennen en indelen",
+      "toelichting": "Vijf vragen waarin je krachten in alledaagse situaties herkent en indeelt.",
+      "config": {
+        "questions": [
+          {
+            "type": "sort",
+            "prompt": "Sleep elke kracht naar de juiste groep. Moeten de voorwerpen elkaar aanraken of niet?",
+            "categories": ["Contactkracht", "Kracht-op-afstand"],
+            "items": [
+              { "text": "de duwkracht waarmee je een winkelkar voortduwt", "category": "Contactkracht" },
+              { "text": "de wrijving tussen je fietsbanden en het wegdek", "category": "Contactkracht" },
+              { "text": "de veerkracht van een trampolinedoek onder je voeten", "category": "Contactkracht" },
+              { "text": "de trekkracht van twee teams aan een touw", "category": "Contactkracht" },
+              { "text": "de zwaartekracht die regendruppels naar beneden doet vallen", "category": "Kracht-op-afstand" },
+              { "text": "de kracht waarmee een magneet een paperclip optilt", "category": "Kracht-op-afstand" }
+            ],
+            "hint": "Vraag je af: raken de twee voorwerpen elkaar aan op het moment dat de kracht werkt?",
+            "explanation": "Een contactkracht werkt alleen als de voorwerpen elkaar aanraken: duwen, trekken, wrijving en veerkracht. Zwaartekracht en magnetische kracht werken ook over een afstand, zonder aanraking."
+          },
+          {
+            "type": "mc",
+            "prompt": "Je knijpt hard in een spons. Welk effect van een kracht zie je hier?",
+            "options": [
+              "Het voorwerp verandert van vorm.",
+              "Het voorwerp verandert van beweging.",
+              "Het voorwerp verandert van massa.",
+              "Het voorwerp verandert van kleur."
+            ],
+            "correctIndex": 0,
+            "explanation": "Een kracht kan twee dingen doen: de beweging van een voorwerp veranderen of het voorwerp vervormen. De spons blijft liggen waar hij ligt, maar wordt platter: dat is een vormverandering."
+          },
+          {
+            "type": "multi",
+            "prompt": "Wat kan een kracht met een voorwerp doen? Duid alle juiste antwoorden aan.",
+            "options": [
+              "een stilstaande bal doen wegrollen",
+              "een rijdende fiets doen vertragen",
+              "een spons platter maken",
+              "de kleur van een voorwerp veranderen",
+              "een voorwerp laten verdwijnen"
+            ],
+            "correctIndices": [0, 1, 2],
+            "explanation": "Krachten laten voorwerpen bewegen, stoppen, van richting veranderen of van vorm veranderen. Kleur veranderen of iets laten verdwijnen kan een kracht niet."
+          },
+          {
+            "type": "marktext",
+            "prompt": "Duid in dit verhaal alle woorden aan die een kracht benoemen.",
+            "text": "Tim trekt zijn schoenen aan met [spierkracht]. Hij springt op de trampoline, die hem met [veerkracht] weer omhoog duwt. Daarna valt hij terug naar beneden door de [zwaartekracht]. Op het natte pad remt hij af dankzij de [wrijvingskracht] tussen zijn zolen en de grond. Zijn sleutel blijft aan de koelkastdeur hangen door een [magnetische] kracht.",
+            "penalizeWrong": false,
+            "explanation": "Spierkracht, veerkracht en wrijvingskracht zijn contactkrachten. Zwaartekracht en magnetische kracht werken over een afstand."
+          },
+          {
+            "type": "tf",
+            "prompt": "De wrijvingskracht werkt in dezelfde zin als de beweging en maakt een voorwerp dus sneller.",
+            "answer": false,
+            "explanation": "Wrijving werkt altijd tegengesteld aan de bewegingsrichting: ze remt de beweging af. Daarom sta je stil als je stopt met trappen op je fiets."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "2.",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: krachten tekenen met een pijl",
+      "toelichting": "Vier vragen over het aangrijpingspunt, de richting, de zin en de grootte van een krachtpijl.",
+      "config": {
+        "questions": [
+          {
+            "type": "table",
+            "prompt": "Je duwt met je hand een doos horizontaal naar rechts over de tafel. Je tekent die duwkracht als een pijl. Vul voor elk kenmerk in wat je in die tekening ziet.",
+            "columns": ["Kenmerk van de krachtpijl", "In deze tekening"],
+            "rows": [
+              {
+                "cells": ["Aangrijpingspunt", ""],
+                "answers": [null, "de zijkant van de doos waar je hand duwt"]
+              },
+              {
+                "cells": ["Richting", ""],
+                "answers": [null, "horizontaal"]
+              },
+              {
+                "cells": ["Zin", ""],
+                "answers": [null, "naar rechts"]
+              },
+              {
+                "cells": ["Grootte", ""],
+                "answers": [null, "de lengte van de pijl"]
+              }
+            ],
+            "hint": "Waar begint de pijl, langs welke lijn ligt hij, welke kant wijst hij op, en waaraan zie je hoe sterk de kracht is?",
+            "explanation": "Het aangrijpingspunt is het punt op het voorwerp waar de kracht werkt, de richting is de lijn waarlangs ze werkt, de zin is de kant waarheen de pijl wijst, en de grootte lees je af aan de lengte van de pijl."
+          },
+          {
+            "type": "mc",
+            "prompt": "Op een tekening is krachtpijl A 2 cm lang en krachtpijl B 6 cm lang. Beide pijlen zijn met dezelfde schaal getekend. Wat betekent dat?",
+            "options": [
+              "De kracht van B is groter dan de kracht van A.",
+              "De kracht van B duurt langer dan de kracht van A.",
+              "De kracht van B werkt op een zwaarder voorwerp.",
+              "A en B zijn even groot, alleen anders getekend."
+            ],
+            "correctIndex": 0,
+            "explanation": "De lengte van de pijl geeft de grootte van de kracht weer: hoe langer de pijl, hoe groter de kracht. B is drie keer zo lang, dus de kracht is drie keer zo groot."
+          },
+          {
+            "type": "number",
+            "prompt": "Op een tekening spreken we een schaal af: 1 cm komt overeen met 10 N. Hoe groot is een kracht die je met een pijl van 4,5 cm tekent? Geef je antwoord in newton (N).",
+            "answer": 45,
+            "tolerance": 0.5,
+            "hint": "Elke centimeter staat voor 10 N, dus vermenigvuldig de lengte met 10.",
+            "explanation": "4,5 cm × 10 N per cm = 45 N. De grootte van een kracht meet je in newton (N)."
+          },
+          {
+            "type": "dropdown",
+            "prompt": "Een lamp hangt stil aan een koord aan het plafond. Kies telkens het juiste woord.",
+            "text": "De zwaartekracht op de lamp heeft een verticale richting en een zin naar {beneden|boven|links}. De kracht van het koord heeft dezelfde richting, maar een zin naar {boven|beneden|rechts}. Omdat de lamp stil blijft hangen, zijn de twee pijlen {even lang|verschillend lang|even breed}.",
+            "shuffle": true,
+            "explanation": "De zwaartekracht trekt de lamp naar beneden, het koord trekt haar even hard omhoog. De lamp hangt stil, dus de krachten heffen elkaar op en de pijlen zijn even lang."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "3.",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: snelheid berekenen",
+      "toelichting": "Zes vragen waarin je zelf met de formule snelheid = afstand / tijd rekent.",
+      "config": {
+        "questions": [
+          {
+            "type": "gap",
+            "prompt": "Vul de formule voor de gemiddelde snelheid aan.",
+            "text": "snelheid = [afstand] / [tijd]",
+            "explanation": "Je deelt de afgelegde afstand door de tijd die je daarvoor nodig had. Zo weet je hoeveel afstand er per uur of per seconde wordt afgelegd."
+          },
+          {
+            "type": "number",
+            "prompt": "Een auto rijdt 150 kilometer in 3 uur. Bereken de gemiddelde snelheid in kilometer per uur (km/u).",
+            "answer": 50,
+            "tolerance": 0.5,
+            "hint": "Deel de afgelegde afstand door de tijd.",
+            "explanation": "snelheid = afstand / tijd = 150 km / 3 u = 50 km/u."
+          },
+          {
+            "type": "number",
+            "prompt": "Een sprinter legt 100 meter af in 20 seconden. Bereken zijn gemiddelde snelheid in meter per seconde (m/s).",
+            "answer": 5,
+            "tolerance": 0.1,
+            "hint": "In m/s reken je met meter en seconden: deel het aantal meter door het aantal seconden.",
+            "explanation": "snelheid = afstand / tijd = 100 m / 20 s = 5 m/s. Hij legt dus elke seconde 5 meter af."
+          },
+          {
+            "type": "mc",
+            "prompt": "Nora en Sam leggen allebei 12 km af. Nora doet er 1 uur over, Sam een half uur. Wie heeft de grootste gemiddelde snelheid, en hoe groot is die?",
+            "options": [
+              "Sam, met 24 km/u",
+              "Nora, met 24 km/u",
+              "Sam, met 12 km/u",
+              "Ze rijden even snel: allebei 12 km/u"
+            ],
+            "correctIndex": 0,
+            "hint": "Een half uur is 0,5 uur. Reken voor allebei afstand / tijd uit.",
+            "explanation": "Nora: 12 km / 1 u = 12 km/u. Sam: 12 km / 0,5 u = 24 km/u. Dezelfde afstand in de helft van de tijd betekent een dubbel zo grote snelheid."
+          },
+          {
+            "type": "number",
+            "prompt": "Een auto rijdt 2 uur lang met een gemiddelde snelheid van 90 km/u. Hoeveel kilometer (km) legt hij in die tijd af?",
+            "answer": 180,
+            "tolerance": 1,
+            "hint": "Per uur legt hij 90 km af. Hoeveel is dat in 2 uur?",
+            "explanation": "afstand = snelheid × tijd = 90 km/u × 2 u = 180 km."
+          },
+          {
+            "type": "tf",
+            "prompt": "Een voorwerp dat met een constante snelheid beweegt, versnelt niet en vertraagt niet: de krachten erop heffen elkaar op.",
+            "answer": true,
+            "explanation": "Bij een constante snelheid verandert er niets aan de beweging, dus heffen de krachten elkaar op. Verandert de snelheid wel, dan is er een nettokracht in het spel."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "worksheet",
+      "titel": "Werkblad: krachten in actie en snelheid berekenen",
+      "toelichting": "Vijf toepassingsvragen: je benoemt krachten in een situatie en rekent snelheden uit.",
+      "config": {
+        "questions": [
+          {
+            "type": "info",
+            "prompt": "**Handig om te weten bij dit werkblad**\n\n- Een kracht is een duw of een trek; ze kan de beweging of de vorm van een voorwerp veranderen.\n- Contactkracht = met aanraking (spierkracht, wrijving, veerkracht). Kracht-op-afstand = zonder aanraking (zwaartekracht, magnetische kracht).\n- snelheid = afstand / tijd. Let op de eenheden: km en uur geven km/u, meter en seconden geven m/s."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul de zinnen over krachten aan.",
+            "text": "Een kracht is een duw of een trek op een voorwerp. Een kracht kan een voorwerp van [beweging] doen veranderen of van [vorm] doen veranderen. De grootte van een kracht druk je uit in [newton].",
+            "explanation": "Dat zijn precies de twee effecten van een kracht. De eenheid van kracht is de newton, met symbool N."
+          },
+          {
+            "type": "number",
+            "prompt": "Sam wandelt van thuis naar school: 3,6 km in 45 minuten. Bereken zijn gemiddelde snelheid in km/u. (Tip: 45 minuten = 0,75 uur.)",
+            "answer": 4.8,
+            "tolerance": 0.1,
+            "hint": "Zet de tijd eerst om naar uren en deel dan de afstand door die tijd.",
+            "explanation": "snelheid = afstand / tijd = 3,6 km / 0,75 u = 4,8 km/u. Dat is een normale wandelsnelheid."
+          },
+          {
+            "type": "number",
+            "prompt": "Een trein legt 210 km af in 1,5 uur. Bereken de gemiddelde snelheid van de trein in km/u.",
+            "answer": 140,
+            "tolerance": 1,
+            "explanation": "snelheid = afstand / tijd = 210 km / 1,5 u = 140 km/u."
+          },
+          {
+            "type": "long",
+            "prompt": "Ella laat per ongeluk haar pen vallen. (a) Welke kracht zorgt ervoor dat de pen naar de grond valt? (b) Is dat een contactkracht of een kracht-op-afstand? Leg uit waarom.",
+            "modelAnswer": "(a) De zwaartekracht zorgt ervoor dat de pen valt. Dat is de aantrekkingskracht die de aarde op de pen uitoefent, altijd naar het centrum van de aarde toe. (b) Het is een kracht-op-afstand, want de aarde moet de pen niet aanraken om eraan te trekken. De pen valt ook terwijl er alleen lucht tussen zit.",
+            "rubric": [
+              { "criterion": "Benoemt de zwaartekracht als de kracht die de pen naar beneden trekt.", "points": 1 },
+              { "criterion": "Zegt dat het een kracht-op-afstand is en legt uit dat er geen aanraking nodig is.", "points": 1 }
+            ]
+          },
+          {
+            "type": "long",
+            "prompt": "Je fietst op een vlakke weg en stopt met trappen. Je fiets wordt trager en staat na een tijdje stil. Leg uit hoe dat komt. Noem de kracht en zeg in welke zin ze werkt.",
+            "modelAnswer": "Zodra je stopt met trappen, is er geen spierkracht meer die de fiets vooruit duwt. De wrijvingskracht blijft wel werken: wrijving tussen de banden en de weg en luchtweerstand tegen jou en de fiets. Die wrijvingskracht werkt altijd tegengesteld aan de bewegingsrichting, dus naar achteren. Daardoor wordt je snelheid steeds kleiner tot de fiets stilstaat.",
+            "rubric": [
+              { "criterion": "Benoemt de wrijvingskracht (banden op de weg en/of luchtweerstand) als oorzaak van het vertragen.", "points": 1 },
+              { "criterion": "Zegt dat die kracht tegengesteld aan de bewegingsrichting werkt en de beweging dus afremt.", "points": 1 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "exitticket",
+      "titel": "Exit-ticket: krachten en snelheid",
+      "toelichting": "Vier korte vragen om te checken of de kern van dit hoofdstuk is blijven hangen.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Welke van deze krachten is een kracht-op-afstand?",
+            "options": [
+              "de zwaartekracht op een vallende appel",
+              "de wrijvingskracht tussen je schoen en de grond",
+              "de spierkracht waarmee je een deur opentrekt",
+              "de veerkracht van een trampolinedoek"
+            ],
+            "correctIndex": 0,
+            "explanation": "De aarde moet de appel niet aanraken om eraan te trekken. De drie andere krachten werken alleen bij aanraking en zijn dus contactkrachten."
+          },
+          {
+            "type": "number",
+            "prompt": "Een bus rijdt 80 kilometer in 2 uur. Bereken de gemiddelde snelheid in km/u.",
+            "answer": 40,
+            "tolerance": 0.5,
+            "explanation": "snelheid = afstand / tijd = 80 km / 2 u = 40 km/u."
+          },
+          {
+            "type": "tf",
+            "prompt": "Op een tekening met een vaste schaal betekent een langere krachtpijl een grotere kracht.",
+            "answer": true,
+            "explanation": "De lengte van de pijl stelt de grootte van de kracht voor. De andere kenmerken zijn het aangrijpingspunt, de richting en de zin."
+          },
+          {
+            "type": "short",
+            "prompt": "Hoe noemen we de kracht die ontstaat als twee oppervlakken langs elkaar schuiven en die de beweging tegenwerkt?",
+            "accepted": ["wrijvingskracht", "wrijving", "de wrijvingskracht", "wrijvingskrachten"],
+            "explanation": "De wrijvingskracht werkt altijd tegen de bewegingsrichting in en remt af. Zonder wrijving zou je op de grond geen grip hebben."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "scramble",
+      "titel": "Zinnen op volgorde: krachten en snelheid",
+      "toelichting": "Sleep de woorden in de juiste volgorde tot je telkens een kloppende zin over krachten krijgt.",
+      "config": {
+        "mode": "sentence",
+        "items": [
+          {
+            "text": "Een kracht kan een voorwerp laten bewegen of van vorm laten veranderen.",
+            "hint": "De twee effecten die een kracht kan hebben."
+          },
+          {
+            "text": "De snelheid bereken je door de afstand te delen door de tijd.",
+            "hint": "De formule van snelheid in woorden."
+          },
+          {
+            "text": "De zwaartekracht trekt alles naar het centrum van de aarde.",
+            "hint": "Hierdoor vallen voorwerpen naar beneden."
+          },
+          {
+            "text": "De wrijvingskracht werkt altijd tegen de bewegingsrichting in.",
+            "hint": "Hierdoor komt je fiets vanzelf tot stilstand."
+          },
+          {
+            "text": "Hoe langer de krachtpijl is, hoe groter de kracht is.",
+            "hint": "Wat de lengte van een krachtpijl betekent."
+          },
+          {
+            "text": "Een magneet trekt een paperclip aan zonder hem aan te raken.",
+            "hint": "Een voorbeeld van een kracht-op-afstand."
+          }
+        ]
+      }
+    }
+  ]
+}

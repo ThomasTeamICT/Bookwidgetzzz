@@ -1,0 +1,341 @@
+{
+  "hoofdstuk": "10b",
+  "oefeningen": [
+    {
+      "sectie": "1.",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: de voortplantingsorganen en de cyclus",
+      "toelichting": "Zes vragen over de bouw en de taken van de voortplantingsorganen en over het verloop van de menstruatiecyclus.",
+      "config": {
+        "questions": [
+          {
+            "type": "sort",
+            "prompt": "Hoort dit orgaan bij het mannelijk of bij het vrouwelijk voortplantingsstelsel?",
+            "categories": ["Mannelijk voortplantingsstelsel", "Vrouwelijk voortplantingsstelsel"],
+            "items": [
+              { "text": "teelballen", "category": "Mannelijk voortplantingsstelsel" },
+              { "text": "bijbal", "category": "Mannelijk voortplantingsstelsel" },
+              { "text": "zaadleider", "category": "Mannelijk voortplantingsstelsel" },
+              { "text": "prostaat", "category": "Mannelijk voortplantingsstelsel" },
+              { "text": "eierstokken", "category": "Vrouwelijk voortplantingsstelsel" },
+              { "text": "eileiders", "category": "Vrouwelijk voortplantingsstelsel" },
+              { "text": "baarmoeder", "category": "Vrouwelijk voortplantingsstelsel" },
+              { "text": "vagina", "category": "Vrouwelijk voortplantingsstelsel" }
+            ],
+            "explanation": "Het mannelijk stelsel maakt en vervoert zaadcellen: teelballen, bijballen, zaadleiders, prostaat en zaadblaasjes, urinebuis en penis. Het vrouwelijk stelsel levert eicellen en laat een baby groeien: eierstokken, eileiders, baarmoeder met baarmoederhals en vagina."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waar vindt de bevruchting bij de mens meestal plaats?",
+            "options": ["in de eileider", "in de baarmoeder", "in de eierstok", "in de vagina"],
+            "correctIndex": 0,
+            "hint": "Het is de plaats waar de eicel na de eisprong wordt opgevangen.",
+            "explanation": "Na de eisprong vangt de trechter van de eileider de eicel op. Daar komen de zaadcellen haar tegen, dus in de eileider versmelten zaadcel en eicel meestal. Het bevruchte eitje reist daarna verder naar de baarmoeder."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom hangen de teelballen in de balzak, buiten het lichaam?",
+            "options": [
+              "Omdat zaadcellen het best gemaakt worden bij een iets lagere temperatuur dan 37 graden.",
+              "Omdat er binnenin de buik geen plaats meer is.",
+              "Omdat de zaadcellen zo sneller naar de penis kunnen zwemmen.",
+              "Omdat de teelballen zo de urine kunnen tegenhouden."
+            ],
+            "correctIndex": 0,
+            "explanation": "In de balzak is het ongeveer 34 graden in plaats van de 37 graden binnenin het lichaam. Bij die iets lagere temperatuur verloopt de aanmaak van zaadcellen het best."
+          },
+          {
+            "type": "order",
+            "prompt": "Zet de fasen van de menstruatiecyclus in de juiste volgorde, te beginnen bij dag 1.",
+            "items": [
+              "De menstruatie: het verdikte baarmoederslijmvlies wordt afgestoten (dag 1).",
+              "In een eierstok rijpt een nieuwe eicel en het baarmoederslijmvlies wordt weer dikker.",
+              "De eisprong: rond dag 14 komt de rijpe eicel vrij en wordt ze opgevangen door de eileider.",
+              "Er is geen bevruchting: de eicel sterft af en de hormonen dalen.",
+              "Het overtollige slijmvlies laat los en er begint een nieuwe menstruatie."
+            ],
+            "hint": "Dag 1 is de eerste dag van de menstruatie.",
+            "explanation": "Eerst de menstruatie, dan ongeveer twee weken rijpen van een eicel en opbouw van het slijmvlies, halverwege de eisprong, en als er geen bevruchting is, dalen de hormonen en begint alles opnieuw."
+          },
+          {
+            "type": "number",
+            "prompt": "Rond welke dag van de cyclus valt de eisprong bij een vrouw met een cyclus van 28 dagen?",
+            "answer": 14,
+            "tolerance": 1,
+            "explanation": "De eisprong valt ongeveer halverwege de cyclus, dus rond dag 14 bij een cyclus van 28 dagen. Bij een langere of kortere cyclus schuift dat moment mee."
+          },
+          {
+            "type": "tf",
+            "prompt": "Bij de man kunnen urine en sperma nooit tegelijk door de urinebuis naar buiten.",
+            "answer": true,
+            "explanation": "De urinebuis loopt door de penis en dient voor allebei, maar de prostaat regelt dat er bij een zaadlozing geen urine bij komt. Beide tegelijk kan dus niet."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "3.",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: puberteit en het ontstaan van nieuw leven",
+      "toelichting": "Vijf vragen over de veranderingen in de puberteit en over de weg van bevruchting tot innesteling.",
+      "config": {
+        "questions": [
+          {
+            "type": "multi",
+            "prompt": "Welke veranderingen komen in de puberteit bij zowel jongens als meisjes voor?",
+            "options": [
+              "een groeispurt",
+              "meer lichaamsbeharing, zoals schaamhaar en okselhaar",
+              "een vettere huid, waardoor er puistjes kunnen ontstaan",
+              "borstontwikkeling",
+              "een lagere stem door testosteron"
+            ],
+            "correctIndices": [0, 1, 2],
+            "explanation": "De groeispurt, meer beharing, een vettere huid en meer zweten komen bij beide voor. Borstontwikkeling hoort bij meisjes (oestrogenen), een lagere stem bij jongens (testosteron)."
+          },
+          {
+            "type": "sort",
+            "prompt": "Is dit een verandering die vooral bij jongens of vooral bij meisjes gebeurt?",
+            "categories": ["Vooral bij jongens", "Vooral bij meisjes"],
+            "items": [
+              { "text": "de teelballen beginnen zaadcellen te maken", "category": "Vooral bij jongens" },
+              { "text": "de stem wordt lager", "category": "Vooral bij jongens" },
+              { "text": "de schouders worden breder", "category": "Vooral bij jongens" },
+              { "text": "de borsten beginnen te groeien", "category": "Vooral bij meisjes" },
+              { "text": "de heupen worden breder en ronder", "category": "Vooral bij meisjes" },
+              { "text": "de eerste menstruatie komt", "category": "Vooral bij meisjes" }
+            ],
+            "explanation": "Testosteron uit de teelballen zorgt bij jongens voor zaadcelproductie, een lagere stem, meer spieren en bredere schouders. Oestrogenen uit de eierstokken zorgen bij meisjes voor borstontwikkeling, bredere heupen en het op gang komen van de cyclus."
+          },
+          {
+            "type": "order",
+            "prompt": "Zet in de juiste volgorde wat er kan gebeuren na een geslachtsgemeenschap rond de eisprong.",
+            "items": [
+              "Bij de zaadlozing komt sperma met miljoenen zaadcellen in de vagina terecht.",
+              "De zaadcellen zwemmen via de baarmoederhals en de baarmoeder naar de eileiders.",
+              "Eén zaadcel dringt de eicel binnen: de bevruchting.",
+              "De bevruchte eicel (zygote) begint te delen en reist door de eileider naar de baarmoeder.",
+              "Het embryo nestelt zich in het baarmoederslijmvlies: de vrouw is zwanger."
+            ],
+            "hint": "Volg de weg die de zaadcellen afleggen.",
+            "explanation": "De zaadcellen zwemmen van de vagina naar de eileider, waar de bevruchting gebeurt. Vijf tot zeven dagen later komt het delende embryo aan in de baarmoeder en nestelt het zich in het slijmvlies: vanaf dan is de vrouw zwanger."
+          },
+          {
+            "type": "mc",
+            "prompt": "Hoeveel zaadcellen dringen er uiteindelijk in de eicel binnen?",
+            "options": [
+              "Eén; daarna verandert de eicel zodat er geen andere meer in kunnen.",
+              "Twee: één van elke teelbal.",
+              "Alle zaadcellen die de eileider bereiken.",
+              "Geen enkele; de eicel begint vanzelf te delen."
+            ],
+            "correctIndex": 0,
+            "explanation": "Zodra één zaadcel binnen is, verandert de eicel zo dat er geen andere zaadcellen meer in kunnen. De kernen van die ene zaadcel en de eicel versmelten tot één nieuwe celkern: de zygote."
+          },
+          {
+            "type": "tf",
+            "prompt": "Vanaf ongeveer 8 weken zwangerschap, als de belangrijkste organen gevormd zijn, spreken we niet meer van een embryo maar van een foetus.",
+            "answer": true,
+            "explanation": "Het embryo is het vroege stadium. Na ongeveer 8 weken, wanneer de belangrijkste organen gevormd zijn, noemen we het ongeboren kind een foetus."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "4.",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: bescherming tegen zwangerschap en soa's",
+      "toelichting": "Zes vragen over anticonceptie, over veilig vrijen en over welke middelen wel of niet tegen soa's beschermen.",
+      "config": {
+        "questions": [
+          {
+            "type": "table",
+            "prompt": "Vul de tabel aan met 'ja' of 'nee'.",
+            "columns": ["Middel", "Beschermt tegen zwangerschap?", "Beschermt tegen soa's?"],
+            "rows": [
+              { "cells": ["condoom", "", ""], "answers": [null, "ja", "ja"] },
+              { "cells": ["de anticonceptiepil", "", ""], "answers": [null, "ja", "nee"] },
+              { "cells": ["spiraaltje", "", ""], "answers": [null, "ja", "nee"] },
+              { "cells": ["hormoonstaafje (implantaat)", "", ""], "answers": [null, "ja", "nee"] }
+            ],
+            "hint": "Welk middel is een barrière en welke werken met hormonen binnenin het lichaam?",
+            "explanation": "Alleen het condoom houdt sperma en andere lichaamsvochten tegen en beschermt daardoor zowel tegen zwangerschap als tegen soa's. De pil, het spiraaltje en het hormoonstaafje werken binnenin het lichaam en voorkomen enkel een zwangerschap."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom is het condoom het enige voorbehoedsmiddel dat ook tegen soa's beschermt?",
+            "options": [
+              "Omdat het als een barrière werkt en sperma en andere lichaamsvochten tegenhoudt.",
+              "Omdat het hormonen afgeeft die virussen doden.",
+              "Omdat het de eisprong tegenhoudt.",
+              "Omdat het de zaadcellen sneller laat afsterven."
+            ],
+            "correctIndex": 0,
+            "explanation": "Soa's worden doorgegeven via lichaamsvochten zoals sperma, bloed en vaginaal vocht. Het condoom vormt een barrière waar die vochten niet door kunnen, dus virussen en bacteriën kunnen niet van de ene persoon naar de andere."
+          },
+          {
+            "type": "mc",
+            "prompt": "Hoe voorkomt de anticonceptiepil een zwangerschap?",
+            "options": [
+              "De hormonen in de pil zorgen ervoor dat er geen eisprong plaatsvindt.",
+              "De pil doodt de zaadcellen in de vagina.",
+              "De pil sluit de eileiders af.",
+              "De pil spoelt het baarmoederslijmvlies elke dag weg."
+            ],
+            "correctIndex": 0,
+            "explanation": "De pil bevat hormonen die de cyclus beïnvloeden zodat er geen eisprong komt. Zonder eicel is er ook niets te bevruchten. De pil moet daarvoor wel elke dag rond hetzelfde tijdstip worden ingenomen."
+          },
+          {
+            "type": "multi",
+            "prompt": "Welke soa's worden veroorzaakt door een bacterie en zijn daardoor met antibiotica te genezen?",
+            "options": ["chlamydia", "gonorroe", "syfilis", "hiv", "herpes genitalis"],
+            "correctIndices": [0, 1, 2],
+            "explanation": "Chlamydia, gonorroe en syfilis zijn bacteriële soa's en zijn goed te behandelen met antibiotica. Hiv en herpes worden veroorzaakt door virussen: die raak je niet meer kwijt, maar je kunt ze meestal wel onder controle houden met medicijnen."
+          },
+          {
+            "type": "tf",
+            "prompt": "Wie de pil slikt, hoeft geen condoom meer te gebruiken.",
+            "answer": false,
+            "explanation": "De pil voorkomt alleen een zwangerschap en biedt geen enkele bescherming tegen soa's. Daarom blijft een condoom nodig, zeker bij een nieuwe of niet-geteste partner."
+          },
+          {
+            "type": "dropdown",
+            "prompt": "Kies telkens het juiste woord.",
+            "text": "Bij een {vasectomie|vaccinatie|ontsluiting} worden de zaadleiders van een man doorgeknipt of geblokkeerd. Een {spiraaltje|condoom} wordt door een dokter in de baarmoeder geplaatst en werkt enkele jaren. De {morning-afterpil|prikpil} wordt gebruikt kort ná onbeschermde seks, bijvoorbeeld als het condoom gescheurd is.",
+            "shuffle": true,
+            "explanation": "Een vasectomie is de sterilisatie bij de man. Een spiraaltje plaatst de arts in de baarmoeder. De morning-afterpil is een noodoplossing achteraf en geen gewone anticonceptiemethode."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Kernbegrippen",
+      "plaats": "einde",
+      "type": "wordsearch",
+      "titel": "Woordzoeker: voortplanting bij de mens",
+      "toelichting": "Zoek de twaalf woorden uit dit hoofdstuk in het rooster.",
+      "config": {
+        "words": [
+          "EICEL",
+          "ZAADCEL",
+          "EILEIDER",
+          "BAARMOEDER",
+          "EIERSTOK",
+          "EISPRONG",
+          "ZYGOTE",
+          "EMBRYO",
+          "FOETUS",
+          "HORMONEN",
+          "PUBERTEIT",
+          "CONDOOM"
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "worksheet",
+      "titel": "Werkblad: cyclus, zwangerschap en veilig vrijen",
+      "toelichting": "Vier toepassingsvragen over de vruchtbare periode, de duur van een zwangerschap en bescherming.",
+      "config": {
+        "questions": [
+          {
+            "type": "info",
+            "prompt": "**Werkblad.** Antwoord in volledige zinnen en gebruik de juiste begrippen uit het hoofdstuk, zoals *eisprong*, *bevruchting*, *innesteling* en *soa*."
+          },
+          {
+            "type": "long",
+            "prompt": "Leg uit waarom de kans op een zwangerschap het grootst is rond de eisprong.",
+            "modelAnswer": "Bij de eisprong komt er een rijpe eicel vrij die door de eileider wordt opgevangen. Alleen dan is er een eicel aanwezig die bevrucht kan worden, en die eicel leeft na de eisprong maar ongeveer 12 tot 24 uur. Zaadcellen kunnen wel 3 tot 5 dagen overleven in het lichaam van de vrouw. Daardoor loopt de vruchtbare periode van enkele dagen vóór de eisprong tot ongeveer één dag erna: in die dagen kunnen zaadcellen en eicel elkaar in de eileider tegenkomen.",
+            "rubric": [
+              { "criterion": "Zegt dat er alleen rond de eisprong een bevruchtbare eicel aanwezig is (12 tot 24 uur).", "points": 1 },
+              { "criterion": "Zegt dat zaadcellen enkele dagen overleven, waardoor de vruchtbare periode al vóór de eisprong begint.", "points": 1 }
+            ],
+            "hint": "Hoe lang leeft een eicel, en hoe lang leven zaadcellen?"
+          },
+          {
+            "type": "number",
+            "prompt": "Een zwangerschap duurt gemiddeld ongeveer 40 weken. Hoeveel maanden is dat ongeveer?",
+            "answer": 9,
+            "tolerance": 0.5,
+            "explanation": "40 weken komt neer op ongeveer negen maanden. Na die periode is de baby klaar om geboren te worden: de weeën beginnen, de baarmoederhals gaat open en de baby wordt via de vagina naar buiten geduwd."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul aan met 'wel' of 'niet'.",
+            "text": "Een condoom beschermt [wel] tegen soa's, want het houdt lichaamsvochten tegen. De anticonceptiepil beschermt daar [niet] tegen, want die werkt alleen binnenin het lichaam van het meisje.",
+            "explanation": "Daarom raadt het hoofdstuk aan om altijd een condoom te gebruiken, ook als het meisje de pil slikt: de pil voorkomt de zwangerschap, het condoom beschermt daarbovenop tegen soa's."
+          },
+          {
+            "type": "long",
+            "prompt": "Iemand schrijft in een chat: 'Een ander zette mij onder druk om iets seksueels te doen wat ik niet wilde.' Welke drie dingen kan die persoon volgens dit hoofdstuk doen?",
+            "modelAnswer": "Ten eerste mag die persoon altijd nee zeggen en duidelijk haar of zijn grens aangeven: je hebt altijd het recht om nee te zeggen als iets niet goed voelt. Ten tweede kan die persoon uit de situatie weggaan als dat mogelijk is. Ten derde is het belangrijk om er zo snel mogelijk over te praten met een volwassene die je vertrouwt, bijvoorbeeld een ouder, een leerkracht of een mentor. Die kan helpen en ervoor zorgen dat het stopt. Wat gebeurd is, heet seksueel overschrijdend gedrag en het is nooit de schuld van wie het overkomt.",
+            "rubric": [
+              { "criterion": "Noemt het recht om nee te zeggen en de eigen grens duidelijk aan te geven.", "points": 1 },
+              { "criterion": "Noemt weggaan uit de situatie én hulp zoeken bij een vertrouwde volwassene.", "points": 1 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "scramble",
+      "titel": "Zinnenpuzzel: zet de zin weer goed",
+      "toelichting": "De woorden zijn door elkaar geschud. Maak van elke reeks woorden opnieuw een kloppende zin.",
+      "config": {
+        "mode": "sentence",
+        "items": [
+          { "text": "Bij de eisprong komt een rijpe eicel vrij uit de eierstok.", "hint": "Wat gebeurt er halverwege de cyclus?" },
+          { "text": "De bevruchting gebeurt meestal in de eileider.", "hint": "Waar ontmoeten zaadcel en eicel elkaar?" },
+          { "text": "Het embryo nestelt zich in het baarmoederslijmvlies.", "hint": "Wat gebeurt er ongeveer een week na de bevruchting?" },
+          { "text": "Alleen een condoom beschermt tegen zwangerschap en soa's.", "hint": "Welk middel beschermt tegen allebei?" },
+          { "text": "In de puberteit zorgen hormonen voor lichamelijke veranderingen.", "hint": "Wat stuurt de veranderingen in de puberteit?" }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "exitticket",
+      "titel": "Exit-ticket hoofdstuk 10b",
+      "toelichting": "Vier vragen om te checken of je de kern van dit hoofdstuk beheerst.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "In welk orgaan groeit de baby tijdens de zwangerschap?",
+            "options": ["in de baarmoeder", "in de eileider", "in de eierstok", "in de vagina"],
+            "correctIndex": 0,
+            "explanation": "Het embryo nestelt zich in het baarmoederslijmvlies en groeit daar via de moederkoek en de navelstreng verder uit tot een baby. De baarmoeder is heel rekbaar en groeit mee."
+          },
+          {
+            "type": "tf",
+            "prompt": "Een meisje kan pas zwanger worden vanaf haar eerste eisprong.",
+            "answer": true,
+            "explanation": "Pas als de eierstokken eicellen beginnen vrij te geven, is er een eicel die bevrucht kan worden. Vanaf dat moment is het lichaam daar biologisch toe in staat, ook al is iemand van die leeftijd natuurlijk nog niet klaar om ouder te zijn."
+          },
+          {
+            "type": "short",
+            "prompt": "Welk voorbehoedsmiddel beschermt zowel tegen zwangerschap als tegen soa's?",
+            "accepted": ["condoom", "het condoom", "een condoom", "condooms"],
+            "explanation": "Alleen het condoom werkt als een barrière: het vangt het sperma op en houdt ook andere lichaamsvochten tegen, waardoor virussen en bacteriën niet overgedragen worden."
+          },
+          {
+            "type": "long",
+            "prompt": "Leg in twee zinnen uit wat er tijdens de menstruatie gebeurt en waarom.",
+            "modelAnswer": "Tijdens de menstruatie wordt het verdikte baarmoederslijmvlies, samen met wat bloed, afgestoten en via de vagina afgevoerd. Dat gebeurt omdat er in die cyclus geen bevruchting en innesteling waren: de hormonen dalen en het opgebouwde slijmvlies is dan niet meer nodig.",
+            "rubric": [
+              { "criterion": "Beschrijft dat het baarmoederslijmvlies met wat bloed wordt afgestoten via de vagina.", "points": 1 },
+              { "criterion": "Legt uit dat dit gebeurt omdat er geen bevruchting of innesteling was en het slijmvlies dus niet nodig is.", "points": 1 }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,264 @@
+{
+  "hoofdstuk": "09",
+  "oefeningen": [
+    {
+      "sectie": "2.",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: eten en ademen bij dieren",
+      "toelichting": "Vijf vragen over het spijsverteringsstelsel van planteneters en vleeseters en over ademen in water en op het land.",
+      "config": {
+        "questions": [
+          {
+            "type": "sort",
+            "prompt": "Hoort dit kenmerk bij een planteneter of bij een vleeseter?",
+            "categories": ["Planteneter (herbivoor)", "Vleeseter (carnivoor)"],
+            "items": [
+              { "text": "zeer lange darmen", "category": "Planteneter (herbivoor)" },
+              { "text": "platte kiezen om te malen", "category": "Planteneter (herbivoor)" },
+              { "text": "vier magen met behulpzame bacteriën", "category": "Planteneter (herbivoor)" },
+              { "text": "korte darmen", "category": "Vleeseter (carnivoor)" },
+              { "text": "scherpe hoektanden om vlees te scheuren", "category": "Vleeseter (carnivoor)" },
+              { "text": "een eenvoudige maag", "category": "Vleeseter (carnivoor)" }
+            ],
+            "hint": "Denk aan de koe en de leeuw uit het voorbeeld.",
+            "explanation": "Planten zijn taai en moeilijk te verteren: de koe maalt ze fijn met platte kiezen en verteert ze traag in vier magen en zeer lange darmen. Vlees verteert snel, dus de leeuw heeft scheurende hoektanden, een eenvoudige maag en korte darmen."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom heeft een koe een veel langer spijsverteringsstelsel dan een leeuw?",
+            "options": [
+              "Omdat plantenmateriaal moeilijker te verteren is en dus meer tijd nodig heeft.",
+              "Omdat een koe veel groter is dan een leeuw.",
+              "Omdat gras meer water bevat dan vlees.",
+              "Omdat een koe geen tanden heeft om mee te kauwen."
+            ],
+            "correctIndex": 0,
+            "explanation": "Planten zijn moeilijker te verteren dan vlees. Een langer en ingewikkelder darmstelsel geeft het voedsel meer tijd, zodat alle voedingsstoffen uit het taaie plantenmateriaal gehaald kunnen worden."
+          },
+          {
+            "type": "tf",
+            "prompt": "Het spijsverteringsstelsel van een omnivoor (alleseter) zit meestal tussen dat van een planteneter en dat van een vleeseter in.",
+            "answer": true,
+            "explanation": "Omnivoren eten zowel planten als vlees. Hun spijsverteringsstelsel zit daarom qua lengte en bouw tussen dat van herbivoren en carnivoren in."
+          },
+          {
+            "type": "dropdown",
+            "prompt": "Kies telkens het juiste woord over ademhaling.",
+            "text": "Een kikkervisje leeft in het water en ademt met {kieuwen|longen|tracheeën}. Een volwassen kikker ademt op het land met {longen|kieuwen}, en onder water neemt hij zuurstof op via zijn vochtige {huid|schubben|pantser}.",
+            "shuffle": true,
+            "explanation": "Het ademhalingsstelsel van een amfibie verandert tijdens zijn leven: kieuwen als kikkervisje in het water, longen als volwassen kikker op het land, en daarbovenop huidademhaling onder water."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom kan een vis niet lang overleven op het land, ook al zit er zuurstof in de lucht?",
+            "options": [
+              "Zijn kieuwen zijn gemaakt om zuurstof uit water te halen en werken niet in lucht.",
+              "Er zit helemaal geen zuurstof in lucht, alleen in water.",
+              "Hij heeft longen die pas na enkele uren beginnen te werken.",
+              "De luchtdruk op het land is te hoog voor zijn schubben."
+            ],
+            "correctIndex": 0,
+            "hint": "Waarmee haalt een vis zuurstof uit zijn omgeving?",
+            "explanation": "Vissen halen zuurstof uit het water met kieuwen. Buiten het water kunnen die kieuwen hun werk niet doen, dus krijgt de vis geen zuurstof meer binnen."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "5.",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: bloed, afvalstoffen en ongewervelden",
+      "toelichting": "Zes vragen over harten en bloedsomlopen, over uitscheiding bij water- en landdieren en over insecten en wormen.",
+      "config": {
+        "questions": [
+          {
+            "type": "table",
+            "prompt": "Vul in hoeveel holtes het hart van elk dier heeft. Antwoord met een getal.",
+            "columns": ["Dier", "Aantal holtes in het hart"],
+            "rows": [
+              { "cells": ["forel (vis)", ""], "answers": [null, "2"] },
+              { "cells": ["kikker (amfibie)", ""], "answers": [null, "3"] },
+              { "cells": ["hagedis (reptiel)", ""], "answers": [null, "3"] },
+              { "cells": ["hond (zoogdier)", ""], "answers": [null, "4"] },
+              { "cells": ["duif (vogel)", ""], "answers": [null, "4"] }
+            ],
+            "hint": "Tel telkens de boezems en de kamers samen.",
+            "explanation": "Een vis heeft één boezem en één kamer (2 holtes). Amfibieën en reptielen hebben twee boezems en één kamer (3 holtes). Zoogdieren en vogels hebben twee boezems en twee kamers (4 holtes)."
+          },
+          {
+            "type": "mc",
+            "prompt": "Wat is het grote voordeel van een dubbele bloedsomloop?",
+            "options": [
+              "Er kan voortdurend veel zuurstofrijk bloed met hoge snelheid naar alle organen gepompt worden.",
+              "Het bloed hoeft nooit langs de longen te passeren.",
+              "Het hart hoeft maar half zo vaak te kloppen.",
+              "Zuurstofrijk en zuurstofarm bloed blijven volledig gemengd."
+            ],
+            "correctIndex": 0,
+            "explanation": "Bij een dubbele bloedsomloop zijn de kleine bloedsomloop (naar de longen) en de grote bloedsomloop (naar het lichaam) gescheiden. Daardoor krijgen alle organen snel veel zuurstofrijk bloed, wat nodig is voor de actieve, warmbloedige leefwijze van vogels en zoogdieren."
+          },
+          {
+            "type": "sort",
+            "prompt": "In welke vorm scheidt dit dier zijn stikstofafval uit?",
+            "categories": ["Ammoniak, direct in het water", "Ureum, opgelost in urine", "Urinezuur, bijna vast"],
+            "items": [
+              { "text": "een vis in een rivier", "category": "Ammoniak, direct in het water" },
+              { "text": "een mens", "category": "Ureum, opgelost in urine" },
+              { "text": "een hond", "category": "Ureum, opgelost in urine" },
+              { "text": "een duif", "category": "Urinezuur, bijna vast" },
+              { "text": "een hagedis in de woestijn", "category": "Urinezuur, bijna vast" }
+            ],
+            "hint": "Hoeveel water heeft dit dier beschikbaar om afval mee weg te spoelen?",
+            "explanation": "Waterdieren lozen giftig ammoniak meteen in het water, dat het verdunt. Zoogdieren zetten hun afval om in ureum en scheiden het uit als urine. Vogels en reptielen maken urinezuur, een bijna vaste stof, zodat ze bijna geen water verliezen."
+          },
+          {
+            "type": "tf",
+            "prompt": "Een duif verliest bijna geen water wanneer ze haar afvalstoffen uitscheidt.",
+            "answer": true,
+            "explanation": "Vogels scheiden urinezuur uit: het witte, pasta-achtige deel van vogelpoep. Daarbij gaat heel weinig water verloren, een handige aanpassing voor dieren die niet altijd kunnen drinken."
+          },
+          {
+            "type": "mc",
+            "prompt": "Een regenworm heeft geen longen en geen kieuwen. Hoe krijgt hij toch zuurstof binnen?",
+            "options": [
+              "Via zijn huid, die daarvoor vochtig moet blijven.",
+              "Via kieuwen die in de bodem verstopt zitten.",
+              "Via kleine longetjes vooraan in zijn kop.",
+              "Via tracheeën, net zoals een insect."
+            ],
+            "correctIndex": 0,
+            "explanation": "De regenworm neemt zuurstof rechtstreeks op via zijn lichaamsoppervlak en geeft daar ook koolstofdioxide af. Dat lukt alleen als zijn huid vochtig blijft."
+          },
+          {
+            "type": "multi",
+            "prompt": "Wat klopt er over insecten?",
+            "options": [
+              "Ze ademen via een tracheeënstelsel: fijne luchtbuisjes naar alle organen.",
+              "Hun bloed heet hemolymfe.",
+              "Ze hebben een open bloedsomloop.",
+              "Hun bloed is rood doordat er hemoglobine in zit.",
+              "Ze hebben longen zoals zoogdieren."
+            ],
+            "correctIndices": [0, 1, 2],
+            "explanation": "Lucht komt via ademopeningen in het pantser en gaat door de tracheeën rechtstreeks naar de organen. Het bloed, de hemolymfe, stroomt vrij door het lichaam (open bloedsomloop) en bevat geen hemoglobine, dus het is niet rood en vervoert geen zuurstof."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Kernbegrippen",
+      "plaats": "einde",
+      "type": "crossword",
+      "titel": "Kruiswoordraadsel: stelsels bij dieren",
+      "toelichting": "Los de negen omschrijvingen op en vul het rooster in.",
+      "config": {
+        "entries": [
+          { "word": "KIEUWEN", "clue": "Hiermee haalt een forel zuurstof uit het water." },
+          { "word": "TRACHEE", "clue": "Luchtbuisje waarmee een insect zuurstof rechtstreeks naar zijn organen brengt (enkelvoud)." },
+          { "word": "HEMOLYMFE", "clue": "Zo heet de kleurloze vloeistof die bij een insect de rol van bloed speelt." },
+          { "word": "UREUM", "clue": "Hierin zet een zoogdier zijn stikstofafval om voor het in de urine verdwijnt." },
+          { "word": "URINEZUUR", "clue": "Het witte, pasta-achtige afval in vogelpoep." },
+          { "word": "AMMONIAK", "clue": "Giftig afval dat een waterdier meteen in het omringende water kan lozen." },
+          { "word": "HERBIVOOR", "clue": "Dier met lange darmen omdat het planten eet." },
+          { "word": "CARNIVOOR", "clue": "Dier met korte darmen omdat het vlees eet." },
+          { "word": "REGENWORM", "clue": "Ongewervelde die ademt via zijn vochtige huid." }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "worksheet",
+      "titel": "Werkblad: aangepast aan je leefwijze",
+      "toelichting": "Vier toepassingsvragen waarin je dieren met elkaar vergelijkt en aanpassingen verklaart.",
+      "config": {
+        "questions": [
+          {
+            "type": "info",
+            "prompt": "**Werkblad.** Antwoord in volledige zinnen. Gebruik telkens het woord *aanpassing*: leg uit waarom de bouw van het dier past bij zijn voeding of leefomgeving."
+          },
+          {
+            "type": "long",
+            "prompt": "Een paard heeft veel langere darmen dan een leeuw. Leg uit hoe dat komt.",
+            "modelAnswer": "Een paard is een planteneter en eet gras en andere planten. Plantenmateriaal is taai en moeilijk te verteren, dus het voedsel heeft veel tijd nodig voor alle voedingsstoffen eruit gehaald zijn. Lange darmen geven die tijd. Een leeuw is een vleeseter en vlees verteert snel en gemakkelijk, dus korte darmen volstaan.",
+            "rubric": [
+              { "criterion": "Zegt dat planten moeilijker of trager te verteren zijn dan vlees.", "points": 1 },
+              { "criterion": "Koppelt dat aan de lengte van de darmen bij de planteneter en de vleeseter.", "points": 1 }
+            ]
+          },
+          {
+            "type": "table",
+            "prompt": "Vergelijk een forel met een hond. Vul de lege vakjes aan.",
+            "columns": ["Kenmerk", "Forel (vis)", "Hond (zoogdier)"],
+            "rows": [
+              { "cells": ["Ademhalingsorgaan", "", ""], "answers": [null, "kieuwen", "longen"] },
+              { "cells": ["Soort bloedsomloop", "", ""], "answers": [null, "enkelvoudige bloedsomloop", "dubbele bloedsomloop"] },
+              { "cells": ["Aantal holtes in het hart", "", ""], "answers": [null, "2", "4"] },
+              { "cells": ["Vorm van het stikstofafval", "", ""], "answers": [null, "ammoniak", "ureum in urine"] }
+            ],
+            "explanation": "De forel leeft in water: kieuwen, één kringloop met een hart van twee holtes, en ammoniak dat het water meteen verdunt. De hond leeft op het land en is erg actief: longen, twee gescheiden kringlopen met een hart van vier holtes, en ureum dat als urine wordt uitgescheiden."
+          },
+          {
+            "type": "long",
+            "prompt": "In de woestijn is er bijna geen water te vinden. Leg uit hoe het uitscheidingsstelsel van een woestijnhagedis daaraan aangepast is.",
+            "modelAnswer": "Een woestijnhagedis is een reptiel en zet zijn afvalstoffen om in urinezuur. Urinezuur is een bijna vaste stof, dus het dier hoeft er nauwelijks water bij te gebruiken om het uit te scheiden. Zo verliest het bijna geen vocht, wat levensbelangrijk is in een omgeving waar het bijna nooit kan drinken. Een zoogdier zou hetzelfde afval als ureum in urine uitscheiden en daarbij veel meer water verliezen.",
+            "rubric": [
+              { "criterion": "Noemt urinezuur als bijna vaste afvalstof bij reptielen en vogels.", "points": 1 },
+              { "criterion": "Legt uit dat er zo bijna geen water verloren gaat, wat nodig is in een droge omgeving.", "points": 1 }
+            ],
+            "hint": "Vergelijk met de vogelpoep uit het voorbeeld in het hoofdstuk."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul aan met het juiste woord uit het hoofdstuk.",
+            "text": "Een insect brengt zuurstof rechtstreeks naar zijn organen via kleine luchtbuisjes, de [tracheeën]. Daardoor hoeft zijn bloed, de [hemolymfe], helemaal geen zuurstof te vervoeren.",
+            "hint": "Het tweede woord verklaart waarom insectenbloed niet rood is.",
+            "explanation": "Omdat de tracheeën de zuurstof al bij elke cel brengen, heeft de hemolymfe geen hemoglobine nodig. Ze vervoert vooral voedingsstoffen en afvalstoffen."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "exitticket",
+      "titel": "Exit-ticket hoofdstuk 9",
+      "toelichting": "Vier vragen om te checken of je de aanpassingen bij dieren begrijpt.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Een dier heeft scherpe hoektanden, een eenvoudige maag en korte darmen. Wat eet dit dier vooral?",
+            "options": ["vlees", "gras en bladeren", "zaden en noten", "plankton uit het water"],
+            "correctIndex": 0,
+            "explanation": "Scheurende hoektanden, een eenvoudige maag en korte darmen zijn de kenmerken van een carnivoor: vlees verteert snel en gemakkelijk."
+          },
+          {
+            "type": "tf",
+            "prompt": "Het hart van een vis heeft vier holtes, net als dat van een zoogdier.",
+            "answer": false,
+            "explanation": "Een vis heeft een eenvoudig hart met twee holtes: één boezem en één kamer. Vier holtes vind je bij zoogdieren en vogels."
+          },
+          {
+            "type": "short",
+            "prompt": "Welke afvalstof scheidt een duif uit als witte, pasta-achtige vogelpoep?",
+            "accepted": ["urinezuur"],
+            "hint": "Het is een bijna vaste stof.",
+            "explanation": "Vogels en reptielen zetten hun stikstofafval om in urinezuur. Zo verliezen ze bijna geen water."
+          },
+          {
+            "type": "long",
+            "prompt": "Leg uit waarom een insect geen rood bloed nodig heeft.",
+            "modelAnswer": "Bij een insect gaat de zuurstof niet via het bloed, maar via het tracheeënstelsel. Lucht komt via ademopeningen binnen en de fijne luchtbuisjes brengen de zuurstof rechtstreeks tot bij alle organen. Omdat het bloed (de hemolymfe) dus geen zuurstof moet vervoeren, heeft het geen hemoglobine nodig, en hemoglobine is net de stof die bloed rood kleurt.",
+            "rubric": [
+              { "criterion": "Zegt dat de tracheeën de zuurstof rechtstreeks naar de organen brengen.", "points": 1 },
+              { "criterion": "Koppelt dat aan het ontbreken van hemoglobine, waardoor de hemolymfe niet rood is.", "points": 1 }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

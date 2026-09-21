@@ -1,0 +1,330 @@
+{
+  "hoofdstuk": "05",
+  "oefeningen": [
+    {
+      "sectie": "2.2",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: wat doen de voedingsstoffen?",
+      "toelichting": "Vijf vragen waarin je de taak van elke voedingsstof toepast op echte voedingsmiddelen.",
+      "config": {
+        "questions": [
+          {
+            "type": "sort",
+            "prompt": "Sleep elke voedingsstof naar haar belangrijkste taak in je lichaam.",
+            "categories": ["Vooral brandstof", "Vooral bouwstof", "Vooral beschermstof"],
+            "items": [
+              {"text": "Zetmeel", "category": "Vooral brandstof"},
+              {"text": "Vetten", "category": "Vooral brandstof"},
+              {"text": "Eiwitten", "category": "Vooral bouwstof"},
+              {"text": "Calcium", "category": "Vooral bouwstof"},
+              {"text": "Vitamine C", "category": "Vooral beschermstof"},
+              {"text": "Vitamine D", "category": "Vooral beschermstof"}
+            ],
+            "hint": "Brandstof = energie leveren, bouwstof = groeien en herstellen, beschermstof = gezond houden.",
+            "explanation": "Koolhydraten (zoals zetmeel) en vetten leveren energie. Eiwitten en het mineraal calcium gebruikt je lichaam om cellen, botten en tanden op te bouwen. Vitamines regelen processen in je lichaam en houden je gezond."
+          },
+          {
+            "type": "mc",
+            "prompt": "Nora heeft haar enkel verzwikt. Haar lichaam moet beschadigd weefsel herstellen en nieuwe cellen maken. Welke voedingsstof heeft ze daarvoor vooral nodig?",
+            "options": [
+              "Eiwitten",
+              "Koolhydraten",
+              "Voedingsvezels",
+              "Vitamine C"
+            ],
+            "correctIndex": 0,
+            "hint": "Welke voedingsstof noemen we de bouwstof van het lichaam?",
+            "explanation": "Eiwitten zijn de bouwstoffen: je lichaam gebruikt ze om cellen op te bouwen en te herstellen. Bij groei en wondheling zijn ze onmisbaar."
+          },
+          {
+            "type": "tf",
+            "prompt": "Voedingsvezels worden in de dunne darm verteerd en leveren daar energie aan je cellen.",
+            "answer": false,
+            "hint": "Wat gebeurt er met vezels in je darm?",
+            "explanation": "Vezels worden niet verteerd in de dunne darm en komen dus niet in je bloed. Ze zijn wel belangrijk: ze houden water vast, stimuleren de darmwerking en geven een verzadigd gevoel."
+          },
+          {
+            "type": "multi",
+            "prompt": "Welke uitspraken over vetten kloppen volgens de tekst? (Meerdere antwoorden juist.)",
+            "options": [
+              "Vetten leveren ongeveer twee keer zoveel energie per gram als koolhydraten.",
+              "Vetten worden in je lichaam opgeslagen als reserve-energie.",
+              "Vetten isoleren je lichaam tegen kou en beschermen je organen.",
+              "Vetten regelen je weerstand en zijn daarom beschermstoffen.",
+              "Vetten kunnen door je lichaam niet afgebroken worden."
+            ],
+            "correctIndices": [0, 1, 2],
+            "hint": "Denk aan energie, reserve en bescherming.",
+            "explanation": "Vet is energierijk (ongeveer 2x zoveel per gram als koolhydraten), wordt opgeslagen als reserve en beschermt en isoleert je lichaam. Je weerstand regelen doen vooral de vitamines, en vetten worden wel degelijk verteerd (onder andere met behulp van gal)."
+          },
+          {
+            "type": "dropdown",
+            "prompt": "Kies telkens het juiste woord.",
+            "text": "Een boterham bevat {zetmeel|zoutzuur|gal}, en dat is een soort {koolhydraat|eiwit|vitamine}. Zo'n stof levert je lichaam vooral {energie|weerstand|stevige botten}. De vitamine C in een sinaasappel is dan weer een {beschermende stof|brandstof|bouwstof}.",
+            "shuffle": true,
+            "hint": "Zetmeel en suiker horen bij dezelfde groep voedingsstoffen.",
+            "explanation": "Zetmeel is een koolhydraat en koolhydraten zijn de belangrijkste brandstof van je lichaam. Vitamines zoals vitamine C zijn beschermende stoffen: ze regelen processen en ondersteunen je weerstand."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "3.1",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: de weg van het voedsel",
+      "toelichting": "Volg het voedsel van mond tot kont en kijk wat er onderweg in mond, keel en slokdarm gebeurt.",
+      "config": {
+        "questions": [
+          {
+            "type": "order",
+            "prompt": "Zet de organen in de volgorde waarin het voedsel ze doorloopt, van mond tot kont.",
+            "items": [
+              "mondholte en keelholte",
+              "slokdarm",
+              "maag",
+              "twaalfvingerige darm",
+              "dunne darm",
+              "dikke darm",
+              "endeldarm en anus"
+            ],
+            "hint": "De twaalfvingerige darm is het eerste stuk van de dunne darm, vlak na de maag.",
+            "explanation": "Het voedsel gaat van mond- en keelholte via de slokdarm naar de maag, dan naar de twaalfvingerige darm en de rest van de dunne darm, vervolgens naar de dikke darm en ten slotte via endeldarm en anus naar buiten."
+          },
+          {
+            "type": "mc",
+            "prompt": "Je slikt een hap brood door. Wat gebeurt er op dat moment met je luchtpijp?",
+            "options": [
+              "Het strotklepje sluit de luchtpijp af, zodat het voedsel naar de slokdarm gaat.",
+              "De luchtpijp blijft gewoon open, zodat je tijdens het slikken kunt doorademen.",
+              "De luchtpijp wordt wijder, zodat het voedsel er vlot langs kan.",
+              "De keelholte splitst het voedsel in twee delen: een deel voor de luchtpijp, een deel voor de slokdarm."
+            ],
+            "correctIndex": 0,
+            "hint": "De keelholte is een kruispunt van twee wegen.",
+            "explanation": "Bij het slikken klapt het strotklepje boven op de luchtpijp dicht. Daardoor volgt het voedsel de juiste weg naar de slokdarm en verslik je je niet."
+          },
+          {
+            "type": "short",
+            "prompt": "Als je een stuk brood lang kauwt, gaat het zoet smaken. Welke voedingsstof wordt daarbij in je mond al afgebroken? Antwoord met één woord.",
+            "accepted": ["zetmeel", "het zetmeel"],
+            "hint": "Het is het koolhydraat dat in brood, pasta en aardappelen zit.",
+            "explanation": "Enzymen in je speeksel breken zetmeel al in de mond af tot kleinere suikerdeeltjes. Die vrijgekomen suikers proef je als een zoete smaak."
+          },
+          {
+            "type": "tf",
+            "prompt": "In de slokdarm worden de voedingsstoffen al voor een groot deel in het bloed opgenomen.",
+            "answer": false,
+            "hint": "Wat is de hoofdtaak van de slokdarm?",
+            "explanation": "In de slokdarm gebeurt er geen vertering en geen opname: hij vervoert het voedsel met peristaltische bewegingen naar de maag. De opname in het bloed gebeurt vooral in de dunne darm."
+          },
+          {
+            "type": "marktext",
+            "prompt": "Klik alle organen aan waar het voedsel zelf doorheen gaat.",
+            "text": "Het voedsel gaat van de [mondholte] via de [slokdarm] naar de [maag] en daarna verder naar de [dunne darm] en de [dikke darm]. De lever en de alvleesklier liggen ernaast: zij sturen alleen verteringssappen naar de darm. De luchtpijp en de longen horen helemaal niet bij het spijsverteringskanaal.",
+            "penalizeWrong": false,
+            "hint": "Een orgaan dat alleen een sap levert, ligt naast de weg van het voedsel.",
+            "explanation": "Het spijsverteringskanaal is de buis waar het voedsel echt doorheen gaat. Lever en alvleesklier horen wel bij het spijsverteringsstelsel, maar ze leveren alleen gal en alvleeskliersap aan de twaalfvingerige darm."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "3.6",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: sappen, darmen en opname",
+      "toelichting": "Vijf vragen over wat maag, twaalfvingerige darm, dunne darm en dikke darm met het voedsel doen.",
+      "config": {
+        "questions": [
+          {
+            "type": "table",
+            "prompt": "Vul de lege vakjes van de tabel aan.",
+            "columns": ["Verteringssap", "Waar wordt het gemaakt?", "Welke voedingsstof pakt het vooral aan?"],
+            "rows": [
+              {"cells": ["Speeksel", "", "zetmeel"], "answers": [null, "speekselklieren", null]},
+              {"cells": ["Maagsap", "maagwand", ""], "answers": [null, null, "eiwitten"]},
+              {"cells": ["Gal", "", "vetten"], "answers": [null, "lever", null]},
+              {"cells": ["Alvleeskliersap", "", "koolhydraten, eiwitten en vetten"], "answers": [null, "alvleesklier", null]}
+            ],
+            "hint": "Gal wordt gemaakt in een groot orgaan rechts boven in je buik en bewaard in de galblaas.",
+            "explanation": "Speeksel komt uit de speekselklieren en start de afbraak van zetmeel. Maagsap komt uit klieren in de maagwand en begint met de eiwitten. Gal komt uit de lever en verdeelt vetten in kleine druppeltjes. Alvleeskliersap komt uit de alvleesklier en breekt alle hoofdvoedingsstoffen verder af."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom kan de dunne darm zoveel voedingsstoffen in het bloed opnemen?",
+            "options": [
+              "De binnenwand is sterk geplooid en zit vol darmvlokken, waardoor het oppervlak enorm groot is.",
+              "De dunne darm is de enige darm met spieren in de wand.",
+              "In de dunne darm is het voedsel nog heel zuur, waardoor het beter oplost.",
+              "De dunne darm maakt zelf gal aan voor de opname."
+            ],
+            "correctIndex": 0,
+            "hint": "Denk aan de vingervormige uitstulpingen in de darmwand.",
+            "explanation": "De darmvlokken en de plooien maken het contactoppervlak met het bloed heel groot. Daardoor kunnen de verteerde voedingsstoffen snel en efficiënt worden opgenomen."
+          },
+          {
+            "type": "tf",
+            "prompt": "In de dikke darm wordt water uit de voedselbrij opgenomen, waardoor de resten indikken tot ontlasting.",
+            "answer": true,
+            "hint": "Waarom is ontlasting vast en de brij in de dunne darm nog vloeibaar?",
+            "explanation": "De dikke darm haalt het meeste water uit de voedselbrij terug. Daardoor dikt de brij in en ontstaat vaste ontlasting."
+          },
+          {
+            "type": "number",
+            "prompt": "Het spijsverteringskanaal van een mens is ongeveer 7 meter lang. De dunne darm is daarvan ongeveer 5,5 meter. Hoeveel meter meten alle andere delen samen?",
+            "answer": 1.5,
+            "tolerance": 0.1,
+            "hint": "Trek de lengte van de dunne darm af van de totale lengte.",
+            "explanation": "7 m - 5,5 m = 1,5 m. De dunne darm is dus veruit het langste deel van het spijsverteringskanaal."
+          },
+          {
+            "type": "short",
+            "prompt": "Bij diarree is je ontlasting waterig, omdat alles te snel door je darm gaat. Welke darm heeft dan te weinig tijd gehad om water op te nemen? Antwoord met de naam van de darm.",
+            "accepted": ["dikke darm", "de dikke darm", "dikkedarm"],
+            "hint": "Het is de darm die na de dunne darm komt.",
+            "explanation": "De dikke darm neemt normaal het meeste water terug op. Gaat de brij er te snel doorheen, dan lukt dat onvoldoende en blijft de ontlasting waterig."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "4.",
+      "plaats": "einde",
+      "type": "worksheet",
+      "titel": "Werkblad: gezond eten en een vlotte spijsvertering",
+      "toelichting": "Pas toe wat je leerde over voedingsstoffen, vezels en water op vier alledaagse situaties.",
+      "config": {
+        "questions": [
+          {
+            "type": "info",
+            "prompt": "**Werk rustig en schrijf in volledige zinnen.** Gebruik in je antwoorden de woorden uit dit hoofdstuk, zoals *voedingsstof*, *voedingsvezel*, *vertering* en *opname*."
+          },
+          {
+            "type": "long",
+            "prompt": "Lars eet bijna nooit groenten, fruit of volkorenbrood en drinkt weinig water. Hij heeft vaak last van harde stoelgang. Leg uit welk bestanddeel hij te weinig binnenkrijgt en hoe dat samenhangt met zijn klacht. Geef daarna twee concrete tips.",
+            "modelAnswer": "Lars krijgt te weinig voedingsvezels (en te weinig water) binnen. Vezels worden niet verteerd, maar ze houden water vast in de darm en stimuleren de darmwerking. Zonder vezels haalt de dikke darm te veel water uit de voedselbrij en wordt de ontlasting hard en droog. Tips: elke dag groenten en fruit eten, kiezen voor volkorenbrood in plaats van wit brood, en ongeveer 1,5 liter water per dag drinken.",
+            "rubric": [
+              {"criterion": "Benoemt voedingsvezels (eventueel samen met water) als wat er ontbreekt", "points": 1},
+              {"criterion": "Legt het verband met de darmwerking en geeft twee bruikbare tips", "points": 1}
+            ],
+            "hint": "Welk bestanddeel van plantaardig voedsel wordt niet verteerd, maar is toch belangrijk?"
+          },
+          {
+            "type": "number",
+            "prompt": "Je zou ongeveer 1,5 liter water per dag moeten drinken. In één glas gaat 250 ml. Hoeveel glazen water drink je dan op een dag?",
+            "answer": 6,
+            "tolerance": 0,
+            "hint": "Reken eerst 1,5 liter om naar milliliter.",
+            "explanation": "1,5 liter = 1500 ml. 1500 ml : 250 ml = 6 glazen. Dat klopt met de richtlijn van ongeveer 6 tot 8 glazen per dag."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul de twee ontbrekende woorden in.",
+            "text": "Wie te weinig [calcium] binnenkrijgt, kan tijdens de groei zwakkere botten en tanden krijgen. Je vindt dit mineraal vooral in [melk], yoghurt en kaas.",
+            "hint": "Het gaat om een mineraal dat als bouwstof dient.",
+            "explanation": "Calcium is een mineraal dat als bouwstof dient voor botten en tanden. Zuivelproducten zoals melk, yoghurt en kaas bevatten er veel van."
+          },
+          {
+            "type": "long",
+            "prompt": "Milan neemt elke dag na school een zak chips en een blikje frisdrank. Stel een gezonder tussendoortje voor en leg met twee argumenten uit waarom jouw keuze beter is voor zijn lichaam.",
+            "modelAnswer": "Een stuk fruit (bijvoorbeeld een appel of banaan) met water is een betere keuze. Ten eerste levert fruit nuttige voedingsstoffen: vitamines, mineralen en vezels, terwijl chips vooral zout en ongezond vet bevatten en frisdrank vooral suiker. Ten tweede helpen de vezels uit fruit de darmwerking en geven ze een verzadigd gevoel, terwijl frisdrank enkel snelle suikers levert. Water lest de dorst zonder extra suiker.",
+            "rubric": [
+              {"criterion": "Stelt een gezonder alternatief voor uit de voedingsadviezen van het hoofdstuk", "points": 1},
+              {"criterion": "Geeft twee correcte argumenten over voedingsstoffen, vezels, suiker, zout of vet", "points": 1}
+            ],
+            "hint": "Vergelijk welke voedingsstoffen er in beide keuzes zitten."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "exitticket",
+      "titel": "Exit-ticket hoofdstuk 5",
+      "toelichting": "Vier vragen om te checken of je de kern van het spijsverteringsstelsel beheerst.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Waarom moet je voedsel eerst verteerd worden voor je cellen er iets mee kunnen?",
+            "options": [
+              "Omdat cellen alleen heel kleine voedingsstoffen kunnen opnemen en gebruiken.",
+              "Omdat het voedsel anders te koud is voor de cellen.",
+              "Omdat cellen alleen water kunnen opnemen.",
+              "Omdat het bloed geen voedingsstoffen kan vervoeren."
+            ],
+            "correctIndex": 0,
+            "hint": "Kan een cel een hele boterham gebruiken?",
+            "explanation": "Een cel kan geen hele boterham of appel gebruiken. Bij de vertering wordt het voedsel afgebroken tot kleine voedingsstoffen die via het bloed tot bij de cellen raken."
+          },
+          {
+            "type": "short",
+            "prompt": "In welk orgaan worden de meeste voedingsstoffen in het bloed opgenomen?",
+            "accepted": ["dunne darm", "de dunne darm", "dunnedarm"],
+            "hint": "Het is het orgaan met de darmvlokken.",
+            "explanation": "De dunne darm neemt de voedingsstoffen op dankzij zijn geplooide wand vol darmvlokken."
+          },
+          {
+            "type": "tf",
+            "prompt": "Gal wordt gemaakt door de maag.",
+            "answer": false,
+            "hint": "Welk orgaan maakt gal, en waar wordt het bewaard?",
+            "explanation": "Gal wordt gemaakt door de lever en bewaard in de galblaas. Het komt in de twaalfvingerige darm terecht en verdeelt vetten in kleine druppeltjes."
+          },
+          {
+            "type": "long",
+            "prompt": "Noem één voedingsstof die vooral brandstof is en één die vooral bouwstof is. Leg bij elk kort uit waarvoor je lichaam ze gebruikt.",
+            "modelAnswer": "Koolhydraten (bijvoorbeeld zetmeel uit brood) zijn brandstof: ze leveren de energie die je spieren, organen en hersenen nodig hebben. Eiwitten (bijvoorbeeld uit vlees, vis of bonen) zijn bouwstof: je lichaam gebruikt ze om cellen op te bouwen en te herstellen, bijvoorbeeld bij groei of na een wonde. Ook vetten zijn brandstof en calcium is een bouwstof voor botten en tanden.",
+            "rubric": [
+              {"criterion": "Kiest een correcte brandstof en een correcte bouwstof", "points": 1},
+              {"criterion": "Legt bij beide correct uit waarvoor het lichaam ze gebruikt", "points": 1}
+            ],
+            "hint": "Denk aan energie tegenover groei en herstel."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Kernbegrippen",
+      "plaats": "einde",
+      "type": "memory",
+      "titel": "Memory: voedingsstof en voedingsmiddel",
+      "toelichting": "Zoek bij elke voedingsstof een voedingsmiddel waar je er veel van vindt.",
+      "config": {
+        "pairs": [
+          {"a": "Calcium", "b": "Melk, yoghurt en kaas"},
+          {"a": "Vitamine C", "b": "Een sinaasappel"},
+          {"a": "Zetmeel", "b": "Brood en pasta"},
+          {"a": "Eiwitten", "b": "Vis, eieren en bonen"},
+          {"a": "Voedingsvezels", "b": "Volkorenbrood en groenten"},
+          {"a": "Vetten", "b": "Chips en frietjes"},
+          {"a": "Water", "b": "Komkommer en appel"}
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "wordsearch",
+      "titel": "Woordzoeker: het spijsverteringsstelsel",
+      "toelichting": "Zoek tien woorden uit dit hoofdstuk in het letterrooster.",
+      "config": {
+        "words": [
+          "MONDHOLTE",
+          "SLOKDARM",
+          "MAAG",
+          "SPEEKSEL",
+          "ENZYMEN",
+          "LEVER",
+          "ALVLEESKLIER",
+          "DARMVLOKKEN",
+          "ENDELDARM",
+          "ONTLASTING"
+        ]
+      }
+    }
+  ]
+}

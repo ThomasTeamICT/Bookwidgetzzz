@@ -1,0 +1,339 @@
+{
+  "hoofdstuk": "08",
+  "oefeningen": [
+    {
+      "sectie": "2.2",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: afvalstoffen, urine en de weg naar buiten",
+      "toelichting": "Zes vragen over waarom je afvalstoffen kwijt moet, wat er in urine zit en welke weg de urine aflegt.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Je cellen maken voortdurend afvalstoffen. Waarom moeten die uit je lichaam verwijderd worden?",
+            "options": [
+              "Anders hopen ze op en vergiftigt je lichaam zichzelf langzaam.",
+              "Anders nemen je cellen te veel zuurstof op.",
+              "Anders wordt je bloed te dun om nog te stromen.",
+              "Anders kan je darm geen voedingsstoffen meer opnemen."
+            ],
+            "correctIndex": 0,
+            "hint": "Denk aan wat er gebeurt als het vuilnis nooit wordt opgehaald.",
+            "explanation": "In het hoofdstuk staat het letterlijk: als afvalstoffen in je lichaam blijven ophopen, zou je lichaam zichzelf langzaam vergiftigen. Daarom scheidt je lichaam ze uit."
+          },
+          {
+            "type": "multi",
+            "prompt": "Welke organen helpen bij de mens mee om afvalstoffen uit het lichaam te verwijderen?",
+            "options": [
+              "de nieren",
+              "de longen",
+              "de huid (zweetklieren)",
+              "de maag",
+              "de hersenen"
+            ],
+            "correctIndices": [0, 1, 2],
+            "explanation": "De nieren filteren het bloed en maken urine, de longen ademen koolstofdioxide uit en de huid scheidt via zweet water en afvalstoffen uit. De maag verteert voedsel en de hersenen sturen je lichaam aan: dat zijn geen uitscheidingsorganen."
+          },
+          {
+            "type": "sort",
+            "prompt": "Zit deze stof normaal wel of niet in de urine van een gezond persoon?",
+            "categories": ["Zit normaal in urine", "Zit normaal niet in urine"],
+            "items": [
+              { "text": "water (ongeveer 95%)", "category": "Zit normaal in urine" },
+              { "text": "ureum", "category": "Zit normaal in urine" },
+              { "text": "overtollige zouten", "category": "Zit normaal in urine" },
+              { "text": "overtollige vitamines", "category": "Zit normaal in urine" },
+              { "text": "rode bloedcellen", "category": "Zit normaal niet in urine" },
+              { "text": "eiwitten", "category": "Zit normaal niet in urine" },
+              { "text": "vet", "category": "Zit normaal niet in urine" }
+            ],
+            "hint": "Wat is te groot om door de zeef van de nier te geraken?",
+            "explanation": "Urine is vooral water met daarin opgeloste afvalstoffen (ureum, urinezuur) en overtollige zouten en vitamines. Bloedcellen, eiwitten en vet blijven in het bloed: je lichaam heeft ze nodig en ze zijn te groot voor de filters in de nieren."
+          },
+          {
+            "type": "order",
+            "prompt": "Zet de organen in de volgorde waarin een druppeltje urine ze passeert, van de plaats waar het gemaakt wordt tot buiten het lichaam.",
+            "items": ["nier", "urineleider", "urineblaas", "plasbuis"],
+            "hint": "Begin bij het orgaan dat de urine maakt.",
+            "explanation": "De weg van de urine is: nier, urineleider, blaas, plasbuis en dan naar buiten."
+          },
+          {
+            "type": "tf",
+            "prompt": "Urine bestaat voor ongeveer 95% uit water.",
+            "answer": true,
+            "explanation": "Het grootste deel van urine is water. Daarin zijn de afvalstoffen zoals ureum en de overtollige zouten opgelost."
+          },
+          {
+            "type": "dropdown",
+            "prompt": "Kies telkens het juiste woord.",
+            "text": "Als je veel water drinkt, is je urine {lichter|donkerder|dikker} van kleur. Je nieren nemen dan {minder|meer} water terug op, zodat je {vaker|minder vaak} naar het toilet moet.",
+            "shuffle": true,
+            "explanation": "Bij een wateroverschot halen de nieren minder water terug uit de voorurine. Er blijft dus meer water in de urine: ze is lichter van kleur en je plast vaker."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "2.3",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: hoe maken je nieren urine?",
+      "toelichting": "Zes vragen over filteren, heropname en wat er gebeurt op het moment dat je plast.",
+      "config": {
+        "questions": [
+          {
+            "type": "order",
+            "prompt": "Zet de stappen waarmee een nier urine maakt in de juiste volgorde.",
+            "items": [
+              "Het bloed komt via de nierslagader in de nier aan.",
+              "In de nefronen wordt een deel van het bloedplasma door een heel fijne zeef geperst.",
+              "Er ontstaat voorurine: water met daarin afvalstoffen en nuttige stoffen door elkaar.",
+              "Bij de heropname gaan water, glucose en zouten terug naar het bloed.",
+              "De definitieve urine verzamelt zich in het nierbekken."
+            ],
+            "hint": "Eerst alles door de zeef, daarna pas terughalen wat je nog nodig hebt.",
+            "explanation": "De nier filtert eerst ruw (voorurine), neemt daarna de nuttige stoffen weer op en houdt zo de definitieve urine over."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom blijven bloedcellen en eiwitten tijdens het filteren gewoon in het bloed?",
+            "options": [
+              "Ze zijn te groot om door de gaatjes van de zeef te passen.",
+              "Ze zijn zwaarder dan water en zakken naar de bodem van de nier.",
+              "De nier breekt ze eerst af tot ureum.",
+              "De plasbuis houdt ze tegen voor ze naar buiten kunnen."
+            ],
+            "correctIndex": 0,
+            "explanation": "De wand van het filtertje werkt als een zeef: kleine deeltjes zoals water, zouten, suikers en afvalstoffen gaan erdoor, grote deeltjes zoals bloedcellen en eiwitten niet."
+          },
+          {
+            "type": "tf",
+            "prompt": "Als je te weinig drinkt, halen je nieren extra water uit de voorurine terug en plas je minder.",
+            "answer": true,
+            "explanation": "Bij watertekort nemen de nieren meer water terug op in het bloed. Je maakt dan minder urine en die urine is geconcentreerder."
+          },
+          {
+            "type": "table",
+            "prompt": "Vul aan: gaat dit deeltje door de zeef van het nefron, of blijft het in het bloed? Schrijf 'door de zeef' of 'blijft in het bloed'.",
+            "columns": ["Deeltje", "Door de zeef of in het bloed?"],
+            "rows": [
+              { "cells": ["water", ""], "answers": [null, "door de zeef"] },
+              { "cells": ["rode bloedcel", ""], "answers": [null, "blijft in het bloed"] },
+              { "cells": ["zout", ""], "answers": [null, "door de zeef"] },
+              { "cells": ["eiwit", ""], "answers": [null, "blijft in het bloed"] }
+            ],
+            "hint": "Klein genoeg voor de zeefgaatjes, of niet?",
+            "explanation": "Water en zout zijn kleine deeltjes en passen door de zeefgaatjes. Een rode bloedcel en een eiwit zijn grote deeltjes en blijven in de bloedbaan."
+          },
+          {
+            "type": "marktext",
+            "prompt": "Duid alle stoffen aan die bij de heropname terug naar het bloed gaan.",
+            "text": "In de nierbuisjes gaan een groot deel van het [water], de [glucose] en bepaalde [zouten] terug naar het bloed. Ureum en urinezuur blijven achter en verlaten je lichaam met de urine.",
+            "penalizeWrong": false,
+            "explanation": "Bij de heropname haalt de nier de nuttige stoffen terug: water, glucose en een deel van de zouten. De afvalstoffen ureum en urinezuur blijven in de urine zitten."
+          },
+          {
+            "type": "mc",
+            "prompt": "Wat gebeurt er op het moment dat je gaat plassen?",
+            "options": [
+              "De sluitspier ontspant en de spierwand van de blaas knijpt samen.",
+              "De sluitspier knijpt samen en de blaaswand ontspant.",
+              "De urineleiders persen de urine rechtstreeks naar buiten.",
+              "De nieren beginnen op dat moment pas urine te maken."
+            ],
+            "correctIndex": 0,
+            "hint": "Eén spier moet los, een andere moet duwen.",
+            "explanation": "De sluitspier houdt de plasbuis normaal dicht. Bij het plassen ontspant die spier terwijl de gespierde blaaswand samenknijpt, zodat de urine via de plasbuis naar buiten wordt geperst."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "3.",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: goed zorgen voor je nieren",
+      "toelichting": "Vier vragen over drinken, zout en gewoonten die je nieren gezond houden.",
+      "config": {
+        "questions": [
+          {
+            "type": "multi",
+            "prompt": "Welke gewoonten zijn volgens dit hoofdstuk goed voor je nieren?",
+            "options": [
+              "elke dag ongeveer 1,5 tot 2 liter water drinken",
+              "matig zijn met zout",
+              "regelmatig bewegen",
+              "elke dag zoute snacks zoals chips eten",
+              "je plas urenlang ophouden"
+            ],
+            "correctIndices": [0, 1, 2],
+            "explanation": "Voldoende drinken houdt je urine verdund, weinig zout houdt je bloeddruk laag en bewegen houdt je bloedsomloop gezond. Veel zout eten en je plas te lang ophouden zijn juist risico's (hoge bloeddruk, nierstenen, blaasontsteking)."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom is te veel zout eten op termijn slecht voor je nieren?",
+            "options": [
+              "Zout houdt vocht vast in je bloedvaten, je bloeddruk stijgt en hoge bloeddruk beschadigt de nieren.",
+              "Zout maakt de zeefgaatjes in de nier groter, waardoor er bloedcellen in je urine komen.",
+              "Zout zorgt ervoor dat je nieren geen ureum meer kunnen maken.",
+              "Zout maakt je urine lichter van kleur, waardoor afvalstoffen achterblijven."
+            ],
+            "correctIndex": 0,
+            "explanation": "Zout houdt vocht vast in de bloedvaten. Daardoor stijgen het bloedvolume en de bloeddruk, en een hoge bloeddruk beschadigt de nieren op lange termijn."
+          },
+          {
+            "type": "tf",
+            "prompt": "Wie elke dag te weinig drinkt, heeft meer kans op nierstenen.",
+            "answer": true,
+            "explanation": "Te weinig drinken geeft geconcentreerde urine. De zouten daarin kunnen dan uitkristalliseren tot nierstenen."
+          },
+          {
+            "type": "short",
+            "prompt": "Emma heeft bijna kleurloze urine, Milan donkergele urine. Wie van de twee heeft die dag het meeste gedronken?",
+            "accepted": ["emma"],
+            "explanation": "Veel drinken verdunt de urine, waardoor ze licht van kleur wordt. Donkergele urine wijst juist op weinig vocht."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Kernbegrippen",
+      "plaats": "einde",
+      "type": "wordsearch",
+      "titel": "Woordzoeker: het uitscheidingsstelsel",
+      "toelichting": "Zoek de twaalf woorden uit dit hoofdstuk in het rooster.",
+      "config": {
+        "words": [
+          "NIEREN",
+          "URINE",
+          "UREUM",
+          "NEFRON",
+          "VOORURINE",
+          "HEROPNAME",
+          "URINELEIDER",
+          "URINEBLAAS",
+          "PLASBUIS",
+          "SLUITSPIER",
+          "NIERSTENEN",
+          "ZOUTEN"
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "worksheet",
+      "titel": "Werkblad: je nieren aan het werk",
+      "toelichting": "Vijf toepassingsvragen: uitleggen, rekenen en aanvullen met wat je over de nieren geleerd hebt.",
+      "config": {
+        "questions": [
+          {
+            "type": "info",
+            "prompt": "**Werkblad.** Antwoord in volledige zinnen en gebruik de begrippen uit het hoofdstuk. Reken bij de rekenvraag netjes met eenheden."
+          },
+          {
+            "type": "long",
+            "prompt": "Op een warme dag drinkt Milan bijna niets. 's Avonds merkt hij dat zijn urine donkergeel is. Leg uit hoe dat komt.",
+            "modelAnswer": "Milan verliest veel vocht via zweet en drinkt weinig, dus zijn lichaam heeft een watertekort. Zijn nieren nemen daarom bij de heropname extra water terug uit de voorurine, zodat dat water in zijn bloed blijft. In de urine blijft daardoor weinig water over, terwijl de afvalstoffen (ureum, zouten) er wel in zitten. De urine is dus geconcentreerd en donkergeel van kleur.",
+            "rubric": [
+              { "criterion": "Legt uit dat de nieren bij watertekort extra water heropnemen in het bloed.", "points": 1 },
+              { "criterion": "Legt uit dat de afvalstoffen daardoor in minder water zitten, waardoor de urine geconcentreerd en donker is.", "points": 1 }
+            ],
+            "hint": "Wat doen de nieren met het water als je lichaam te weinig vocht heeft?"
+          },
+          {
+            "type": "number",
+            "prompt": "Jasper wil vandaag minstens 1,5 liter drinken. Hij dronk al 3 glazen van 250 ml. Hoeveel milliliter moet hij nog drinken? Antwoord in ml.",
+            "answer": 750,
+            "tolerance": 10,
+            "hint": "Zet 1,5 liter eerst om naar milliliter.",
+            "explanation": "3 x 250 ml = 750 ml gedronken. 1,5 liter = 1500 ml. 1500 ml - 750 ml = 750 ml die hij nog moet drinken."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul aan met 'meer' of 'minder'.",
+            "text": "Wie op een dag twee liter water drinkt, laat de nieren [minder] water heropnemen en plast daardoor [meer].",
+            "explanation": "Bij een wateroverschot halen de nieren minder water terug uit de voorurine, zodat het teveel aan water via de urine verdwijnt."
+          },
+          {
+            "type": "table",
+            "prompt": "Vul aan via welk uitscheidingsorgaan elke afvalstof je lichaam verlaat.",
+            "columns": ["Afvalstof", "Uitscheidingsorgaan"],
+            "rows": [
+              { "cells": ["koolstofdioxide", ""], "answers": [null, "de longen"] },
+              { "cells": ["ureum", ""], "answers": [null, "de nieren"] },
+              { "cells": ["overtollig water en zout in zweet", ""], "answers": [null, "de huid (zweetklieren)"] }
+            ],
+            "explanation": "Je longen ademen koolstofdioxide uit, je nieren scheiden ureum uit via de urine en je huid verliest water en zouten via het zweet."
+          },
+          {
+            "type": "long",
+            "prompt": "Noem drie gewoonten die goed zijn voor je nieren en leg bij elke gewoonte in een zin uit waarom.",
+            "modelAnswer": "1) Elke dag 1,5 tot 2 liter water drinken: je nieren hebben vocht nodig om afvalstoffen op te lossen en uit te scheiden, en verdunde urine geeft minder kans op nierstenen. 2) Matig zijn met zout: te veel zout houdt vocht vast in de bloedvaten en verhoogt de bloeddruk, wat de nieren op termijn beschadigt. 3) Op tijd naar het toilet gaan: urine die te lang in de blaas blijft, verhoogt de kans op een blaasontsteking, die kan opstijgen naar de nieren. (Ook goed: gezond en gevarieerd eten, regelmatig bewegen, niet roken.)",
+            "rubric": [
+              { "criterion": "Noemt drie gewoonten die in het hoofdstuk staan.", "points": 1 },
+              { "criterion": "Geeft bij elke gewoonte een juiste uitleg over het effect op de nieren.", "points": 1 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "scramble",
+      "titel": "Zinnenpuzzel: zet de zin weer goed",
+      "toelichting": "De woorden zijn door elkaar geschud. Maak van elke reeks woorden opnieuw een kloppende zin.",
+      "config": {
+        "mode": "sentence",
+        "items": [
+          { "text": "De nieren filteren afvalstoffen uit het bloed.", "hint": "Wat is de hoofdtaak van de nieren?" },
+          { "text": "De urine stroomt van de nier via de urineleider naar de blaas.", "hint": "De weg van de urine, eerste stuk" },
+          { "text": "De sluitspier houdt de urine in de blaas tot je gaat plassen.", "hint": "Welke spier houdt de plasbuis dicht?" },
+          { "text": "Bij de heropname gaan nuttige stoffen terug naar het bloed.", "hint": "Wat gebeurt er na het eerste filteren?" },
+          { "text": "Wie te weinig drinkt, krijgt donkere en geconcentreerde urine.", "hint": "Gevolg van te weinig water drinken" }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "exitticket",
+      "titel": "Exit-ticket hoofdstuk 8",
+      "toelichting": "Vier vragen om te checken of je de kern van het uitscheidingsstelsel beheerst.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Welke stof hoort bij een gezond persoon NIET in de urine thuis?",
+            "options": ["eiwit", "ureum", "overtollig zout", "water"],
+            "correctIndex": 0,
+            "explanation": "Eiwitten zijn grote deeltjes: ze passen niet door de zeef in het nefron en blijven in het bloed. Ureum, overtollige zouten en water horen wel in urine."
+          },
+          {
+            "type": "short",
+            "prompt": "Welk orgaan slaat de urine op tot jij naar het toilet gaat?",
+            "accepted": ["blaas", "de blaas", "urineblaas", "de urineblaas"],
+            "explanation": "De urineblaas is een rekbare spierzak die de urine bewaart. Daardoor hoef je niet voortdurend te druppelen."
+          },
+          {
+            "type": "tf",
+            "prompt": "Je nieren maken alleen urine aan op het moment dat je gaat plassen.",
+            "answer": false,
+            "explanation": "De urineproductie gaat continu door. Doordat de blaas als opslagzak werkt, moet je pas naar het toilet als de blaas voldoende gevuld is."
+          },
+          {
+            "type": "long",
+            "prompt": "Leg in twee zinnen uit waarom het gevaarlijk zou zijn als je nieren zouden stoppen met werken.",
+            "modelAnswer": "Als de nieren stoppen, worden de afvalstoffen zoals ureum en de overtollige zouten niet meer uit het bloed gefilterd. Die stoffen hopen zich dan op in je lichaam, waardoor je lichaam zichzelf vergiftigt en het evenwicht van water en zouten verstoord raakt.",
+            "rubric": [
+              { "criterion": "Zegt dat de afvalstoffen niet meer uit het bloed gehaald worden.", "points": 1 },
+              { "criterion": "Zegt dat die ophoping schadelijk of vergiftigend is voor het lichaam.", "points": 1 }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

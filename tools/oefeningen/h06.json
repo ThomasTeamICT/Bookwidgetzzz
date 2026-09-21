@@ -1,0 +1,335 @@
+{
+  "hoofdstuk": "06",
+  "oefeningen": [
+    {
+      "sectie": "2.1",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: ingeademde en uitgeademde lucht",
+      "toelichting": "Vijf vragen over waarom je ademt en wat er met de lucht verandert onderweg.",
+      "config": {
+        "questions": [
+          {
+            "type": "dropdown",
+            "prompt": "Kies telkens het juiste percentage of woord.",
+            "text": "Ingeademde lucht bevat ongeveer {21|16|4} % zuurstof en ongeveer {0,04|4|21} % koolstofdioxide. Uitgeademde lucht bevat ongeveer {16|21|78} % zuurstof en ongeveer {4|0,04|78} % koolstofdioxide. Het percentage stikstof blijft {gelijk|veel hoger|veel lager}.",
+            "shuffle": true,
+            "hint": "Er verdwijnt maar een deel van de zuurstof uit de lucht, niet alles.",
+            "explanation": "In de longen wordt een deel van de zuurstof opgenomen (van ongeveer 21 % naar 16 %) en komt er koolstofdioxide bij (van ongeveer 0,04 % naar 4 %). Stikstof gebruikt je lichaam niet, dus dat percentage verandert niet."
+          },
+          {
+            "type": "mc",
+            "prompt": "Je blaast je adem door een buisje in helder kalkwater. Het kalkwater wordt troebel. Wat toont deze proef aan?",
+            "options": [
+              "Uitgeademde lucht bevat meer koolstofdioxide dan ingeademde lucht.",
+              "Uitgeademde lucht bevat meer zuurstof dan ingeademde lucht.",
+              "Uitgeademde lucht bevat meer stikstof dan ingeademde lucht.",
+              "Uitgeademde lucht is kouder dan ingeademde lucht."
+            ],
+            "correctIndex": 0,
+            "hint": "Kalkwater reageert met het afvalgas dat je uitademt.",
+            "explanation": "Kalkwater wordt troebel door koolstofdioxide. Je adem bevat er ongeveer 4 % van, veel meer dan de 0,04 % in de buitenlucht."
+          },
+          {
+            "type": "tf",
+            "prompt": "Het percentage stikstof in uitgeademde lucht is duidelijk lager dan in ingeademde lucht.",
+            "answer": false,
+            "hint": "Doet je lichaam iets met stikstof?",
+            "explanation": "Je lichaam gebruikt stikstof niet. Het percentage stikstof (ongeveer 78 %) blijft dus gelijk; alleen zuurstof en koolstofdioxide veranderen."
+          },
+          {
+            "type": "short",
+            "prompt": "Op een koude dag zie je wolkjes als je uitademt. Welke stof uit je adem condenseert dan in de koude lucht? Antwoord met één woord.",
+            "accepted": ["waterdamp", "water", "damp"],
+            "hint": "Diezelfde stof zorgt ervoor dat een spiegel beslaat als je ertegen blaast.",
+            "explanation": "Uitgeademde lucht bevat veel waterdamp uit je vochtige luchtwegen. In koude lucht condenseert die damp tot kleine druppeltjes: je ziet een wolkje."
+          },
+          {
+            "type": "multi",
+            "prompt": "Welke uitspraken over uitgeademde lucht kloppen? (Meerdere antwoorden juist.)",
+            "options": [
+              "Ze bevat meer waterdamp dan ingeademde lucht.",
+              "Ze is warmer dan de lucht die je inademde.",
+              "Ze bevat minder zuurstof dan ingeademde lucht.",
+              "Ze bevat helemaal geen zuurstof meer.",
+              "Ze bevat minder koolstofdioxide dan ingeademde lucht."
+            ],
+            "correctIndices": [0, 1, 2],
+            "hint": "Uitgeademde lucht bevat nog altijd ongeveer 16 % zuurstof.",
+            "explanation": "Uitgeademde lucht is warmer en vochtiger en bevat minder zuurstof en meer koolstofdioxide. Er blijft wel nog zuurstof in over (ongeveer 16 %); daarom kan mond-op-mondbeademing werken."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "2.2",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: adembewegingen en longinhoud",
+      "toelichting": "Vergelijk in- en uitademing en reken met de vitale capaciteit.",
+      "config": {
+        "questions": [
+          {
+            "type": "table",
+            "prompt": "Vul de lege vakjes aan: wat gebeurt er bij in- en bij uitademen?",
+            "columns": ["Lichaamsdeel", "Bij het inademen", "Bij het uitademen"],
+            "rows": [
+              {"cells": ["Ribben", "gaan omhoog en naar buiten", ""], "answers": [null, null, "zakken omlaag"]},
+              {"cells": ["Middenrif", "", "ontspant en gaat omhoog"], "answers": [null, "gaat omlaag", null]},
+              {"cells": ["Borstkas", "", "wordt kleiner"], "answers": [null, "wordt groter", null]},
+              {"cells": ["Longen", "zetten uit", ""], "answers": [null, null, "krimpen"]}
+            ],
+            "hint": "Bij uitademen gebeurt telkens het omgekeerde van bij inademen.",
+            "explanation": "Bij het inademen gaan de ribben omhoog en naar buiten en gaat het middenrif omlaag: de borstkas wordt groter en de longen zetten uit. Bij het uitademen zakken de ribben, gaat het middenrif omhoog, wordt de borstkas kleiner en krimpen de longen."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom stroomt er lucht je longen binnen wanneer je inademt?",
+            "options": [
+              "Omdat je borstkas groter wordt en de longen uitzetten, waardoor lucht naar binnen gezogen wordt.",
+              "Omdat je longen met eigen spieren in hun wand de lucht naar binnen zuigen.",
+              "Omdat het middenrif de lucht naar binnen blaast.",
+              "Omdat de buitenlucht warmer is dan de lucht in je longen."
+            ],
+            "correctIndex": 0,
+            "hint": "Wat doen je ribben en je middenrif met de ruimte in je borstkas?",
+            "explanation": "De ribben en het middenrif maken de ruimte in je borstkas groter. De rekbare longen zetten mee uit en daardoor wordt lucht naar binnen gezogen."
+          },
+          {
+            "type": "mc",
+            "prompt": "Laura ademt zo diep mogelijk in en blaast daarna alles wat ze kan in een ballon. De ballon bevat achteraf 2,5 liter lucht. Wat heeft Laura gemeten?",
+            "options": [
+              "Haar vitale capaciteit",
+              "Het volume van één longblaasje",
+              "Het zuurstofgehalte van haar adem",
+              "Het aantal ademhalingen per minuut"
+            ],
+            "correctIndex": 0,
+            "hint": "Maximaal inademen en daarna alles uitblazen: hoe heet dat volume?",
+            "explanation": "De vitale capaciteit is de maximale hoeveelheid lucht die je in één keer kunt uitademen na zo diep mogelijk te hebben ingeademd. Met een ballon of een spirometer kun je die meten."
+          },
+          {
+            "type": "number",
+            "prompt": "Laura blaast 2,5 liter uit, haar vader 4 liter. Hoeveel liter meer is de vitale capaciteit van haar vader?",
+            "answer": 1.5,
+            "tolerance": 0.1,
+            "hint": "Trek het kleinste volume af van het grootste.",
+            "explanation": "4 l - 2,5 l = 1,5 l. Grotere mensen hebben doorgaans grotere longen en dus een grotere vitale capaciteit."
+          },
+          {
+            "type": "tf",
+            "prompt": "Iemand die veel sport of een blaasinstrument bespeelt, kan een grotere vitale capaciteit krijgen.",
+            "answer": true,
+            "hint": "Kun je ademhalingsspieren trainen?",
+            "explanation": "Sporters, zangers en blazers trainen hun longen en ademhalingsspieren. Daardoor kan hun vitale capaciteit groter worden. Bij rokers of bij astma is ze net vaak kleiner."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "3.1",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: de weg van de lucht",
+      "toelichting": "Zes vragen over de route van de lucht en over wat neus, luchtpijp en longblaasjes ermee doen.",
+      "config": {
+        "questions": [
+          {
+            "type": "order",
+            "prompt": "Zet de onderdelen in de volgorde waarin de ingeademde lucht ze doorloopt.",
+            "items": [
+              "neus- of mondholte",
+              "keelholte",
+              "luchtpijp",
+              "twee hoofdbronchiën",
+              "kleinere luchtpijptakjes",
+              "longblaasjes"
+            ],
+            "hint": "De luchtpijp splitst pas onderaan je hals in twee takken.",
+            "explanation": "De lucht gaat via neus of mond naar de keelholte, dan de luchtpijp in. Die splitst in twee hoofdbronchiën, die zich vertakken in steeds kleinere buisjes tot in de longblaasjes."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul de twee ontbrekende woorden in.",
+            "text": "De luchtpijp splitst onderaan in twee [bronchiën], één naar elke long. Helemaal op het einde van de kleinste luchtwegen liggen de [longblaasjes], waar de gasuitwisseling gebeurt.",
+            "hint": "Het ademhalingsstelsel lijkt op een boom: eerst twee dikke takken, dan steeds kleinere takjes.",
+            "explanation": "De twee hoofdbronchiën verdelen de lucht over de linker- en de rechterlong. Aan het uiteinde van de kleinste vertakkingen zitten de longblaasjes (alveolen)."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom is ademen door je neus gezonder dan ademen door je mond?",
+            "options": [
+              "In de neus wordt de lucht opgewarmd, bevochtigd en gefilterd.",
+              "In de neus wordt al een deel van de zuurstof in het bloed opgenomen.",
+              "Door de neus komt er meer stikstof binnen.",
+              "Door de neus gaat de lucht sneller naar de longen."
+            ],
+            "correctIndex": 0,
+            "hint": "Denk aan het slijmvlies, de bloedvaatjes en de neushaartjes.",
+            "explanation": "Het slijmvlies met zijn bloedvaatjes verwarmt en bevochtigt de lucht, en de neushaartjes en het slijm houden stof en ziektekiemen tegen. De mondholte heeft die filters en verwarming niet."
+          },
+          {
+            "type": "marktext",
+            "prompt": "Klik alle woorden aan die te maken hebben met het schoonmaken van de ingeademde lucht.",
+            "text": "Onderweg naar de longen wordt de lucht gezuiverd. De [neushaartjes] vooraan in de neus houden grote stofdeeltjes tegen. Kleinere deeltjes en ziektekiemen blijven kleven in het [slijm] van de luchtwegen. De [trilhaartjes] werken dat vuile slijm omhoog naar de keelholte. Bij een grotere prikkel zorgt de [hoestreflex] voor een stevige luchtstoot naar buiten. Het middenrif en de ribben helpen bij het ademen, maar maken de lucht niet schoon.",
+            "penalizeWrong": false,
+            "hint": "Vier dingen houden vuil tegen of werken het weer naar buiten.",
+            "explanation": "Neushaartjes, slijm, trilhaartjes en de hoestreflex zorgen samen dat er zo weinig mogelijk stof en ziektekiemen tot in de longblaasjes raken. Middenrif en ribben zorgen voor de adembewegingen, niet voor de zuivering."
+          },
+          {
+            "type": "tf",
+            "prompt": "In de keelholte kruisen de weg van de lucht en de weg van het voedsel elkaar.",
+            "answer": true,
+            "hint": "Waarom kun je je verslikken?",
+            "explanation": "De keelholte is een kruispunt: de lucht gaat verder naar de luchtpijp, het voedsel naar de slokdarm. Bij het slikken sluit het strotklepje de luchtpijp af."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom kunnen de longblaasjes zoveel zuurstof aan het bloed doorgeven?",
+            "options": [
+              "Er zijn er miljoenen met samen een enorme oppervlakte, en hun wanden zijn superdun.",
+              "Ze zijn groot en dik, zodat er veel lucht in past.",
+              "Ze maken zelf extra zuurstof aan.",
+              "Ze pompen de lucht met spiertjes het bloed in."
+            ],
+            "correctIndex": 0,
+            "hint": "Alle longblaasjes samen zijn ongeveer zo groot als een tennisveld.",
+            "explanation": "Door de miljoenen blaasjes met heel dunne, vochtige wanden en de haarvaatjes er vlak tegenaan kunnen zuurstof en koolstofdioxide snel door de wand heen bewegen."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "4.",
+      "plaats": "einde",
+      "type": "worksheet",
+      "titel": "Werkblad: zorg goed voor je longen",
+      "toelichting": "Vier opdrachten waarin je je kennis over de luchtwegen gebruikt om gezondheidskeuzes uit te leggen.",
+      "config": {
+        "questions": [
+          {
+            "type": "info",
+            "prompt": "**Schrijf je antwoorden in volledige zinnen.** Gebruik woorden uit dit hoofdstuk, zoals *slijm*, *trilhaartjes*, *longblaasjes* en *vitale capaciteit*."
+          },
+          {
+            "type": "long",
+            "prompt": "Veel rokers hebben last van een blijvende ochtendhoest. Leg uit hoe dat komt. Gebruik in je uitleg zeker de woorden slijm en trilhaartjes.",
+            "modelAnswer": "In sigarettenrook zitten teer en giftige stoffen. Die irriteren de luchtwegen, waardoor het slijmvlies opzwelt en er meer slijm gemaakt wordt. Tegelijk raken de trilhaartjes beschadigd of verlamd, zodat ze het vuile slijm niet meer omhoog naar de keelholte kunnen werken. Het slijm met vuil blijft dus in de luchtpijp en de bronchiën liggen, en de enige manier om het kwijt te raken is hoesten. Op lange termijn kunnen ook longblaasjes stukgaan, waardoor de longcapaciteit afneemt.",
+            "rubric": [
+              {"criterion": "Legt uit dat rook de luchtwegen irriteert en er meer slijm ontstaat", "points": 1},
+              {"criterion": "Legt uit dat beschadigde trilhaartjes het slijm niet meer afvoeren, zodat hoesten nodig is", "points": 1}
+            ],
+            "hint": "Wat is normaal de taak van de trilhaartjes in je luchtpijp?"
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul de twee ontbrekende gassen in.",
+            "text": "Als je sport, hebben je spiercellen meer [zuurstof] nodig om energie vrij te maken. Ze maken daarbij ook meer afvalgas, namelijk [koolstofdioxide], dat je via de longblaasjes weer uitademt.",
+            "hint": "Het ene gas neem je op, het andere geef je af.",
+            "explanation": "Bij inspanning verbruiken je spieren meer zuurstof en produceren ze meer koolstofdioxide. Daarom ga je sneller en dieper ademen."
+          },
+          {
+            "type": "short",
+            "prompt": "In de longblaasjes gaat zuurstof vanuit de lucht naar het bloed. Welk gas gaat precies de andere kant op, van het bloed naar de lucht?",
+            "accepted": ["koolstofdioxide", "co2", "co₂", "koolstofdioxide (co2)"],
+            "hint": "Het is het afvalgas dat in je cellen ontstaat.",
+            "explanation": "Koolstofdioxide gaat vanuit het bloed door de dunne wand het longblaasje in en verlaat je lichaam bij het uitademen."
+          },
+          {
+            "type": "long",
+            "prompt": "Noem twee gewoonten om je longen gezond te houden: één ding dat je wél doet en één ding dat je net niet doet. Leg bij elk uit waarom het goed is voor je longen.",
+            "modelAnswer": "Wel doen: regelmatig bewegen of sporten. Daardoor train je je ademhalingsspieren, groeit je vitale capaciteit en nemen je longen zuurstof efficiënter op, zodat je minder snel buiten adem bent. Niet doen: roken of in rokerige ruimtes zitten. Rook beschadigt de trilhaartjes en de longblaasjes, waardoor vuil blijft liggen en de longcapaciteit afneemt. Andere goede keuzes zijn: vaak verluchten, vuile lucht en fijn stof vermijden en een stofmasker dragen bij stoffig werk.",
+            "rubric": [
+              {"criterion": "Noemt één gewoonte om wel te doen en één om te vermijden", "points": 1},
+              {"criterion": "Legt bij beide correct uit welk effect dat heeft op de longen", "points": 1}
+            ],
+            "hint": "Denk aan bewegen, verluchten, roken en luchtvervuiling."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "exitticket",
+      "titel": "Exit-ticket hoofdstuk 6",
+      "toelichting": "Vier vragen om te checken of je de kern van het ademhalingsstelsel beheerst.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Waarom hebben je cellen voortdurend zuurstof nodig?",
+            "options": [
+              "Om energie vrij te maken uit voedingsstoffen.",
+              "Om voedsel in de maag tot kleinere stukjes af te breken.",
+              "Om koolstofdioxide aan te maken als bouwstof.",
+              "Om de lucht in de longblaasjes op te warmen."
+            ],
+            "correctIndex": 0,
+            "hint": "Hoe noemen we de verbranding in de cel?",
+            "explanation": "Bij de celademhaling gebruiken cellen zuurstof om energie vrij te maken uit voedingsstoffen. Daarbij ontstaat koolstofdioxide als afvalgas."
+          },
+          {
+            "type": "short",
+            "prompt": "In welk onderdeel van de longen gebeurt de gasuitwisseling met het bloed?",
+            "accepted": ["longblaasjes", "de longblaasjes", "longblaasje", "alveolen"],
+            "hint": "Ze liggen helemaal op het einde van de kleinste luchtwegen.",
+            "explanation": "In de longblaasjes (alveolen) gaat zuurstof door de superdunne wand het bloed in en koolstofdioxide het blaasje in."
+          },
+          {
+            "type": "tf",
+            "prompt": "Uitgeademde lucht bevat meer zuurstof dan ingeademde lucht.",
+            "answer": false,
+            "hint": "Vergelijk 21 % met 16 %.",
+            "explanation": "Het is net omgekeerd: ingeademde lucht bevat ongeveer 21 % zuurstof, uitgeademde lucht nog ongeveer 16 %, want een deel is in het bloed opgenomen."
+          },
+          {
+            "type": "long",
+            "prompt": "Je zit een lesuur in een klas met alle ramen en deuren dicht en voelt je loom. Leg uit wat er ondertussen met de lucht in het lokaal gebeurd is en wat je eraan kunt doen.",
+            "modelAnswer": "Iedereen in de klas ademt voortdurend zuurstof in en koolstofdioxide uit. Daardoor daalt het zuurstofgehalte in het lokaal en stijgt het CO2-gehalte, en voelt de lucht muf aan. Je cellen krijgen minder makkelijk zuurstof en je voelt je slaperig. De oplossing is ventileren: een raam of deur openzetten zodat er frisse, zuurstofrijke lucht binnenkomt.",
+            "rubric": [
+              {"criterion": "Legt uit dat het zuurstofgehalte daalt en het CO2-gehalte stijgt door het ademen van de klas", "points": 1},
+              {"criterion": "Geeft ventileren of verluchten als oplossing", "points": 1}
+            ],
+            "hint": "Welke twee gassen wisselt iedereen in het lokaal uit met de lucht?"
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Kernbegrippen",
+      "plaats": "einde",
+      "type": "memory",
+      "titel": "Memory: de cijfers van je ademhaling",
+      "toelichting": "Zoek bij elk gegeven uit dit hoofdstuk het juiste getal of de juiste vergelijking.",
+      "config": {
+        "pairs": [
+          {"a": "Zuurstof in ingeademde lucht", "b": "ongeveer 21 %"},
+          {"a": "Zuurstof in uitgeademde lucht", "b": "ongeveer 16 %"},
+          {"a": "CO2 in ingeademde lucht", "b": "ongeveer 0,04 %"},
+          {"a": "CO2 in uitgeademde lucht", "b": "ongeveer 4 %"},
+          {"a": "Stikstof in de lucht", "b": "ongeveer 78 %"},
+          {"a": "Vitale capaciteit volwassene", "b": "3 tot 5 liter"},
+          {"a": "Oppervlakte van alle longblaasjes", "b": "zo groot als een tennisveld"}
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "scramble",
+      "titel": "Zinnenpuzzel: hoe werkt je ademhaling?",
+      "toelichting": "Zet de woorden in de juiste volgorde tot een kloppende zin over het ademhalingsstelsel.",
+      "config": {
+        "mode": "sentence",
+        "items": [
+          {"text": "In de longblaasjes gaat zuurstof van de lucht naar het bloed.", "hint": "Waar gebeurt de gasuitwisseling?"},
+          {"text": "Bij het inademen gaat het middenrif omlaag en wordt de borstkas groter.", "hint": "Denk aan de adembewegingen."},
+          {"text": "De trilhaartjes werken het slijm met stof omhoog naar de keelholte.", "hint": "Zo blijft de luchtpijp schoon."},
+          {"text": "Uitgeademde lucht bevat minder zuurstof en meer koolstofdioxide.", "hint": "Vergelijk in- en uitgeademde lucht."},
+          {"text": "Je cellen gebruiken zuurstof om energie vrij te maken uit voedingsstoffen.", "hint": "Waarvoor dient zuurstof in de cel?"}
+        ]
+      }
+    }
+  ]
+}

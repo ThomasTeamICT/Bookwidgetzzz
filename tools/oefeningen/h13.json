@@ -1,0 +1,323 @@
+{
+  "hoofdstuk": "13",
+  "oefeningen": [
+    {
+      "sectie": "1.2",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: massa of gewicht?",
+      "toelichting": "Vijf vragen over het verschil tussen massa en gewicht en over correct wegen.",
+      "config": {
+        "questions": [
+          {
+            "type": "sort",
+            "prompt": "Gaat deze uitspraak over de massa of over het gewicht van een voorwerp?",
+            "categories": ["Massa", "Gewicht"],
+            "items": [
+              { "text": "wordt uitgedrukt in kilogram (kg) of gram (g)", "category": "Massa" },
+              { "text": "blijft even groot op de aarde en op de maan", "category": "Massa" },
+              { "text": "lees je af op een keukenweegschaal in gram", "category": "Massa" },
+              { "text": "is een kracht", "category": "Gewicht" },
+              { "text": "is op de maan ongeveer zes keer kleiner", "category": "Gewicht" },
+              { "text": "ontstaat doordat de aarde aan een voorwerp trekt", "category": "Gewicht" }
+            ],
+            "hint": "Massa zegt hoeveel stof er is; gewicht zegt hoe hard de zwaartekracht eraan trekt.",
+            "explanation": "Massa is de hoeveelheid materie en verandert niet als je van plaats verandert. Gewicht is de zwaartekracht op die massa en hangt wel af van waar je bent."
+          },
+          {
+            "type": "tf",
+            "prompt": "Een astronaut van 60 kg heeft op de maan een kleinere massa dan op de aarde.",
+            "answer": false,
+            "explanation": "Zijn massa blijft 60 kg: hij bestaat uit precies evenveel stof. Alleen zijn gewicht is op de maan veel kleiner, want de zwaartekracht is daar ongeveer zes keer kleiner. De weegschaal zou daar ongeveer 10 kg aanwijzen."
+          },
+          {
+            "type": "number",
+            "prompt": "Een doos koekjes weegt met verpakking en al 500 g. De lege doos weegt 50 g. Wat is de massa van de koekjes alleen? Geef je antwoord in gram (g).",
+            "answer": 450,
+            "tolerance": 0,
+            "hint": "Trek de massa van de lege verpakking af van het totaal.",
+            "explanation": "500 g − 50 g = 450 g. Je meet de massa van de inhoud door het verschil te nemen, of door vooraf op de tara-knop te drukken."
+          },
+          {
+            "type": "mc",
+            "prompt": "Je wilt weten hoeveel gram water er in een beker zit. Wat doe je het handigst?",
+            "options": [
+              "Zet de lege beker op de weegschaal, druk op tara en giet daarna pas het water erin.",
+              "Giet het water in de beker en lees meteen af; de beker telt toch niet mee.",
+              "Weeg alleen de lege beker en tel daar 100 g bij op.",
+              "Weeg de beker met water en vermenigvuldig het resultaat met 2."
+            ],
+            "correctIndex": 0,
+            "explanation": "Met de tara-knop springt de weegschaal op nul terwijl de lege beker erop staat. Wat je daarna afleest, is de massa van alleen het water."
+          },
+          {
+            "type": "number",
+            "prompt": "Een appel heeft een massa van 150 g. Hoeveel kilogram (kg) is dat?",
+            "answer": 0.15,
+            "tolerance": 0.005,
+            "hint": "1 kg = 1000 g, dus deel het aantal gram door 1000.",
+            "explanation": "150 g / 1000 = 0,150 kg. Gram gebruik je voor lichte voorwerpen, kilogram voor zwaardere."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "1.4",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: volume meten en berekenen",
+      "toelichting": "Vijf vragen over eenheden van volume en over de juiste meetmethode kiezen.",
+      "config": {
+        "questions": [
+          {
+            "type": "number",
+            "prompt": "Een fles frisdrank heeft een inhoud van 1,5 L. Hoeveel milliliter (mL) is dat?",
+            "answer": 1500,
+            "tolerance": 0,
+            "hint": "1 liter is 1000 milliliter.",
+            "explanation": "1,5 L × 1000 = 1500 mL. Eén liter bevat 1000 milliliter."
+          },
+          {
+            "type": "number",
+            "prompt": "Een rechthoekige doos is 10 cm lang, 5 cm breed en 4 cm hoog. Bereken het volume in kubieke centimeter (cm³).",
+            "answer": 200,
+            "tolerance": 0,
+            "hint": "volume = lengte × breedte × hoogte",
+            "explanation": "10 cm × 5 cm × 4 cm = 200 cm³. Meet je in centimeter, dan krijg je het volume in kubieke centimeter."
+          },
+          {
+            "type": "order",
+            "prompt": "Zet de stappen van de waterverdringingsmethode in de juiste volgorde. Je wilt het volume van een steen bepalen.",
+            "items": [
+              "Giet water in de maatcilinder en lees het beginvolume af.",
+              "Laat de steen voorzichtig helemaal onder water zakken.",
+              "Wacht tot het water stil staat en lees het nieuwe volume af.",
+              "Trek het beginvolume af van het nieuwe volume.",
+              "Noteer dat verschil als het volume van de steen."
+            ],
+            "hint": "Je moet eerst weten hoeveel water er al in zat voor je de steen erin legt.",
+            "explanation": "De steen duwt evenveel water opzij als zijn eigen volume. Het verschil tussen het nieuwe en het oorspronkelijke waterniveau is dus precies het volume van de steen."
+          },
+          {
+            "type": "mc",
+            "prompt": "Welke methode gebruik je het best om het volume van een onregelmatige kiezelsteen te bepalen?",
+            "options": [
+              "de waterverdringingsmethode met een maatcilinder",
+              "lengte × breedte × hoogte meten met een meetlat",
+              "de steen op een digitale weegschaal leggen",
+              "de steen in een maatbeker leggen en de weegschaal aflezen"
+            ],
+            "correctIndex": 0,
+            "explanation": "Een kiezel heeft geen rechte zijden, dus lengte × breedte × hoogte werkt niet. Een weegschaal geeft je de massa, niet het volume. Met waterverdringing meet je wel het volume."
+          },
+          {
+            "type": "dropdown",
+            "prompt": "Kies telkens de juiste eenheid of het juiste getal.",
+            "text": "1 milliliter is precies evenveel als 1 {kubieke centimeter|kubieke meter|kilogram}. Eén liter bevat {1000|100|10} milliliter. Voor vaste voorwerpen gebruiken we meestal {cm³|mL|kg} als eenheid van volume.",
+            "shuffle": true,
+            "explanation": "1 mL = 1 cm³ en 1 L = 1000 mL. Voor vloeistoffen gebruik je mL of L, voor vaste voorwerpen meestal cm³."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "2.",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: rekenen met massadichtheid",
+      "toelichting": "Zes vragen waarin je de massadichtheid berekent en voorspelt of iets drijft of zinkt.",
+      "config": {
+        "questions": [
+          {
+            "type": "gap",
+            "prompt": "Vul de formule voor massadichtheid aan.",
+            "text": "massadichtheid = [massa] / [volume]",
+            "explanation": "Massadichtheid zegt hoeveel massa er in één volume-eenheid zit. Reken je in gram en cm³, dan krijg je g/cm³."
+          },
+          {
+            "type": "number",
+            "prompt": "Een metalen blok heeft een volume van 25 cm³ en een massa van 200 g. Bereken de massadichtheid in g/cm³.",
+            "answer": 8,
+            "tolerance": 0.1,
+            "hint": "Deel de massa door het volume.",
+            "explanation": "200 g / 25 cm³ = 8 g/cm³. Elke kubieke centimeter van dat metaal weegt dus 8 gram."
+          },
+          {
+            "type": "mc",
+            "prompt": "Dat metaal heeft een massadichtheid van 8 g/cm³. Water heeft 1,0 g/cm³. Wat gebeurt er als je het blok in water legt?",
+            "options": [
+              "Het zinkt, want de massadichtheid is groter dan die van water.",
+              "Het drijft, want de massadichtheid is kleiner dan die van water.",
+              "Het drijft, want het blok is zwaarder dan het water eromheen.",
+              "Dat hangt alleen af van de vorm van het blok."
+            ],
+            "correctIndex": 0,
+            "explanation": "Is de massadichtheid van een voorwerp groter dan die van de vloeistof, dan zinkt het. 8 g/cm³ is veel groter dan 1,0 g/cm³, dus het blok zakt naar de bodem."
+          },
+          {
+            "type": "number",
+            "prompt": "100 mL keukenolie heeft een massa van 90 g. Bereken de massadichtheid van de olie in g/mL.",
+            "answer": 0.9,
+            "tolerance": 0.05,
+            "hint": "massadichtheid = massa / volume, dus 90 gedeeld door 100.",
+            "explanation": "90 g / 100 mL = 0,90 g/mL. Dat is kleiner dan de 1,0 g/mL van water, en daarom drijft olie op water."
+          },
+          {
+            "type": "table",
+            "prompt": "Vul de lege vakjes in. Reken telkens met massadichtheid = massa / volume.",
+            "columns": ["Stof", "Massa (g)", "Volume (cm³)", "Massadichtheid (g/cm³)"],
+            "rows": [
+              {
+                "cells": ["water", "50", "50", ""],
+                "answers": [null, null, null, "1"]
+              },
+              {
+                "cells": ["ijzer", "79", "10", ""],
+                "answers": [null, null, null, "7,9"]
+              },
+              {
+                "cells": ["hout", "30", "60", ""],
+                "answers": [null, null, null, "0,5"]
+              },
+              {
+                "cells": ["olie", "45", "50", ""],
+                "answers": [null, null, null, "0,9"]
+              },
+              {
+                "cells": ["water", "", "200", "1"],
+                "answers": [null, "200", null, null]
+              }
+            ],
+            "hint": "In de laatste rij ken je de massadichtheid al: hoeveel gram weegt dan 200 cm³ water?",
+            "explanation": "50/50 = 1; 79/10 = 7,9; 30/60 = 0,5; 45/50 = 0,9. In de laatste rij: 200 cm³ × 1 g/cm³ = 200 g. Hout en olie drijven op water, ijzer zinkt."
+          },
+          {
+            "type": "tf",
+            "prompt": "Als je van dezelfde stof twee keer zoveel volume neemt, wordt ook de massadichtheid twee keer zo groot.",
+            "answer": false,
+            "explanation": "Massa en volume verdubbelen allebei, dus de verhouding massa/volume blijft precies gelijk. Massadichtheid is een stofeigenschap: ze hangt niet af van hoeveel je van de stof neemt."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "worksheet",
+      "titel": "Werkblad: drijven of zinken?",
+      "toelichting": "Vijf toepassingsvragen waarin je meet, rekent en voorspelt of iets drijft of zinkt.",
+      "config": {
+        "questions": [
+          {
+            "type": "info",
+            "prompt": "**Handig om te weten bij dit werkblad**\n\n- massadichtheid = massa / volume\n- 1 mL = 1 cm³ en 1 L = 1000 mL\n- Water heeft een massadichtheid van 1,0 g/cm³.\n- Kleinere massadichtheid dan water → het drijft. Grotere massadichtheid dan water → het zinkt."
+          },
+          {
+            "type": "number",
+            "prompt": "Rani legt een steen in een maatcilinder. Het water staat eerst op 80 mL en stijgt tot 130 mL. Bereken het volume van de steen in cm³.",
+            "answer": 50,
+            "tolerance": 0,
+            "hint": "Het volume van de steen is het verschil tussen het nieuwe en het oude waterniveau.",
+            "explanation": "130 mL − 80 mL = 50 mL, en 1 mL is hetzelfde als 1 cm³. Het volume van de steen is dus 50 cm³."
+          },
+          {
+            "type": "number",
+            "prompt": "Diezelfde steen heeft een massa van 135 g. Bereken de massadichtheid van de steen in g/cm³.",
+            "answer": 2.7,
+            "tolerance": 0.05,
+            "hint": "Gebruik het volume dat je net berekend hebt: 50 cm³.",
+            "explanation": "135 g / 50 cm³ = 2,7 g/cm³."
+          },
+          {
+            "type": "long",
+            "prompt": "Zal de steen uit de vorige vragen drijven of zinken als je hem in een emmer water laat vallen? Leg je antwoord uit met de massadichtheid van water.",
+            "modelAnswer": "De steen zinkt. De massadichtheid van de steen is 2,7 g/cm³ en die van water is 1,0 g/cm³. De steen bevat dus veel meer massa per kubieke centimeter dan water. Een voorwerp met een grotere massadichtheid dan de vloeistof waarin het ligt, zakt naar de bodem. Daarom zinkt de steen.",
+            "rubric": [
+              { "criterion": "Zegt dat de steen zinkt en vergelijkt 2,7 g/cm³ met de 1,0 g/cm³ van water.", "points": 1 },
+              { "criterion": "Verwoordt de regel: grotere massadichtheid dan de vloeistof betekent zinken, kleinere betekent drijven.", "points": 1 }
+            ]
+          },
+          {
+            "type": "number",
+            "prompt": "Een blokje piepschuim is 10 cm lang, 10 cm breed en 5 cm hoog en heeft een massa van 25 g. Bereken de massadichtheid in g/cm³. (Bereken eerst het volume.)",
+            "answer": 0.05,
+            "tolerance": 0.005,
+            "hint": "Volume = 10 × 10 × 5. Deel daarna de massa door dat volume.",
+            "explanation": "Volume = 10 × 10 × 5 = 500 cm³. Massadichtheid = 25 g / 500 cm³ = 0,05 g/cm³. Dat is veel kleiner dan 1,0 g/cm³, dus piepschuim drijft vlot op water."
+          },
+          {
+            "type": "long",
+            "prompt": "Een grote opgeblazen strandbal blijft op het water drijven, terwijl een klein metalen moertje meteen naar de bodem zakt. Leg uit hoe dat kan, hoewel de strandbal veel groter is dan het moertje. Gebruik het woord massadichtheid.",
+            "modelAnswer": "Of iets drijft of zinkt, hangt niet af van de grootte maar van de massadichtheid. De strandbal heeft een heel groot volume maar bijna geen massa, want hij zit vol lucht. Zijn massadichtheid (massa gedeeld door volume) is daardoor veel kleiner dan 1,0 g/cm³, de massadichtheid van water, en dus drijft hij. Het moertje is klein, maar het is helemaal van metaal en heeft dus veel massa in een klein volume. Zijn massadichtheid is veel groter dan die van water, en daarom zinkt het.",
+            "rubric": [
+              { "criterion": "Legt uit dat de strandbal veel volume maar weinig massa heeft, dus een lage massadichtheid, en daarom drijft.", "points": 1 },
+              { "criterion": "Legt uit dat het metalen moertje veel massa in een klein volume heeft, dus een hoge massadichtheid, en daarom zinkt.", "points": 1 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "exitticket",
+      "titel": "Exit-ticket: massa, volume en massadichtheid",
+      "toelichting": "Vier korte vragen om te checken of de kern van dit hoofdstuk is blijven hangen.",
+      "config": {
+        "questions": [
+          {
+            "type": "number",
+            "prompt": "Een suikerklontje heeft een volume van 4 cm³ en een massa van 6,4 g. Bereken de massadichtheid in g/cm³.",
+            "answer": 1.6,
+            "tolerance": 0.05,
+            "explanation": "6,4 g / 4 cm³ = 1,6 g/cm³. Dat is groter dan 1,0 g/cm³, dus een suikerklontje zakt eerst naar de bodem van je glas."
+          },
+          {
+            "type": "tf",
+            "prompt": "Je massa is op de maan kleiner dan op de aarde.",
+            "answer": false,
+            "explanation": "Je massa blijft overal even groot, want je bestaat uit dezelfde hoeveelheid stof. Alleen je gewicht wordt kleiner, omdat de zwaartekracht op de maan zwakker is."
+          },
+          {
+            "type": "mc",
+            "prompt": "Kurk heeft een massadichtheid van 0,24 g/cm³. Wat gebeurt er als je een stuk kurk in water (1,0 g/cm³) legt?",
+            "options": [
+              "Het drijft.",
+              "Het zakt naar de bodem.",
+              "Het lost op in het water.",
+              "Het blijft precies in het midden zweven."
+            ],
+            "correctIndex": 0,
+            "explanation": "0,24 g/cm³ is kleiner dan de 1,0 g/cm³ van water, dus de kurk drijft aan het oppervlak."
+          },
+          {
+            "type": "short",
+            "prompt": "Welke methode gebruik je om het volume van een onregelmatig voorwerp, zoals een sleutel, te bepalen?",
+            "accepted": ["waterverdringing", "waterverdringingsmethode", "de waterverdringingsmethode", "de waterverdringing", "onderdompelen in water"],
+            "hint": "Je laat het voorwerp in een maatcilinder met water zakken.",
+            "explanation": "Bij waterverdringing duwt het voorwerp evenveel water opzij als zijn eigen volume. Het verschil in waterniveau is dus het volume van het voorwerp."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Kernbegrippen",
+      "plaats": "einde",
+      "type": "hangman",
+      "titel": "Galgje: meten aan materie",
+      "toelichting": "Raad de woorden letter per letter met behulp van de aanwijzing.",
+      "config": {
+        "words": [
+          { "word": "MASSA", "hint": "Dit lees je af als je een appel op de keukenweegschaal legt." },
+          { "word": "VOLUME", "hint": "Dit lees je af op een maatcilinder met water." },
+          { "word": "GEWICHT", "hint": "Dit is op de maan ongeveer zes keer kleiner dan op de aarde." },
+          { "word": "DICHTHEID", "hint": "Korte naam voor de verhouding massa per kubieke centimeter." },
+          { "word": "WEEGSCHAAL", "hint": "Toestel waarop je een voorwerp legt om te weten hoeveel gram het is." },
+          { "word": "MAATCILINDER", "hint": "Glazen buis met streepjes waarin je bijvoorbeeld 50 mL water giet." },
+          { "word": "DRIJVEN", "hint": "Dit doet een houtblok in water." },
+          { "word": "ZINKEN", "hint": "Dit doet een metalen moer in water." }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,264 @@
+{
+  "hoofdstuk": "10a",
+  "oefeningen": [
+    {
+      "sectie": "1.2",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: seksueel of aseksueel?",
+      "toelichting": "Vijf vragen over waarom soorten zich voortplanten en over het verschil tussen de twee hoofdvormen.",
+      "config": {
+        "questions": [
+          {
+            "type": "sort",
+            "prompt": "Hoort dit kenmerk bij seksuele of bij aseksuele voortplanting?",
+            "categories": ["Seksuele (geslachtelijke) voortplanting", "Aseksuele (ongeslachtelijke) voortplanting"],
+            "items": [
+              { "text": "er zijn twee ouders nodig", "category": "Seksuele (geslachtelijke) voortplanting" },
+              { "text": "een zaadcel versmelt met een eicel", "category": "Seksuele (geslachtelijke) voortplanting" },
+              { "text": "de nakomelingen verschillen van hun ouders", "category": "Seksuele (geslachtelijke) voortplanting" },
+              { "text": "er is maar één ouder", "category": "Aseksuele (ongeslachtelijke) voortplanting" },
+              { "text": "de nakomeling is een kloon", "category": "Aseksuele (ongeslachtelijke) voortplanting" },
+              { "text": "een bacterie deelt zich gewoon in tweeën", "category": "Aseksuele (ongeslachtelijke) voortplanting" }
+            ],
+            "hint": "Tel telkens hoeveel ouders er nodig zijn.",
+            "explanation": "Bij seksuele voortplanting maken twee ouders elk een geslachtscel; door de bevruchting ontstaat een nakomeling met eigenschappen van beide ouders, dus met variatie. Bij aseksuele voortplanting kopieert één ouder zichzelf en zijn de nakomelingen genetisch identiek."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom is voortplanting zo belangrijk voor een soort?",
+            "options": [
+              "Zonder voortplanting komen er geen nieuwe individuen bij en sterft de soort uit.",
+              "Zonder voortplanting worden de individuen veel sneller oud.",
+              "Zonder voortplanting kunnen organismen geen voedsel meer opnemen.",
+              "Zonder voortplanting zouden alle nakomelingen identiek zijn."
+            ],
+            "correctIndex": 0,
+            "explanation": "Ouderdieren en ouderplanten sterven na verloop van tijd. Alleen als er nakomelingen komen die hen vervangen, blijft de soort bestaan."
+          },
+          {
+            "type": "tf",
+            "prompt": "Bij aseksuele voortplanting is er genetische variatie tussen de nakomelingen.",
+            "answer": false,
+            "explanation": "Bij aseksuele voortplanting ontstaan klonen: alle nakomelingen zijn genetisch identiek aan de ene ouder. Variatie ontstaat net bij seksuele voortplanting, omdat de nakomeling eigenschappen van twee ouders erft."
+          },
+          {
+            "type": "mc",
+            "prompt": "Uit de knollen van een aardappelplant groeien nieuwe scheuten en zo nieuwe planten. Om welke vorm van voortplanting gaat het?",
+            "options": [
+              "Aseksuele voortplanting: er is maar één ouderplant en er komt geen bevruchting aan te pas.",
+              "Seksuele voortplanting: de knol is de bevruchte eicel van de plant.",
+              "Seksuele voortplanting: er zijn stuifmeel en een stamper voor nodig.",
+              "Geen van beide: uit een knol groeit nooit een nieuwe plant."
+            ],
+            "correctIndex": 0,
+            "hint": "Zijn er hier twee ouders of maar één?",
+            "explanation": "Er is één ouderplant, er zijn geen geslachtscellen en er is geen bevruchting. De nieuwe planten zijn klonen van de moederplant, dus dit is aseksuele voortplanting."
+          },
+          {
+            "type": "dropdown",
+            "prompt": "Kies telkens het juiste woord.",
+            "text": "Bij seksuele voortplanting versmelt een zaadcel met een {eicel|knol|stekje}. De nakomelingen zijn {niet identiek aan|exacte kopieën van} hun ouders, want ze erven eigenschappen van {beide ouders|één ouder}.",
+            "shuffle": true,
+            "explanation": "Bij de bevruchting versmelten zaadcel en eicel tot een bevruchte eicel. Omdat het nageslacht eigenschappen van beide ouders krijgt, lijkt het op hen maar is het niet identiek: er ontstaat variatie."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "2.2",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: van bloem tot zaad",
+      "toelichting": "Zes vragen over de bloemdelen, de bestuiving, de bevruchting en de manieren waarop planten zich zonder zaad vermeerderen.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Waar in de bloem worden de stuifmeelkorrels gemaakt?",
+            "options": [
+              "in de helmknoppen boven op de meeldraden",
+              "op de kleverige stempel van de stamper",
+              "in het vruchtbeginsel onderaan de stamper",
+              "in de zaadbeginsels"
+            ],
+            "correctIndex": 0,
+            "explanation": "De meeldraden zijn de mannelijke delen. Aan hun top zitten de helmknoppen, waar de stuifmeelkorrels met de mannelijke voortplantingscellen gevormd worden."
+          },
+          {
+            "type": "order",
+            "prompt": "Zet de stappen van de geslachtelijke voortplanting bij een appelboom in de juiste volgorde.",
+            "items": [
+              "Een bij neemt stuifmeel mee van de meeldraden van een appelbloesem.",
+              "Het stuifmeel komt op de kleverige stempel van een andere appelbloesem terecht: de bestuiving.",
+              "De stuifmeelkorrel groeit uit tot een buisje naar het vruchtbeginsel.",
+              "De zaadcel versmelt met een eicel: de bevruchting.",
+              "Uit de bevruchte eicel groeit een zaad in het vruchtbeginsel.",
+              "Het vruchtbeginsel groeit uit tot een appel rond de zaden."
+            ],
+            "hint": "Bestuiving komt altijd vóór bevruchting.",
+            "explanation": "Eerst wordt het stuifmeel vervoerd (bestuiving), daarna groeit er een buisje naar de eicel en versmelten de kernen (bevruchting). Pas daarna ontstaan het zaad en de vrucht eromheen."
+          },
+          {
+            "type": "tf",
+            "prompt": "Bestuiving en bevruchting betekenen hetzelfde.",
+            "answer": false,
+            "explanation": "Bestuiving is het transport van stuifmeel naar de stamper. Bevruchting is pas de versmelting van de kern van de zaadcel met de kern van de eicel in het vruchtbeginsel. Zonder bestuiving geen bevruchting, maar het zijn twee verschillende stappen."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom hebben veel bloemen felle kleuren, geur en nectar?",
+            "options": [
+              "Om insecten te lokken, die het stuifmeel van bloem naar bloem meenemen.",
+              "Om de wind beter te kunnen vangen.",
+              "Om te voorkomen dat dieren de zaden opeten.",
+              "Om zonlicht te weerkaatsen zodat de zaden sneller rijpen."
+            ],
+            "correctIndex": 0,
+            "explanation": "Een bij of vlinder komt op de kleur en de geur af om nectar te halen. Daarbij blijft stuifmeel aan haar lichaam plakken, dat ze meeneemt naar de volgende bloem. Zo zorgen de insecten voor de bestuiving."
+          },
+          {
+            "type": "marktext",
+            "prompt": "Duid alle delen aan die bij de stamper horen.",
+            "text": "De [stempel] vangt het stuifmeel op, de [stijl] verbindt de stempel met het [vruchtbeginsel], waarin de eicellen in zaadbeginsels zitten. De meeldraden met hun helmknoppen horen daar niet bij.",
+            "penalizeWrong": false,
+            "explanation": "De stamper is het vrouwelijke deel in het midden van de bloem en bestaat uit stempel, stijl en vruchtbeginsel. Meeldraad en helmknop zijn mannelijke delen."
+          },
+          {
+            "type": "multi",
+            "prompt": "Op welke manieren planten bloemplanten zich ongeslachtelijk voort?",
+            "options": [
+              "met uitlopers",
+              "met knollen of bollen",
+              "met stekjes",
+              "met zaden uit een vrucht",
+              "met stuifmeel van een andere bloem"
+            ],
+            "correctIndices": [0, 1, 2],
+            "explanation": "Bij uitlopers, knollen, bollen en stekjes groeit een nieuwe plant uit een deel van de moederplant, zonder zaad en zonder bevruchting. Zaden en stuifmeel horen juist bij de geslachtelijke voortplanting."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Kernbegrippen",
+      "plaats": "einde",
+      "type": "wordsearch",
+      "titel": "Woordzoeker: voortplanting bij planten",
+      "toelichting": "Zoek de twaalf woorden uit dit hoofdstuk in het rooster.",
+      "config": {
+        "words": [
+          "STAMPER",
+          "MEELDRAAD",
+          "STUIFMEEL",
+          "STEMPEL",
+          "BESTUIVING",
+          "BEVRUCHTING",
+          "EICEL",
+          "ZAADCEL",
+          "KLOON",
+          "UITLOPER",
+          "VRUCHT",
+          "ZAAD"
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "worksheet",
+      "titel": "Werkblad: kiezen tussen zaad en stek",
+      "toelichting": "Vier toepassingsvragen waarin je de twee vormen van voortplanting vergelijkt en toepast op echte planten.",
+      "config": {
+        "questions": [
+          {
+            "type": "info",
+            "prompt": "**Werkblad.** Antwoord in volledige zinnen. Gebruik de woorden *kloon*, *variatie*, *bestuiving* en *bevruchting* waar ze passen."
+          },
+          {
+            "type": "long",
+            "prompt": "Een tuinier wil tien rozenstruiken die er precies hetzelfde uitzien als zijn lievelingsroos. Neemt hij daarvoor best zaden of stekjes? Leg je keuze uit.",
+            "modelAnswer": "Hij neemt best stekjes. Uit een stekje groeit een nieuwe plant uit een stukje van de moederplant, zonder bevruchting. Die nieuwe planten zijn klonen: ze hebben exact hetzelfde erfelijk materiaal en zien er dus precies hetzelfde uit. Als hij zaden zou gebruiken, is er bevruchting geweest met stuifmeel van een andere plant en erven de nieuwe rozen eigenschappen van twee ouders. Er is dan variatie en de struiken zouden er anders uitzien.",
+            "rubric": [
+              { "criterion": "Kiest stekjes en noemt dat dit ongeslachtelijke voortplanting is die klonen oplevert.", "points": 1 },
+              { "criterion": "Legt uit dat zaden uit bevruchting ontstaan en dus variatie geven.", "points": 1 }
+            ],
+            "hint": "Welke manier levert genetisch identieke nakomelingen op?"
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul aan met 'wind' of 'insecten'.",
+            "text": "Gras en maïs hebben onopvallende bloemen en maken heel veel licht stuifmeel; zij worden bestoven door de [wind]. Een appelboom heeft grote, geurige bloesems met nectar en wordt vooral bestoven door [insecten].",
+            "explanation": "Windbestuivers investeren in heel veel licht stuifmeel dat ver kan waaien. Insectenbestuivers investeren in opvallende, geurende bloemen met nectar die bijen en vlinders lokken."
+          },
+          {
+            "type": "table",
+            "prompt": "Vergelijk de twee vormen van voortplanting. Vul de lege vakjes aan.",
+            "columns": ["Vraag", "Seksuele voortplanting", "Aseksuele voortplanting"],
+            "rows": [
+              { "cells": ["Hoeveel ouders?", "", ""], "answers": [null, "twee", "één"] },
+              { "cells": ["Is er een bevruchting?", "", ""], "answers": [null, "ja", "nee"] },
+              { "cells": ["Lijken de nakomelingen op de ouder?", "", ""], "answers": [null, "ze lijken erop, maar zijn niet identiek: er is variatie", "ze zijn genetisch identiek: klonen"] },
+              { "cells": ["Voorbeeld uit het hoofdstuk", "", ""], "answers": [null, "een appelboom die appels met zaden maakt", "een aardbeiplant met uitlopers"] }
+            ],
+            "explanation": "Twee ouders en een bevruchting geven variatie; één ouder zonder bevruchting geeft klonen."
+          },
+          {
+            "type": "long",
+            "prompt": "Een aardbeiplant kan zich op twee manieren vermeerderen: met uitlopers en met zaden uit de aardbei. Noem van elke manier één voordeel.",
+            "modelAnswer": "Voordeel van uitlopers: de plant kan in haar eentje snel veel kopieën van zichzelf maken, zonder dat er een tweede plant of een bestuiver nodig is, en die nieuwe plantjes zijn precies even goed als de moederplant. Voordeel van zaden: bij de bevruchting komen eigenschappen van twee ouderplanten samen, zodat er variatie ontstaat. Bovendien kunnen zaden via de vrucht door dieren ver verspreid worden, zodat de soort op nieuwe plaatsen kan groeien.",
+            "rubric": [
+              { "criterion": "Noemt een juist voordeel van ongeslachtelijke voortplanting (snel, één ouder volstaat, identieke kopieën).", "points": 1 },
+              { "criterion": "Noemt een juist voordeel van geslachtelijke voortplanting (variatie of verspreiding via de vrucht).", "points": 1 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "exitticket",
+      "titel": "Exit-ticket hoofdstuk 10a",
+      "toelichting": "Vier vragen om te checken of je de kern van de voortplanting bij planten beheerst.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Wat is het grootste verschil tussen seksuele en aseksuele voortplanting?",
+            "options": [
+              "Bij seksuele voortplanting zijn er twee ouders en ontstaat er variatie; bij aseksuele voortplanting is er één ouder en zijn de nakomelingen klonen.",
+              "Bij seksuele voortplanting is er één ouder; bij aseksuele voortplanting zijn er twee.",
+              "Bij seksuele voortplanting zijn alle nakomelingen identiek; bij aseksuele voortplanting niet.",
+              "Bij aseksuele voortplanting is er altijd een bevruchting nodig."
+            ],
+            "correctIndex": 0,
+            "explanation": "Twee ouders, geslachtscellen en een bevruchting horen bij seksuele voortplanting en leveren variatie op. Eén ouder zonder bevruchting levert klonen op."
+          },
+          {
+            "type": "short",
+            "prompt": "In welk deel van de bloem groeit het zaad na de bevruchting?",
+            "accepted": ["vruchtbeginsel", "het vruchtbeginsel", "in het vruchtbeginsel"],
+            "hint": "Het is het verdikte onderste deel van de stamper.",
+            "explanation": "De bevruchte eicel ontwikkelt zich tot een zaad in het vruchtbeginsel. Dat vruchtbeginsel groeit daarna uit tot de vrucht rond de zaden."
+          },
+          {
+            "type": "tf",
+            "prompt": "Een plantje dat uit een stekje groeit, is genetisch identiek aan de moederplant.",
+            "answer": true,
+            "explanation": "Een stekje is een stukje van de moederplant dat wortels vormt. Er komt geen bevruchting aan te pas, dus het nieuwe plantje is een kloon."
+          },
+          {
+            "type": "long",
+            "prompt": "Leg uit waarom een appelboom bijen nodig heeft om appels te kunnen maken.",
+            "modelAnswer": "Een appelbloesem kan pas een appel vormen als er eerst bestuiving en bevruchting gebeuren. De bij vliegt van bloesem naar bloesem om nectar te halen en neemt daarbij stuifmeel van de meeldraden mee. Bij de volgende bloem strijkt dat stuifmeel op de stempel van de stamper. Daarna groeit er een buisje naar het vruchtbeginsel en bevrucht een zaadcel een eicel. Pas na die bevruchting groeit het vruchtbeginsel uit tot een appel met zaden erin.",
+            "rubric": [
+              { "criterion": "Legt uit dat de bij het stuifmeel van de meeldraden naar de stamper brengt (bestuiving).", "points": 1 },
+              { "criterion": "Legt uit dat er pas na de bevruchting een vrucht met zaden uit het vruchtbeginsel groeit.", "points": 1 }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

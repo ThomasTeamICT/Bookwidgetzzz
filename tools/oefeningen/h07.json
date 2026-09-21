@@ -1,0 +1,357 @@
+{
+  "hoofdstuk": "07",
+  "oefeningen": [
+    {
+      "sectie": "2.2",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: waaruit bestaat bloed en wat doet het?",
+      "toelichting": "Zes vragen over de samenstelling van bloed en over alles wat het vervoert en beschermt.",
+      "config": {
+        "questions": [
+          {
+            "type": "sort",
+            "prompt": "Sleep elk bestanddeel naar het juiste deel van het bloed.",
+            "categories": ["Bloedplasma", "Bloedcellen"],
+            "items": [
+              {"text": "water (ongeveer 90 %)", "category": "Bloedplasma"},
+              {"text": "glucose en mineralen", "category": "Bloedplasma"},
+              {"text": "hormonen", "category": "Bloedplasma"},
+              {"text": "ureum (afvalstof)", "category": "Bloedplasma"},
+              {"text": "rode bloedcellen", "category": "Bloedcellen"},
+              {"text": "witte bloedcellen", "category": "Bloedcellen"},
+              {"text": "bloedplaatjes", "category": "Bloedcellen"}
+            ],
+            "hint": "Het plasma is het vloeibare deel: alles wat daarin opgelost zit, hoort bij het plasma.",
+            "explanation": "Bloedplasma is de lichtgele vloeistof die voor ongeveer 90 % uit water bestaat, met daarin opgeloste stoffen zoals suikers, mineralen, hormonen, afvalstoffen en plasma-eiwitten. De vaste bestanddelen zijn de drie soorten bloedcellen: rode, witte en bloedplaatjes."
+          },
+          {
+            "type": "mc",
+            "prompt": "Jonas heeft door een ziekte veel te weinig witte bloedcellen. Welk gevolg verwacht je het eerst?",
+            "options": [
+              "Hij wordt sneller ziek, want zijn afweer werkt minder goed.",
+              "Zijn bloed kan minder zuurstof vervoeren.",
+              "Zijn bloed wordt lichter van kleur.",
+              "Zijn hart gaat trager kloppen."
+            ],
+            "correctIndex": 0,
+            "hint": "Welke taak hebben witte bloedcellen?",
+            "explanation": "Witte bloedcellen verdedigen je lichaam tegen bacteriën, virussen en andere indringers. Met te weinig witte bloedcellen ben je veel vatbaarder voor infecties. Zuurstof vervoeren doen de rode bloedcellen."
+          },
+          {
+            "type": "short",
+            "prompt": "Je snijdt je in je vinger en even later stopt het bloeden en ontstaat er een korstje. Welke bloedcellen zetten dat proces in gang? Antwoord met één woord.",
+            "accepted": ["bloedplaatjes", "de bloedplaatjes", "trombocyten"],
+            "hint": "Het zijn geen echte cellen, maar kleine stukjes van cellen.",
+            "explanation": "Bloedplaatjes klonteren samen en starten de bloedstolling. Daarbij wordt fibrinogeen omgezet in fibrinedraden die een netwerk vormen: de bloedklonter en later het korstje."
+          },
+          {
+            "type": "tf",
+            "prompt": "Rode bloedcellen hebben een celkern, witte bloedcellen niet.",
+            "answer": false,
+            "hint": "Denk na over welke van de twee groter is en wél een kern heeft.",
+            "explanation": "Het is net omgekeerd: rode bloedcellen zijn kleine schijfjes zonder kern, met hemoglobine erin. Witte bloedcellen zijn groter en hebben wél een celkern."
+          },
+          {
+            "type": "multi",
+            "prompt": "Welke van deze transporten doet het bloed volgens de tekst? (Meerdere antwoorden juist.)",
+            "options": [
+              "Zuurstof van de longen naar alle lichaamscellen brengen.",
+              "Voedingsstoffen uit de darm naar de cellen brengen.",
+              "Hormonen van de hormoonklieren naar hun doelorgaan brengen.",
+              "Onverteerde voedselresten naar de dikke darm brengen.",
+              "Ureum van de cellen naar de nieren brengen."
+            ],
+            "correctIndices": [0, 1, 2, 4],
+            "hint": "Wat blijft er in het spijsverteringskanaal en komt dus nooit in het bloed?",
+            "explanation": "Bloed vervoert zuurstof en koolstofdioxide, voedingsstoffen, hormonen, afvalstoffen zoals ureum en ook warmte. Onverteerde resten komen nooit in het bloed: die schuiven gewoon door de darm naar buiten."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul de twee ontbrekende woorden in.",
+            "text": "De rode bloedcellen kunnen zuurstof binden dankzij de rode kleurstof [hemoglobine]. De afvalstof [ureum] brengt het bloed naar de nieren, waar ze uit het bloed gefilterd wordt.",
+            "hint": "Het eerste woord geeft het bloed zijn rode kleur, het tweede verlaat je lichaam via de urine.",
+            "explanation": "Hemoglobine in de rode bloedcellen bindt zuurstof en maakt het bloed rood. Ureum is een afvalstof uit de cellen die via het bloed naar de nieren gaat en met de urine het lichaam verlaat."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "3.1",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: slagaders, aders en haarvaten",
+      "toelichting": "Vergelijk de drie soorten bloedvaten en verklaar hun bouw vanuit hun functie.",
+      "config": {
+        "questions": [
+          {
+            "type": "table",
+            "prompt": "Vul de lege vakjes aan: vergelijk een slagader met een ader.",
+            "columns": ["Kenmerk", "Slagader", "Ader"],
+            "rows": [
+              {"cells": ["Richting van het bloed", "van het hart weg", ""], "answers": [null, null, "naar het hart toe"]},
+              {"cells": ["Wand", "", "dun en weinig gespierd"], "answers": [null, "dik, gespierd en elastisch", null]},
+              {"cells": ["Bloeddruk", "hoog", ""], "answers": [null, null, "laag"]},
+              {"cells": ["Klepjes in het vat?", "", "ja"], "answers": [null, "nee", null]}
+            ],
+            "hint": "Alles hangt samen met de druk: het hart pompt het bloed krachtig de slagaders in.",
+            "explanation": "Slagaders voeren bloed van het hart weg onder hoge druk; daarom hebben ze een dikke, elastische en gespierde wand en geen klepjes. Aders brengen bloed terug naar het hart onder lage druk; daarom hebben ze een dunne wand en klepjes die terugstromen beletten."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom voel je je polsslag wel in een slagader en niet in een ader?",
+            "options": [
+              "Omdat het bloed in slagaders bij elke hartslag onder hoge druk wordt weggepompt.",
+              "Omdat aders dieper in je lichaam liggen dan slagaders.",
+              "Omdat er in aders klepjes zitten die het kloppen tegenhouden.",
+              "Omdat er in aders alleen tijdens de hartpauze bloed stroomt."
+            ],
+            "correctIndex": 0,
+            "hint": "Wat gebeurt er met de elastische slagaderwand bij elke samentrekking van het hart?",
+            "explanation": "Bij elke hartslag perst de kamer bloed onder hoge druk in de slagaders. De elastische wand zet daarbij ritmisch uit: dat voel je als polsslag. In aders is de druk veel lager, dus daar voel je niets."
+          },
+          {
+            "type": "mc",
+            "prompt": "De wand van een haarvat is maar één cellaag dik. Waarom is dat handig?",
+            "options": [
+              "Zo kunnen stoffen makkelijk uitgewisseld worden tussen het bloed en de cellen.",
+              "Zo stroomt het bloed er veel sneller doorheen.",
+              "Zo past er meer bloed in het vat.",
+              "Zo blijft de hartslag tot in de weefsels voelbaar."
+            ],
+            "correctIndex": 0,
+            "hint": "Wat gebeurt er precies in de haarvaten?",
+            "explanation": "In de haarvaten geeft het bloed zuurstof en voedingsstoffen af aan de cellen en neemt het koolstofdioxide en andere afvalstoffen op. Een wand van één cellaag dik maakt die uitwisseling mogelijk."
+          },
+          {
+            "type": "tf",
+            "prompt": "De longader is een ader die zuurstofrijk bloed vervoert.",
+            "answer": true,
+            "hint": "Een ader is een vat dat naar het hart toe gaat, wat er ook in zit.",
+            "explanation": "Een ader is elk bloedvat dat naar het hart toe gaat. De longaders brengen bloed van de longen naar het hart, en dat bloed heeft er net zuurstof opgenomen. Ze zijn dus de uitzondering op de regel."
+          },
+          {
+            "type": "dropdown",
+            "prompt": "Kies telkens het juiste woord.",
+            "text": "Als je heel lang rechtop stilstaat, stapelt het bloed zich op in je {beenaders|beenslagaders|longaders}. De {klepjes|kraakbeenringen|darmvlokken} in die vaten zorgen ervoor dat het bloed niet terugzakt. Door je {spieren|botten|longen} te bewegen duw je het bloed weer omhoog richting hart.",
+            "shuffle": true,
+            "hint": "In welke vaten moet het bloed tegen de zwaartekracht in omhoog?",
+            "explanation": "In de beenaders moet het bloed omhoog tegen de zwaartekracht in, met lage druk. De klepjes beletten dat het terugzakt en je beenspieren duwen het bloed mee vooruit. Daarom vallen soldaten die lang stilstaan soms flauw."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "3.3",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: het hart en de bloedsomloop",
+      "toelichting": "Zes vragen over de pompende motor en de route die het bloed twee keer door het hart aflegt.",
+      "config": {
+        "questions": [
+          {
+            "type": "order",
+            "prompt": "Zuurstofarm bloed komt via de holle aders in het hart. Zet de volgende plaatsen in de volgorde waarin het bloed ze daarna passeert.",
+            "items": [
+              "rechterboezem",
+              "rechterkamer",
+              "longslagader",
+              "haarvaten rond de longblaasjes",
+              "longader",
+              "linkerboezem",
+              "linkerkamer"
+            ],
+            "hint": "Het bloed moet eerst zuurstof gaan halen in de longen voor het naar de rest van het lichaam mag.",
+            "explanation": "Dit is de kleine bloedsomloop: van de rechterboezem naar de rechterkamer, via de longslagader naar de haarvaten rond de longblaasjes (daar wordt het bloed zuurstofrijk), en via de longaders terug naar de linkerboezem en de linkerkamer. Vanuit de linkerkamer vertrekt het bloed de aorta in."
+          },
+          {
+            "type": "mc",
+            "prompt": "Waarom is de spierwand van de linkerkamer dikker dan die van de rechterkamer?",
+            "options": [
+              "Omdat de linkerkamer het bloed tot in de verste uiteinden van het lichaam moet pompen.",
+              "Omdat er in de linkerkamer veel meer bloed past.",
+              "Omdat in de linkerkamer het bloed nog zuurstofarm is.",
+              "Omdat de linkerkamer het bloed alleen naar de longen moet pompen."
+            ],
+            "correctIndex": 0,
+            "hint": "Vergelijk de afstand naar je tenen met de afstand naar je longen.",
+            "explanation": "De linkerkamer is de lichaamspomp: ze stuwt het bloed via de aorta tot in je tenen en je hersenen. Dat vraagt veel meer kracht dan het korte stukje naar de longen, dat de rechterkamer verzorgt."
+          },
+          {
+            "type": "marktext",
+            "prompt": "Klik alle bloedvaten aan waarin zuurstofrijk bloed stroomt.",
+            "text": "Het bloed in de [longader] is zuurstofrijk, net als het bloed in de [aorta] en in de [slagaders van je armen en benen]. In de longslagader en in de bovenste en onderste holle ader stroomt juist zuurstofarm bloed.",
+            "penalizeWrong": false,
+            "hint": "Let op: de longslagader en de longader zijn elkaars uitzondering.",
+            "explanation": "Na de longen is het bloed zuurstofrijk: het stroomt via de longaders naar het hart en daarna via de aorta en de lichaamsslagaders naar de organen. De longslagader (op weg naar de longen) en de holle aders (terug uit het lichaam) bevatten zuurstofarm bloed."
+          },
+          {
+            "type": "number",
+            "prompt": "Sam voelt zijn polsslag en telt 18 slagen in 15 seconden. Hoeveel slagen per minuut is dat?",
+            "answer": 72,
+            "tolerance": 0,
+            "hint": "Een minuut bestaat uit vier keer 15 seconden.",
+            "explanation": "18 x 4 = 72 slagen per minuut. Dat past in de normale hartfrequentie in rust bij jongeren, namelijk ongeveer 60 tot 100 slagen per minuut."
+          },
+          {
+            "type": "tf",
+            "prompt": "Tijdens de hartpauze ontspant het hart en vult het zich opnieuw met binnenstromend bloed.",
+            "answer": true,
+            "hint": "Wat gebeurt er na de samentrekking van de kamers?",
+            "explanation": "Een hartslag bestaat uit drie stappen: de boezems trekken samen, dan de kamers, en daarna volgt de hartpauze waarin het hart ontspant en zich opnieuw vult."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul de twee ontbrekende woorden in.",
+            "text": "De rechterharthelft is de longpomp: ze stuwt zuurstofarm bloed naar de [longen]. De linkerharthelft is de lichaamspomp: ze perst zuurstofrijk bloed in de grote lichaamsslagader of [aorta].",
+            "hint": "De ene pomp werkt over een korte afstand, de andere over het hele lichaam.",
+            "explanation": "De rechterhelft pompt naar de longen (kleine bloedsomloop), de linkerhelft via de aorta naar alle organen (grote bloedsomloop). Daarom spreken we van een dubbele bloedsomloop."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "4.",
+      "plaats": "einde",
+      "type": "worksheet",
+      "titel": "Werkblad: hoe fit is je transportstelsel?",
+      "toelichting": "Reken met je hartslag en gebruik je kennis om gezonde keuzes voor hart en bloedvaten uit te leggen.",
+      "config": {
+        "questions": [
+          {
+            "type": "info",
+            "prompt": "**Practicum hartslag.** Sam meet zijn hartslag telkens door 15 seconden te tellen en dat aantal met 4 te vermenigvuldigen. In rust telt hij **17** slagen; meteen na 20 kniebuigingen telt hij **27** slagen."
+          },
+          {
+            "type": "number",
+            "prompt": "Wat is Sams hartfrequentie in rust, in slagen per minuut?",
+            "answer": 68,
+            "tolerance": 0,
+            "hint": "Vermenigvuldig het aantal slagen in 15 seconden met 4.",
+            "explanation": "17 x 4 = 68 slagen per minuut. Dat ligt binnen de normale rustwaarde van ongeveer 60 tot 100 slagen per minuut."
+          },
+          {
+            "type": "number",
+            "prompt": "Hoeveel slagen per minuut telt Sam vlak na de kniebuigingen?",
+            "answer": 108,
+            "tolerance": 0,
+            "hint": "Reken op dezelfde manier als bij de rustmeting.",
+            "explanation": "27 x 4 = 108 slagen per minuut. Sams hart klopt na de inspanning dus 40 slagen per minuut sneller dan in rust."
+          },
+          {
+            "type": "long",
+            "prompt": "Verklaar waarom Sams hart na de kniebuigingen sneller klopt. Leg uit wat zijn spiercellen extra nodig hebben en wat ze extra kwijt moeten.",
+            "modelAnswer": "Bij inspanning verbruiken de spiercellen veel meer energie. Daarvoor hebben ze extra zuurstof en extra voedingsstoffen nodig, die het bloed moet aanvoeren. Tegelijk maken de spieren meer afvalstoffen en meer koolstofdioxide en warmte, die het bloed moet afvoeren naar de longen en de rest van het lichaam. Door sneller te kloppen pompt het hart meer liter bloed per minuut rond, zodat al dat transport sneller gebeurt.",
+            "rubric": [
+              {"criterion": "Legt uit dat de spiercellen meer zuurstof en voedingsstoffen nodig hebben", "points": 1},
+              {"criterion": "Legt uit dat afvalstoffen, CO2 en warmte sneller afgevoerd moeten worden, dus meer bloed per minuut", "points": 1}
+            ],
+            "hint": "Denk aan wat het bloed aanvoert én aan wat het afvoert."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul de twee ontbrekende woorden in.",
+            "text": "Te veel zout in je voeding kan zorgen voor een hogere [bloeddruk], waardoor je hart harder moet werken. Te veel verzadigd vet en cholesterol kunnen op lange termijn [aderverkalking] veroorzaken: vetachtige plaques in de wand van je bloedvaten.",
+            "hint": "Het eerste woord meet de dokter met een band rond je arm.",
+            "explanation": "Te veel zout verhoogt de bloeddruk en belast het hart. Te veel verzadigd vet en cholesterol zorgen voor plaques in de vaatwand (aderverkalking), waardoor het bloed moeilijker doorstroomt."
+          },
+          {
+            "type": "long",
+            "prompt": "Geef drie tips voor een levensstijl die goed is voor je hart en bloedvaten. Leg bij elke tip kort uit waarom.",
+            "modelAnswer": "1) Gezond en gevarieerd eten met veel groenten en fruit en weinig zout en suiker: zo blijven je bloedvaten soepel, krijg je minder slechte vetten in je bloed en blijft je bloeddruk normaal. 2) Elke dag minstens een uur bewegen: je hart is een spier die sterker wordt door training, waardoor het in rust trager mag kloppen en je bloeddruk gezond blijft. 3) Niet roken: rook beschadigt de wand van je bloedvaten en laat het bloed minder goed zuurstof vervoeren. Ook voldoende slapen en ontspannen helpt je hartslag en bloeddruk gezond te houden.",
+            "rubric": [
+              {"criterion": "Geeft drie tips die in het hoofdstuk staan", "points": 1},
+              {"criterion": "Verklaart bij elke tip het effect op hart of bloedvaten", "points": 1}
+            ],
+            "hint": "Denk aan voeding, beweging, roken en alcohol, slaap en ontspanning."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "exitticket",
+      "titel": "Exit-ticket hoofdstuk 7",
+      "toelichting": "Vier vragen om te checken of je de kern van het transportstelsel beheerst.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Waarom heeft je lichaam een transportstelsel nodig?",
+            "options": [
+              "Omdat cellen diep in je lichaam zelf niet bij zuurstof en voeding kunnen en hun afval kwijt moeten.",
+              "Omdat het bloed het voedsel in de darm moet verteren.",
+              "Omdat je cellen anders te veel zuurstof zouden krijgen.",
+              "Omdat de longen zonder bloed geen lucht zouden kunnen aanzuigen."
+            ],
+            "correctIndex": 0,
+            "hint": "Denk aan een cel midden in je been: hoe raakt die aan zuurstof?",
+            "explanation": "Cellen diep in je lichaam liggen niet aan de lucht of aan de darm. Het bloed verbindt longen en darmen met elke cel: het brengt zuurstof en voedingsstoffen en voert afvalstoffen af."
+          },
+          {
+            "type": "short",
+            "prompt": "In welke bloedvaten wisselt het bloed stoffen uit met de lichaamscellen?",
+            "accepted": ["haarvaten", "de haarvaten", "haarvat", "capillairen"],
+            "hint": "Het zijn de allerkleinste bloedvaatjes, met een wand van één cellaag.",
+            "explanation": "In de haarvaten geeft het bloed zuurstof en voedingsstoffen af aan de cellen en neemt het koolstofdioxide en afvalstoffen op. Hun wand is maar één cellaag dik."
+          },
+          {
+            "type": "tf",
+            "prompt": "Bij de mens gaat het bloed tijdens één volledige rondgang twee keer door het hart.",
+            "answer": true,
+            "hint": "Waarom noemen we het een dubbele bloedsomloop?",
+            "explanation": "Dat is precies wat 'dubbele bloedsomloop' betekent: één keer via de rechterhelft (naar de longen) en één keer via de linkerhelft (naar de rest van het lichaam)."
+          },
+          {
+            "type": "long",
+            "prompt": "Leg uit waarom het bloed eerst de kleine bloedsomloop moet afleggen voordat het naar de rest van je lichaam gaat.",
+            "modelAnswer": "Het bloed dat uit het lichaam terugkomt is zuurstofarm en bevat veel koolstofdioxide, want de cellen hebben de zuurstof opgebruikt. In de kleine bloedsomloop gaat dat bloed via de rechterharthelft en de longslagader naar de haarvaten rond de longblaasjes. Daar geeft het CO2 af en neemt het verse zuurstof op. Pas daarna is het bloed weer zuurstofrijk en kan de linkerharthelft het via de aorta naar alle cellen pompen. Zonder die tussenstop zou het bloed geen zuurstof kunnen afleveren.",
+            "rubric": [
+              {"criterion": "Legt uit dat het terugkerende bloed zuurstofarm is en veel CO2 bevat", "points": 1},
+              {"criterion": "Legt uit dat het bloed in de longen CO2 afgeeft en zuurstof opneemt voor het naar het lichaam gaat", "points": 1}
+            ],
+            "hint": "Wat is er met het bloed gebeurd in de haarvaten van je spieren?"
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Kernbegrippen",
+      "plaats": "einde",
+      "type": "crossword",
+      "titel": "Kruiswoordraadsel: hart en bloedvaten",
+      "toelichting": "Los het raadsel op met woorden uit dit hoofdstuk; elke aanwijzing beschrijft wat het onderdeel doet.",
+      "config": {
+        "entries": [
+          {"word": "SLAGADER", "clue": "Hierin voel je je polsslag kloppen."},
+          {"word": "HAARVAT", "clue": "Zo dun dat er maar één of twee rode bloedcellen tegelijk door passen."},
+          {"word": "KLEPJES", "clue": "Eenrichtingsdeurtjes in je aders die het bloed beletten terug te zakken."},
+          {"word": "AORTA", "clue": "Het grote vat waar de linkerkamer het bloed in perst."},
+          {"word": "BOEZEM", "clue": "Bovenste holte van het hart, die bloed uit de aders ontvangt."},
+          {"word": "LONGADER", "clue": "De uitzondering: een ader met zuurstofrijk bloed."},
+          {"word": "FIBRINE", "clue": "Draden die een netwerk vormen waarin bloedcellen blijven hangen bij het stollen."},
+          {"word": "UREUM", "clue": "Afvalstof die het bloed naar de nieren brengt."}
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "memory",
+      "titel": "Memory: de cijfers van je transportstelsel",
+      "toelichting": "Zoek bij elk gegeven uit dit hoofdstuk het juiste getal of de juiste vergelijking.",
+      "config": {
+        "pairs": [
+          {"a": "Bloed dat het hart per minuut rondpompt", "b": "4 à 5 liter"},
+          {"a": "Hartfrequentie in rust bij jongeren", "b": "60 à 100 per minuut"},
+          {"a": "Deel van bloedplasma dat water is", "b": "ongeveer 90 %"},
+          {"a": "Aantal holtes in het hart", "b": "4: 2 boezems en 2 kamers"},
+          {"a": "Grootte van het hart", "b": "ongeveer zo groot als je vuist"},
+          {"a": "Dikte van de wand van een haarvat", "b": "één cellaag"},
+          {"a": "Witte tegenover rode bloedcellen", "b": "ongeveer 1 op 1000"}
+        ]
+      }
+    }
+  ]
+}

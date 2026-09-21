@@ -1,0 +1,392 @@
+{
+  "hoofdstuk": "11",
+  "oefeningen": [
+    {
+      "sectie": "1.2",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: energievormen en omzettingen",
+      "toelichting": "Vijf vragen waarin je energievormen herkent en een omzetting van begin tot eind volgt.",
+      "config": {
+        "questions": [
+          {
+            "type": "sort",
+            "prompt": "Bij welke energievorm hoort elk voorbeeld? Sleep elk voorbeeld naar de juiste groep.",
+            "categories": ["Bewegingsenergie", "Chemische energie", "Stralingsenergie", "Thermische energie"],
+            "items": [
+              { "text": "stromend water in een beek", "category": "Bewegingsenergie" },
+              { "text": "een auto die over de snelweg rijdt", "category": "Bewegingsenergie" },
+              { "text": "de boterham in je brooddoos", "category": "Chemische energie" },
+              { "text": "een volle batterij", "category": "Chemische energie" },
+              { "text": "zonlicht op je gezicht", "category": "Stralingsenergie" },
+              { "text": "de microgolven in een microgolfoven", "category": "Stralingsenergie" },
+              { "text": "een kop hete thee", "category": "Thermische energie" },
+              { "text": "een warme radiator", "category": "Thermische energie" }
+            ],
+            "hint": "Vraag je telkens af: beweegt het, zit de energie opgeslagen in een stof, straalt het, of is het gewoon warm?",
+            "explanation": "Bewegingsenergie zit in alles wat beweegt, chemische energie zit opgeslagen in stoffen zoals voedsel en batterijen, stralingsenergie zit in licht en microgolven, en thermische energie is de energie van alles wat een hoge temperatuur heeft."
+          },
+          {
+            "type": "mc",
+            "prompt": "Je doet een zaklamp op batterijen aan. Welke rij geeft de energieomzetting in die zaklamp het best weer?",
+            "options": [
+              "chemische energie → elektrische energie → licht en warmte",
+              "elektrische energie → chemische energie → licht en warmte",
+              "stralingsenergie → chemische energie → beweging",
+              "thermische energie → elektrische energie → licht"
+            ],
+            "correctIndex": 0,
+            "explanation": "In de batterij zit chemische energie. Die wordt eerst omgezet in elektrische energie, en het lampje maakt daar licht van. Dat de zaklamp een beetje warm wordt, toont dat er ook warmte ontstaat."
+          },
+          {
+            "type": "tf",
+            "prompt": "Bij een energieomzetting blijft de totale hoeveelheid energie behouden: energie verdwijnt nooit zomaar.",
+            "answer": true,
+            "explanation": "Energie gaat nooit verloren, ze verandert alleen van vorm. Wel komt een deel vaak vrij in een vorm die je niet wilde, bijvoorbeeld warmte. Dat noemen we warmteverlies, maar de energie zelf is er nog."
+          },
+          {
+            "type": "dropdown",
+            "prompt": "Een boogschutter spant zijn boog en laat dan los. Kies telkens het juiste woord.",
+            "text": "In een gespannen boog zit {potentiële energie|bewegingsenergie|elektrische energie}. Zodra de schutter loslaat, wordt die omgezet in {bewegingsenergie|chemische energie|stralingsenergie} van de pijl.",
+            "shuffle": true,
+            "explanation": "Energie die opgeslagen ligt door de toestand of de positie van een voorwerp is potentiële energie (bij een boog spreken we van veerenergie). Bij het loslaten schiet de pijl weg: die energie is nu bewegingsenergie."
+          },
+          {
+            "type": "short",
+            "prompt": "Voedsel, hout, benzine en batterijen bevatten allemaal dezelfde soort opgeslagen energie. Hoe noemen we die energievorm?",
+            "accepted": ["chemische energie", "chemische", "chemisch", "chemische-energie"],
+            "hint": "Die energie komt vrij bij een chemische reactie, bijvoorbeeld bij verbranding.",
+            "explanation": "Chemische energie is energie die opgeslagen zit in stoffen. Ze komt vrij bij een chemische reactie, zoals de verbranding van hout of benzine."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "1.4",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: van fossiele brandstof naar duurzame energie",
+      "toelichting": "Vijf vragen over wat er bij verbranding gebeurt en hoe het duurzamer kan.",
+      "config": {
+        "questions": [
+          {
+            "type": "marktext",
+            "prompt": "Duid alle hernieuwbare energiebronnen aan in deze lijst.",
+            "text": "steenkool, [wind], aardolie, [zonlicht], aardgas, [waterkracht], benzine, [biomassa], [aardwarmte]",
+            "penalizeWrong": false,
+            "explanation": "Wind, zonlicht, waterkracht, biomassa en aardwarmte raken niet op en geven tijdens het gebruik weinig of geen schadelijke uitstoot. Steenkool, aardolie, aardgas en benzine zijn fossiele brandstoffen: die raken wel uitgeput."
+          },
+          {
+            "type": "mc",
+            "prompt": "Welke stoffen ontstaan er vooral bij de volledige verbranding van aardgas in een kachel?",
+            "options": [
+              "koolstofdioxide en waterdamp",
+              "zuurstofgas en glucose",
+              "koolstofmonoxide en zuurstofgas",
+              "stikstof en mineralen"
+            ],
+            "correctIndex": 0,
+            "hint": "Denk aan wat er uit de uitlaat van een auto komt.",
+            "explanation": "Bij een volledige verbranding reageert de brandstof met zuurstof uit de lucht. Daarbij ontstaan vooral koolstofdioxide (CO₂) en waterdamp, en komt er energie vrij als warmte en licht."
+          },
+          {
+            "type": "multi",
+            "prompt": "Welke uitspraken over fossiele brandstoffen kloppen? Duid alle juiste antwoorden aan.",
+            "options": [
+              "Ze zijn miljoenen jaren geleden gevormd uit afgestorven planten en dieren.",
+              "Bij hun verbranding komt CO₂ vrij, een broeikasgas.",
+              "Ze raken na verloop van tijd op.",
+              "Ze horen bij de hernieuwbare energiebronnen.",
+              "Bij hun verbranding ontstaat er zuurstofgas."
+            ],
+            "correctIndices": [0, 1, 2],
+            "explanation": "Fossiele brandstoffen komen uit afgestorven organismen, raken uitgeput en geven bij verbranding CO₂ af. Ze zijn dus niet hernieuwbaar. Zuurstofgas wordt bij verbranding net verbruikt, niet gemaakt."
+          },
+          {
+            "type": "tf",
+            "prompt": "Bij een onvolledige verbranding, met te weinig zuurstof, kan het zeer giftige gas koolstofmonoxide (CO) ontstaan.",
+            "answer": true,
+            "explanation": "Voor een volledige verbranding is voldoende zuurstof nodig. Is er te weinig zuurstof, dan ontstaat er onder andere koolstofmonoxide (CO), een zeer giftig gas."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul de zin aan met de juiste woorden.",
+            "text": "Fossiele brandstoffen raken op termijn [uitgeput]. Daarom stappen we over op [hernieuwbare] energiebronnen en proberen we thuis ook energie te [besparen], bijvoorbeeld door onze woning beter te isoleren.",
+            "explanation": "Een duurzame energievoorziening steunt op twee sporen: overschakelen op bronnen die niet opraken, en minder energie verspillen."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "2.3",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: hoe een plant haar eigen voedsel maakt",
+      "toelichting": "Zes vragen over de behoeften van een plant en het verloop van de fotosynthese.",
+      "config": {
+        "questions": [
+          {
+            "type": "order",
+            "prompt": "Zet de stappen van de fotosynthese in de juiste volgorde, van grondstof tot eindproduct.",
+            "items": [
+              "De wortels nemen water op uit de bodem en de stengel voert het naar de bladeren.",
+              "De huidmondjes laten koolstofdioxide uit de lucht binnen in het blad.",
+              "Het chlorofyl in de bladgroenkorrels vangt lichtenergie van de zon op.",
+              "In de bladgroenkorrels worden water en koolstofdioxide omgezet in glucose.",
+              "Het zuurstofgas dat daarbij ontstaat, verlaat het blad via de huidmondjes.",
+              "De glucose wordt opgeslagen als zetmeel of verbruikt voor energie en groei."
+            ],
+            "hint": "Begin bij de grondstoffen die binnenkomen en eindig bij wat de plant met de suiker doet.",
+            "explanation": "Eerst komen de grondstoffen binnen (water via de wortels, CO₂ via de huidmondjes), dan vangt het chlorofyl het licht op, daarna volgt de omzetting tot glucose, het zuurstofgas gaat naar buiten en ten slotte gebruikt of bewaart de plant de glucose."
+          },
+          {
+            "type": "table",
+            "prompt": "Fotosynthese en celademhaling gebeuren allebei in een plant, maar ze zijn elkaars tegengestelde. Vul de lege vakjes aan.",
+            "columns": ["Kenmerk", "Fotosynthese", "Celademhaling"],
+            "rows": [
+              {
+                "cells": ["Gas dat opgenomen wordt", "", "zuurstofgas"],
+                "answers": [null, "koolstofdioxide", null]
+              },
+              {
+                "cells": ["Gas dat afgegeven wordt", "zuurstofgas", ""],
+                "answers": [null, null, "koolstofdioxide"]
+              },
+              {
+                "cells": ["Is er licht nodig?", "", "nee"],
+                "answers": [null, "ja", null]
+              },
+              {
+                "cells": ["Wat gebeurt er met glucose?", "gemaakt", ""],
+                "answers": [null, null, "afgebroken"]
+              }
+            ],
+            "hint": "Bij fotosynthese bouwt de plant suiker op met licht; bij celademhaling breekt ze die suiker weer af voor energie, ook ’s nachts.",
+            "explanation": "Fotosynthese heeft licht nodig, neemt CO₂ op, geeft O₂ af en maakt glucose. Celademhaling gebeurt dag én nacht, verbruikt zuurstof en glucose, en geeft CO₂ af."
+          },
+          {
+            "type": "mc",
+            "prompt": "Bo zet een plant in een donkere kast. Ze geeft hem wel water en de aarde is rijk aan mineralen. Toch groeit de plant niet. Waarom niet?",
+            "options": [
+              "Zonder licht kan de plant geen fotosynthese doen en dus geen glucose maken.",
+              "Zonder licht kunnen de wortels geen water meer opnemen.",
+              "Zonder licht heeft de plant geen mineralen meer nodig.",
+              "Zonder licht groeien de bladgroenkorrels uit tot wortels."
+            ],
+            "correctIndex": 0,
+            "explanation": "Licht is de energiebron van de fotosynthese. Zonder licht maakt de plant geen glucose meer en heeft ze dus geen voedingsstoffen om mee te groeien, hoeveel water en mineralen ze ook krijgt."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul de woordformule van de fotosynthese aan.",
+            "text": "water + [koolstofdioxide] + lichtenergie → [glucose] + [zuurstof]",
+            "hint": "Links staan de grondstoffen die binnenkomen, rechts wat de plant maakt.",
+            "explanation": "De plant neemt water en koolstofdioxide op en maakt daar met lichtenergie glucose van. Het zuurstofgas dat daarbij ontstaat, geeft ze af aan de lucht."
+          },
+          {
+            "type": "multi",
+            "prompt": "Wat heeft een plant nodig om te kunnen groeien? Duid alle juiste antwoorden aan.",
+            "options": [
+              "licht",
+              "water en mineralen uit de bodem",
+              "koolstofdioxide uit de lucht",
+              "glucose uit de bodem",
+              "zuurstofgas als grondstof voor de fotosynthese"
+            ],
+            "correctIndices": [0, 1, 2],
+            "explanation": "Licht, water, koolstofdioxide en mineralen zijn de kernvoorwaarden. Glucose haalt de plant niet uit de bodem: die maakt ze zelf. Zuurstofgas is geen grondstof maar juist een product van de fotosynthese."
+          },
+          {
+            "type": "tf",
+            "prompt": "Overdag geeft een groene plant meer zuurstofgas af dan ze zelf verbruikt.",
+            "answer": true,
+            "explanation": "Overdag doet de plant fotosynthese én celademhaling, maar de fotosynthese levert veel meer zuurstof op dan de plant zelf gebruikt. Daarom komt er netto zuurstof vrij. ’s Nachts stopt de fotosynthese en verbruikt de plant alleen maar zuurstof."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "3.3",
+      "plaats": "einde",
+      "type": "quiz",
+      "titel": "Check: de plant als fotosynthesefabriek",
+      "toelichting": "Vijf vragen over de bouw van een plant en haar aanpassingen aan de fotosynthese.",
+      "config": {
+        "questions": [
+          {
+            "type": "sort",
+            "prompt": "Is deze aanpassing microscopisch (enkel met een microscoop te zien) of macroscopisch (met het blote oog te zien)?",
+            "categories": ["Microscopische aanpassing", "Macroscopische aanpassing"],
+            "items": [
+              { "text": "bladcellen vol bladgroenkorrels", "category": "Microscopische aanpassing" },
+              { "text": "huidmondjes in de opperhuid van het blad", "category": "Microscopische aanpassing" },
+              { "text": "luchtruimtes tussen de cellen van het sponsweefsel", "category": "Microscopische aanpassing" },
+              { "text": "brede, platte bladeren", "category": "Macroscopische aanpassing" },
+              { "text": "een diep en wijd vertakt wortelstelsel", "category": "Macroscopische aanpassing" },
+              { "text": "een stengel die naar het raam toe buigt", "category": "Macroscopische aanpassing" },
+              { "text": "naaldvormige bladeren bij een den", "category": "Macroscopische aanpassing" }
+            ],
+            "hint": "Kun je het van een afstand zien staan, of heb je er een microscoop voor nodig?",
+            "explanation": "Bladgroenkorrels, huidmondjes en de luchtruimtes in het bladweefsel zie je alleen onder de microscoop. De vorm van de bladeren, de groeirichting en het wortelstelsel zie je met het blote oog."
+          },
+          {
+            "type": "mc",
+            "prompt": "De meeste bladeren zijn plat, breed en dun. Wat is het grootste voordeel van die vorm voor de fotosynthese?",
+            "options": [
+              "Een groot, plat oppervlak vangt veel licht op en in een dun blad hoeft CO₂ niet ver te verplaatsen.",
+              "Een dun blad heeft geen huidmondjes nodig om gassen uit te wisselen.",
+              "Een plat blad kan rechtstreeks water uit de bodem opnemen.",
+              "Een breed blad kan zelf mineralen aanmaken voor de plant."
+            ],
+            "correctIndex": 0,
+            "explanation": "Breed en plat betekent veel oppervlak om licht op te vangen. Dun betekent dat het licht alle cellen bereikt en dat CO₂ snel tot bij elke cel kan diffunderen."
+          },
+          {
+            "type": "tf",
+            "prompt": "Ook de wortels doen aan fotosynthese, want ze horen bij dezelfde plant.",
+            "answer": false,
+            "explanation": "Wortels zitten in de grond, vangen geen licht op en bevatten geen bladgroen. Ze doen dus géén fotosynthese. Hun taak is water en mineralen opnemen en de plant verankeren."
+          },
+          {
+            "type": "short",
+            "prompt": "Een kamerplant bij het raam buigt na een paar weken helemaal naar het licht toe. Hoe noemen we dat verschijnsel?",
+            "accepted": ["fototropie", "fototropisme", "de fototropie"],
+            "hint": "Het woord begint met foto-, net als fotosynthese.",
+            "explanation": "Fototropie is de groei naar het licht toe. Zo vangen de bladeren meer licht op en kan de plant meer fotosynthese doen."
+          },
+          {
+            "type": "multi",
+            "prompt": "Welke aanpassingen helpen een plant vooral om méér licht op te vangen? Duid alle juiste antwoorden aan.",
+            "options": [
+              "brede, platte bladeren",
+              "bladeren die zo aan de stengel staan dat ze elkaar weinig beschaduwen",
+              "een stengel die de bladeren omhoog en uit de schaduw houdt",
+              "huidmondjes die bij droogte sluiten",
+              "wortels die dieper de grond in groeien"
+            ],
+            "correctIndices": [0, 1, 2],
+            "explanation": "Bladvorm, bladopstelling en de hoogte van de stengel bepalen hoeveel licht op de bladeren valt. Sluitende huidmondjes beperken waterverlies en diepe wortels halen water en mineralen op: die twee helpen de plant wel, maar niet om licht te vangen."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "worksheet",
+      "titel": "Werkblad: van zonlicht tot suiker",
+      "toelichting": "Vijf toepassingsvragen waarin je de energieomzettingen en de fotosynthese zelf uitlegt en narekent.",
+      "config": {
+        "questions": [
+          {
+            "type": "info",
+            "prompt": "**Handig om te weten bij dit werkblad**\n\n- Energie gaat nooit verloren, ze wordt omgezet van de ene vorm in de andere.\n- Woordformule fotosynthese: water + koolstofdioxide + lichtenergie → glucose + zuurstof.\n- Voor één molecuul glucose gebruikt de plant 6 moleculen CO₂ en 6 moleculen water, en komen er 6 moleculen zuurstofgas vrij."
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul aan welke energieomzetting er in een automotor gebeurt.",
+            "text": "In de motor wordt benzine verbrand. De [chemische] energie van de benzine wordt daarbij omgezet in [bewegingsenergie], waardoor de auto vooruit rijdt, en in [warmte], waardoor de motor heet wordt.",
+            "explanation": "Verbranding is een energieomzetting: de energie die in de brandstof opgeslagen zat, komt vrij als beweging, warmte en licht."
+          },
+          {
+            "type": "number",
+            "prompt": "Een blad maakt op een zonnige dag 4 moleculen glucose aan. Hoeveel moleculen koolstofdioxide heeft het daarvoor nodig? Geef het aantal moleculen.",
+            "answer": 24,
+            "tolerance": 0,
+            "hint": "Per molecuul glucose zijn er 6 moleculen CO₂ nodig.",
+            "explanation": "Voor één molecuul glucose gebruikt de plant 6 moleculen CO₂. Voor 4 moleculen glucose is dat 4 × 6 = 24 moleculen koolstofdioxide."
+          },
+          {
+            "type": "long",
+            "prompt": "Nora zet twee even grote takjes waterpest in een bak water. Takje A staat onder een felle lamp, takje B staat in een donkere kast. Na een halfuur telt ze de belletjes die uit de blaadjes komen. Bij welk takje ziet ze meer belletjes? Welk gas zit er in die belletjes, en waarom komt het vrij?",
+            "modelAnswer": "Bij takje A, onder de felle lamp, ziet Nora veel meer belletjes. In die belletjes zit zuurstofgas (O₂). Dat zuurstofgas komt vrij bij de fotosynthese: met de lichtenergie van de lamp zet de waterpest water en koolstofdioxide om in glucose, en daarbij ontstaat zuurstof. Takje B krijgt geen licht, dus daar stopt de fotosynthese en komen er (bijna) geen belletjes meer.",
+            "rubric": [
+              { "criterion": "Zegt dat takje A (met licht) meer belletjes geeft en benoemt het gas als zuurstof(gas).", "points": 1 },
+              { "criterion": "Legt uit dat de belletjes ontstaan door fotosynthese en dat die licht nodig heeft, waardoor takje B in het donker stopt.", "points": 1 }
+            ]
+          },
+          {
+            "type": "gap",
+            "prompt": "Vul de weg van het water door de plant aan.",
+            "text": "Water komt de plant binnen via de [wortels], gaat door transportvaten in de [stengel] omhoog, en wordt in de bladgroenkorrels van het [blad] gebruikt als grondstof voor de fotosynthese.",
+            "explanation": "Elk plantendeel heeft zijn taak: de wortels nemen op, de stengel transporteert en houdt de bladeren in het licht, en in het blad gebeurt de eigenlijke omzetting."
+          },
+          {
+            "type": "long",
+            "prompt": "Leg uit waarom er zonder planten geen dieren en mensen op aarde zouden kunnen leven. Gebruik in je antwoord de woorden autotroof, heterotroof, glucose en zuurstof.",
+            "modelAnswer": "Planten zijn autotroof: ze maken via fotosynthese zelf hun voedsel, namelijk glucose. Dieren en mensen zijn heterotroof: zij kunnen zelf geen voedsel maken en moeten planten of andere dieren eten. Alle energie in ons voedsel komt dus uiteindelijk van planten, en daarvoor van de zon. Bovendien komt bij de fotosynthese zuurstof vrij. Die zuurstof hebben wij nodig om te ademen. Zonder planten zou er dus geen voedsel en geen zuurstof zijn.",
+            "rubric": [
+              { "criterion": "Gebruikt autotroof en heterotroof correct: planten maken zelf glucose, dieren en mensen moeten eten.", "points": 1 },
+              { "criterion": "Vermeldt dat de fotosynthese ook de zuurstof levert die wij inademen.", "points": 1 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Oefeningen",
+      "plaats": "einde",
+      "type": "exitticket",
+      "titel": "Exit-ticket: energie en fotosynthese",
+      "toelichting": "Vier korte vragen om te checken of de kern van dit hoofdstuk is blijven hangen.",
+      "config": {
+        "questions": [
+          {
+            "type": "mc",
+            "prompt": "Wat maakt een plant tijdens de fotosynthese?",
+            "options": [
+              "glucose en zuurstofgas",
+              "koolstofdioxide en water",
+              "mineralen en water",
+              "zetmeel en koolstofdioxide"
+            ],
+            "correctIndex": 0,
+            "explanation": "Water en koolstofdioxide zijn de grondstoffen; glucose en zuurstofgas zijn de producten. Zetmeel maakt de plant pas later uit de glucose."
+          },
+          {
+            "type": "short",
+            "prompt": "Welk gas neemt een blad via de huidmondjes op om aan fotosynthese te doen?",
+            "accepted": ["koolstofdioxide", "co2", "co₂", "koolstofdioxide (co2)", "koolstofdioxidegas"],
+            "explanation": "Koolstofdioxide (CO₂) komt via de huidmondjes het blad binnen en is samen met water de grondstof voor glucose."
+          },
+          {
+            "type": "dropdown",
+            "prompt": "Kies telkens het juiste woord.",
+            "text": "Een plant is {autotroof|heterotroof|fossiel}: ze maakt haar eigen voedsel met zonlicht. Een mens is {heterotroof|autotroof|duurzaam} en moet daarom planten of dieren eten.",
+            "shuffle": true,
+            "explanation": "Autotrofen zoals planten maken zelf hun voedingsstoffen. Heterotrofen zoals mensen, dieren en schimmels moeten eten om aan energie te komen."
+          },
+          {
+            "type": "tf",
+            "prompt": "Zonne-energie, windenergie en waterkracht zijn hernieuwbare energiebronnen.",
+            "answer": true,
+            "explanation": "Deze bronnen raken niet op en geven tijdens het gebruik geen CO₂ af. Daarom horen ze bij een duurzame energievoorziening."
+          }
+        ]
+      }
+    },
+    {
+      "sectie": "Kernbegrippen",
+      "plaats": "einde",
+      "type": "wordsearch",
+      "titel": "Woordzoeker: energie en fotosynthese",
+      "toelichting": "Zoek de twaalf sleutelwoorden van dit hoofdstuk terug in het rooster.",
+      "config": {
+        "words": [
+          "FOTOSYNTHESE",
+          "HUIDMONDJES",
+          "HETEROTROOF",
+          "VERBRANDING",
+          "FOTOTROPIE",
+          "CHLOROFYL",
+          "AUTOTROOF",
+          "MINERALEN",
+          "BLADGROEN",
+          "ZUURSTOF",
+          "GLUCOSE",
+          "ENERGIE"
+        ]
+      }
+    }
+  ]
+}

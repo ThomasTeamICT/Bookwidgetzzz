@@ -262,6 +262,26 @@ OEF_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'oefeningen')
 QUIZ_LIKE = {'quiz': 'single', 'exitticket': 'single', 'worksheet': 'scroll'}
 
 
+DECIMAL_RE = re.compile(r'^-?\d+[.,]\d+$')
+
+
+def with_decimal_alts(answer):
+    """'7,9' → '7,9|7.9': de nakijker aanvaardt beide schrijfwijzen (alternatieven met |)."""
+    parts = [a.strip() for a in str(answer).split('|')]
+    out = []
+    for a in parts:
+        out.append(a)
+        if DECIMAL_RE.match(a):
+            alt = a.replace(',', '.') if ',' in a else a.replace('.', ',')
+            if alt not in parts:
+                out.append(alt)
+    return '|'.join(out)
+
+
+def gap_with_alts(text):
+    return re.sub(r'\[([^\]]+)\]', lambda m: '[' + with_decimal_alts(m.group(1)) + ']', text)
+
+
 def convert_question(q, goal_code):
     t = q['type']
     out = {'id': uid('q'), 'type': t, 'prompt': q['prompt'], 'points': q.get('points', 2 if t == 'long' else (0 if t == 'info' else 1))}
@@ -285,7 +305,7 @@ def convert_question(q, goal_code):
             out['points'] = sum(r['points'] for r in q['rubric']) or out['points']
         out['allowDraw'] = True
     elif t == 'gap':
-        out['text'] = q['text']
+        out['text'] = gap_with_alts(q['text'])
     elif t == 'match':
         out['pairs'] = [{'left': p['left'], 'right': p['right']} for p in q['pairs']]
     elif t == 'order':
@@ -301,7 +321,7 @@ def convert_question(q, goal_code):
         by_name = {c['name']: c['id'] for c in cats}
         out.update(categories=cats, items=[{'id': uid('it'), 'text': i['text'], 'categoryId': by_name[i['category']]} for i in q['items']])
     elif t == 'table':
-        out.update(columns=q['columns'], rows=[{'id': uid('r'), 'cells': r['cells'], 'answers': r['answers']} for r in q['rows']], caseSensitive=False)
+        out.update(columns=q['columns'], rows=[{'id': uid('r'), 'cells': r['cells'], 'answers': [with_decimal_alts(a) if a else a for a in r['answers']]} for r in q['rows']], caseSensitive=False)
     return out
 
 
