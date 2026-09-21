@@ -76,6 +76,26 @@ en maximale opvolgbaarheid.
 - In de quiz-editor krijgt elke vraag een leerplandoel (autocomplete), en het
   AI-editorpaneel koppelt bestaande vragen in één keer aan leerplandoelen.
 
+### 👥 Klassen: delen en opvolgen met leerlingen en toestellen, zonder server
+- **Klassen** (`#/klassen`): klaslijst plakken ("12 Naam" of "Naam" per regel), klascode,
+  **opdrachten** (cursus of widget, met deadline en instructie — ook rechtstreeks vanuit het
+  deelvenster van een widget of cursus). Elke leerling krijgt een vaste identiteit
+  (`studentId`), zodat inzendingen en leesvoortgang niet meer aan een vrij ingetikte naam hangen.
+- **Klaslink, QR of klaspakket**: één link (of bestand) met de klaslijst én alle opgedragen
+  cursussen en widgets, media inbegrepen. Op eender welk toestel opent die de **leerlinghub**
+  (`#/leerling/:code`): naam kiezen uit de lijst, opdrachten met deadlinebadges, en een sectie
+  **Inleveren** met de resultaat- en voortgangscodes als QR-code.
+- **Inleverpunt** (`#/inleverpunt`): de leerkracht plakt véél codes tegelijk (ontdubbeld, met
+  per code leerling, klas, score of voortgang) of **scant de QR-codes** op de schermen van de
+  leerlingen met de camera (BarcodeDetector, met jsQR als terugval). Werk voor een onbekende
+  widget wordt nooit weggegooid.
+- **Klasoverzicht** (`#/klas/:id`): matrix leerlingen × opdrachten (niet gestart, bezig,
+  ingediend, score, leesvoortgang), per leerling de **score per leerplandoel** over alle
+  opdrachten heen, openstaand nakijkwerk, CSV-export.
+- Bewust serverloos: niets verlaat het toestel behalve wat de leerkracht of leerling zelf
+  deelt (link, QR, code). Wil je later toch live synchronisatie tussen toestellen, dan is dat
+  een aparte, expliciete keuze (zie Beperkingen).
+
 ### 📚 Cursusmodule: digitale cursussen (BrightBook-achtig, en verder)
 - **Authoring**: hoofdstukken → secties → 16 bloktypes (kop, tekst met markdown,
   afbeelding, video, audio, extern kader, kadertjes, citaat, tabel, kolommen, uitklapper,

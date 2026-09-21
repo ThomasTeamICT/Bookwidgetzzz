@@ -4,6 +4,7 @@ import type { Course } from '../../lib/courseTypes';
 import { courseReadUrl, encodeCourseToUrl, exportCourseJson } from '../../lib/courses';
 import { referencedWidgetIds } from '../../lib/courseTypes';
 import { downloadFile } from '../../lib/utils';
+import { AssignToClassSection } from '../ShareModal';
 import { CopyButton, Modal } from '../ui';
 
 export function CourseShareModal({ course, onClose }: { course: Course; onClose: () => void }) {
@@ -148,6 +149,10 @@ export function CourseShareModal({ course, onClose }: { course: Course; onClose:
         <CopyButton text={course.code} label="Code kopiëren" />
         <CopyButton text={readUrl} label="Directe link kopiëren" />
       </div>
+
+      <hr className="divider" />
+
+      <AssignToClassSection kind="course" targetId={course.id} title={course.title} />
 
       {selected.length > 0 && (
         <>

@@ -45,10 +45,15 @@ export async function exportProgress(studentName: string): Promise<string> {
   return JSON.stringify(file, null, 2);
 }
 
-/** Sleutel om dubbele pogingen te herkennen (zelfde widget, naam en indienmoment). */
-function dupKey(widgetId: unknown, studentName: unknown, submittedAt: unknown): string {
+/**
+ * Sleutel om dubbele pogingen te herkennen (zelfde widget, naam en
+ * indienmoment). Ook gebruikt door lib/inbox.ts: het inleverpunt ontdubbelt
+ * geplakte en gescande resultaatcodes op exact dezelfde manier.
+ */
+export function submissionDupKey(widgetId: unknown, studentName: unknown, submittedAt: unknown): string {
   return `${String(widgetId)}::${String(studentName).trim().toLowerCase()}::${String(submittedAt)}`;
 }
+
 
 /**
  * Leest een voortgangsbestand defensief in en bewaart alleen de pogingen die
@@ -64,7 +69,7 @@ export function importProgress(json: string): { naam: string; imported: number }
 
     const bestaand = getSubmissions();
     const bestaandeIds = new Set(bestaand.map((s) => s.id));
-    const gezien = new Set(bestaand.map((s) => dupKey(s.widgetId, s.studentName, s.submittedAt)));
+    const gezien = new Set(bestaand.map((s) => submissionDupKey(s.widgetId, s.studentName, s.submittedAt)));
 
     let imported = 0;
     let eersteNaam = '';
@@ -77,7 +82,7 @@ export function importProgress(json: string): { naam: string; imported: number }
       if (typeof s.studentName !== 'string' || !s.studentName.trim()) continue;
       if (!s.answers || typeof s.answers !== 'object' || Array.isArray(s.answers)) continue;
 
-      const key = dupKey(s.widgetId, s.studentName, s.submittedAt);
+      const key = submissionDupKey(s.widgetId, s.studentName, s.submittedAt);
       if (gezien.has(key)) continue;
       gezien.add(key);
 

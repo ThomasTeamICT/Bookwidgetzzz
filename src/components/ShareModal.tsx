@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import QRCode from 'qrcode';
 import type { Widget } from '../lib/types';
 import { encodeWidgetToUrl, exportWidgetJson, playUrlForCode } from '../lib/share';
+import { assignmentsForClass, createAssignment, dueBadge, getClasses, saveAssignment } from '../lib/classes';
 import { countUnresolvedMedia, inlineMedia } from '../lib/mediaStore';
 import { downloadFile } from '../lib/utils';
-import { CheckRow, CopyButton, Modal, useToast } from './ui';
+import { CheckRow, CopyButton, Field, Modal, useToast } from './ui';
 
 interface Inlined {
   /** Widget met de media als data-URL (null zolang dat nog loopt). */
@@ -76,6 +78,10 @@ export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () =>
         <CopyButton text={widget.code} label="Code kopiëren" />
         <CopyButton text={codeUrl} label="Directe link kopiëren" />
       </div>
+
+      <hr className="divider" />
+
+      <AssignToClassSection kind="widget" targetId={widget.id} title={widget.title} />
 
       <hr className="divider" />
 
@@ -204,5 +210,106 @@ function AdaptedLinkSection({ widget, inlined }: { widget: Widget; inlined: Widg
         )}
       </div>
     </details>
+  );
+}
+
+// ── Toewijzen aan een klas ──────────────────────────────────────────────────
+
+/**
+ * Van "delen" naar "opgeven": dezelfde cursus of oefening als opdracht in een
+ * klas zetten, met een deadline. De leerling ziet ze meteen in zijn klaslink,
+ * de leerkracht in zijn klasoverzicht. Ook gebruikt door de cursus-deelmodal.
+ */
+export function AssignToClassSection({
+  kind, targetId, title,
+}: { kind: 'course' | 'widget'; targetId: string; title: string }) {
+  const toast = useToast();
+  const classes = useMemo(() => getClasses(), []);
+  const [classId, setClassId] = useState(() => (classes.length === 1 ? classes[0].id : ''));
+  const [due, setDue] = useState('');
+  const [note, setNote] = useState('');
+  const [melding, setMelding] = useState('');
+
+  // Bewust zonder useMemo: de opdrachtenlijst is klein, en na het toewijzen
+  // moet deze regel meteen de nieuwe stand tonen ("bijwerken" i.p.v. "toewijzen").
+  const bestaande = classId
+    ? assignmentsForClass(classId).find((a) => a.kind === kind && a.targetId === targetId)
+    : undefined;
+
+  if (classes.length === 0) {
+    return (
+      <div className="callout">
+        <span aria-hidden>👥</span>
+        <div>
+          <strong>Toewijzen aan een klas?</strong> Maak eerst een klas aan bij{' '}
+          <Link to="/klassen">Klassen</Link>. Daarna geef je deze {kind === 'course' ? 'cursus' : 'oefening'}{' '}
+          in één klik op, met deadline — en volg je in één overzicht wie ze al maakte.
+        </div>
+      </div>
+    );
+  }
+
+  const toewijzen = () => {
+    if (!classId) return;
+    const dueAt = due ? new Date(`${due}T23:59:59`).getTime() : null;
+    const cls = classes.find((c) => c.id === classId);
+    const opdracht = bestaande
+      ? { ...bestaande, dueAt: Number.isFinite(dueAt) ? dueAt : null, note: note.trim() || bestaande.note }
+      : createAssignment({ classId, kind, targetId, dueAt: Number.isFinite(dueAt) ? dueAt : null, note });
+    saveAssignment(opdracht);
+    const badge = dueBadge(opdracht.dueAt);
+    const tekst = `“${title}” staat nu in ${cls?.name ?? 'de klas'}${badge ? ` (deadline: ${badge.label})` : ''}.`;
+    setMelding(tekst);
+    toast(bestaande ? 'Opdracht bijgewerkt' : 'Toegewezen aan de klas', 'ok');
+  };
+
+  return (
+    <div>
+      <div className="callout">
+        <span aria-hidden>👥</span>
+        <div>
+          <strong>Toewijzen aan een klas:</strong> je leerlingen zien deze opdracht in hun klaslink,
+          met naam en deadline. Hun werk komt onder hun eigen naam in je klasoverzicht terecht.
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div style={{ flex: '1 1 200px' }}>
+          <Field label="Klas">
+            <select className="select" value={classId} onChange={(e) => { setClassId(e.target.value); setMelding(''); }}>
+              <option value="">— kies een klas —</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}{c.schoolYear ? ` (${c.schoolYear})` : ''}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        <div style={{ flex: '1 1 160px' }}>
+          <Field label="Deadline (optioneel)">
+            <input className="input" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+          </Field>
+        </div>
+      </div>
+      <Field label="Instructie (optioneel)" hint="Eén zin: wat verwacht je van je leerlingen?">
+        <input
+          className="input"
+          value={note}
+          placeholder="bv. Maak dit tegen vrijdag; één poging volstaat."
+          onChange={(e) => setNote(e.target.value)}
+        />
+      </Field>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button className="btn btn-primary btn-sm" disabled={!classId} onClick={toewijzen}>
+          {bestaande ? '✔ Opdracht bijwerken' : '➕ Toewijzen aan deze klas'}
+        </button>
+        {bestaande && !melding && (
+          <span className="hint">Staat al in deze klas — bijwerken past de deadline aan.</span>
+        )}
+        {melding && (
+          <span className="hint" role="status">
+            {melding} <Link to={`/klas/${classId}`}>→ klasoverzicht</Link>
+          </span>
+        )}
+      </div>
+    </div>
   );
 }

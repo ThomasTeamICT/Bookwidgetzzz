@@ -4,6 +4,8 @@ import { getPrefs, getWidgets, savePrefs, saveWidget } from './storage';
 import { EXAMPLE_CURRICULUM_ID, getCurricula, getCurriculum, saveCurriculum } from './curriculum';
 import { createWidget } from '../widgets/registry';
 import { uid } from './utils';
+import { ensureDemoCourse } from './courses';
+import { seedExampleClass } from './classes';
 
 // ── Voorbeeldleerplan ───────────────────────────────────────────────────────
 //
@@ -226,4 +228,9 @@ export function seedIfEmpty() {
 
   for (const w of widgets) saveWidget(w);
   savePrefs({ ...prefs, seeded: true });
+  // Voorbeeldklas met opdrachten voor de democursus en een voorbeeldwidget.
+  // De democursus eerst, anders heeft de klas niets om aan te wijzen.
+  // Idempotent (eigen vlag 'wf.classes.seeded.v1'): verwijderd blijft verwijderd.
+  ensureDemoCourse();
+  seedExampleClass();
 }

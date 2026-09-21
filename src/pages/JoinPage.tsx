@@ -17,7 +17,7 @@ export function JoinPage() {
       setError('Vul de volledige code in (6 tekens).');
       return;
     }
-    // Eén codeveld voor alles: eerst widgets proberen, dan cursussen.
+    // Eén codeveld voor alles: eerst widgets, dan cursussen, dan klassen.
     if (getWidgetByCode(c)) {
       navigate(`/speel/${c}`);
       return;
@@ -27,7 +27,15 @@ export function JoinPage() {
       navigate(`/cursus/lees/${c}`);
       return;
     }
-    setError(`Geen opdracht of cursus gevonden met code ${c} op dit toestel. Werk je thuis? Vraag dan de draagbare link aan je leerkracht.`);
+    const { getClassByCode } = await import('../lib/classes');
+    const { getClassPackByCode } = await import('../lib/classPack');
+    if (getClassByCode(c) || getClassPackByCode(c)) {
+      navigate(`/leerling/${c}`);
+      return;
+    }
+    setError(
+      `Geen opdracht, cursus of klas gevonden met code ${c} op dit toestel. Werk je thuis? Vraag dan de draagbare link of het klaspakket aan je leerkracht.`
+    );
   };
 
   return (
@@ -43,7 +51,9 @@ export function JoinPage() {
           <div className="card card-pad" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '2.8rem' }} aria-hidden>🎓</div>
             <h1 style={{ fontSize: '1.45rem' }}>Meedoen met een opdracht</h1>
-            <p style={{ color: 'var(--text-soft)' }}>Typ de code die je van je leerkracht kreeg.</p>
+            <p style={{ color: 'var(--text-soft)' }}>
+              Typ de code die je van je leerkracht kreeg: van een oefening, een cursus of van je klas.
+            </p>
             <form onSubmit={(e) => { e.preventDefault(); void go(); }}>
               <input
                 className="input join-code-input"
@@ -51,7 +61,7 @@ export function JoinPage() {
                 maxLength={6}
                 placeholder="ABC123"
                 autoFocus
-                aria-label="Klascode van 6 tekens"
+                aria-label="Code van 6 tekens"
                 onChange={(e) => { setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')); setError(''); }}
               />
               {error && <p role="alert" style={{ color: 'var(--err)', fontWeight: 600, marginTop: 10 }}>{error}</p>}
@@ -60,9 +70,12 @@ export function JoinPage() {
               </button>
             </form>
           </div>
-          <p style={{ textAlign: 'center', marginTop: 14, marginBottom: 0 }}>
+          <p style={{ textAlign: 'center', marginTop: 14, marginBottom: 0, display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link to="/voortgang" style={{ color: 'var(--text-soft)', fontSize: '0.9rem' }}>
               📈 Mijn voortgang
+            </Link>
+            <Link to="/klas/open" style={{ color: 'var(--text-soft)', fontSize: '0.9rem' }}>
+              📦 Klaspakket openen
             </Link>
           </p>
         </div>

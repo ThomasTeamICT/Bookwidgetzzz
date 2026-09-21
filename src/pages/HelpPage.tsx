@@ -75,6 +75,18 @@ export function HelpPage() {
             a: 'De app bewaart geen versiegeschiedenis; exporteer daarom vóór grote ingrepen (zoals een AI-herwerking) even een back-upbestand — de AI-herwerkmodal heeft daar een knop voor. Importeren zet de back-up terug (met bevestiging).',
           },
           {
+            q: '👥 Hoe werk ik met een klas op meerdere toestellen?',
+            a: 'Maak bij Klassen een klas (plak je klaslijst) en geef opdrachten (een cursus of widget, met deadline). Deel dan de klaslink of de QR-code: op elk toestel opent die de leerlinghub, waar de leerling zijn naam kiest en zijn opdrachten ziet. Resultaten en leesvoortgang komen terug als code: de leerling toont de QR-code in de sectie Inleveren, jij scant ze op het Inleverpunt (of plakt de codes in bulk). Het klasoverzicht telt alles op per leerling, ook per leerplandoel.',
+          },
+          {
+            q: '🎯 Hoe bouw ik een cursus die het leerplan dekt?',
+            a: 'Maak eerst een leerplan bij Leerplannen: plak de doelen of lees de pdf in; de AI zet ze om in een doelenlijst met codes (officiële nummering blijft staan). Kies dan bij Cursussen "Blanco vanuit leerplan", vink de doelen aan en laat de AI-cursusbouwer een cursus maken waarin elk doel in een sectie zit. De dekkingsmatrix in de editor toont wat gedekt is; de knop "Vul de hiaten" schrijft secties voor wat nog ontbreekt.',
+          },
+          {
+            q: '📄 Ik heb al cursusmateriaal in Word of pdf. Hoe krijg ik dat erin?',
+            a: 'Ga naar Importeren (ook via de knop op de widgetpagina): sleep je .docx, pdf, markdown of tekst erin. Je ziet de tekst en kiest wat je ermee doet: een cursus laten bouwen met AI (optioneel gekoppeld aan een leerplan), oefeningen laten maken in de AI-studio, of zonder AI omzetten naar een cursus waarbij koppen hoofdstukken en secties worden. Daarna pas je alles aan in de editor en kan je het met de optimaliseer-knop vereenvoudigen, differentiëren of controlevragen laten toevoegen.',
+          },
+          {
             q: '🧹 De opslag zit vol — wat nu?',
             a: 'Afbeeldingen, audio en bijlagen staan sinds kort apart in de bestandsopslag van de browser (IndexedDB, honderden MB), dus die vullen de kleine tekstopslag niet meer. Zit ze toch vol, dan zijn oude inzendingen (met tekeningen en audio-antwoorden) meestal de boosdoener: wis ze via de privacypagina, of exporteer oude widgets naar een bestand en verwijder ze uit de app.',
           },

@@ -9,9 +9,11 @@ import {
   saveStudentProgress, sharedCourseDiffers, startProgress, touchSection,
 } from '../lib/courses';
 import { hasUnresolvedMedia, onMediaChange } from '../lib/mediaStore';
+import { clearStudentContext, getStudentContext } from '../lib/studentContext';
 import { downloadFile, formatDate } from '../lib/utils';
 import { BlockRenderer } from '../components/course/BlockRenderer';
-import { CopyButton, EmptyState } from '../components/ui';
+import { CodeQr } from '../components/CodeQr';
+import { EmptyState } from '../components/ui';
 import { A11yMenu, loadA11y } from '../components/A11yMenu';
 
 // ── /cursus/open?d=… — gedeelde link openen ─────────────────────────────────
@@ -221,6 +223,10 @@ function CourseReader({ course }: { course: Course }) {
   const flat = useMemo(() => allSections(course), [course]);
   const nameKey = NAME_KEY_PREFIX + course.id;
 
+  // Leest deze leerling onder een klasidentiteit (klaslink/klaspakket)? Dan
+  // hoeft hij zijn naam niet te typen én draagt zijn voortgang classId en
+  // studentId mee — ook in de voortgangscode die hij later doorgeeft.
+  const [studentCtx, setStudentCtx] = useState(() => getStudentContext());
   const [name, setName] = useState('');
   const [draftName, setDraftName] = useState('');
   const [sectionId, setSectionId] = useState<string | null>(null);
@@ -357,6 +363,10 @@ function CourseReader({ course }: { course: Course }) {
     if (!p) return;
     const stored = getStudentProgress(p.courseId, p.studentName);
     const merged = stored ? mergeProgressRecords(stored, p) : p;
+    // Klasidentiteit van dít tabblad behouden: mergeProgressRecords vertrekt
+    // van het bewaarde record, dat nog van vóór de klaslink kan zijn.
+    if (p.classId) merged.classId = p.classId;
+    if (p.studentId) merged.studentId = p.studentId;
     // de bedoeling van dít tabblad wint voor "waar was ik?" …
     merged.lastSectionId = p.lastSectionId ?? merged.lastSectionId;
     // … en voor de checklist van de sectie die hier open staat (anders zou
@@ -374,6 +384,10 @@ function CourseReader({ course }: { course: Course }) {
     const n = studentName.trim() || 'Anoniem';
     try { localStorage.setItem(nameKey, n); } catch { /* best effort */ }
     const p = startProgress(course, n);
+    if (studentCtx) {
+      p.classId = studentCtx.classId;
+      if (studentCtx.studentId) p.studentId = studentCtx.studentId;
+    }
     progressRef.current = p;
     // Verder lezen waar je was — anders bij de eerste sectie beginnen
     const startId =
@@ -394,7 +408,8 @@ function CourseReader({ course }: { course: Course }) {
     if (progressRef.current) return;
     let stored: string | null = null;
     try { stored = localStorage.getItem(nameKey); } catch { /* geen opslag */ }
-    if (stored && stored.trim()) begin(stored);
+    if (studentCtx) begin(studentCtx.studentName);
+    else if (stored && stored.trim()) begin(stored);
     else if (!course.settings.requireName) begin('Anoniem');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -478,6 +493,19 @@ function CourseReader({ course }: { course: Course }) {
     touchSection(p, sectionId).completedAt = Date.now();
     persist();
     bump();
+  };
+
+  /** "Niet jij?" — eerst bewaren wat er staat, dan terug naar de naampoort. */
+  const switchStudent = () => {
+    persist();
+    flushNotesRef.current();
+    clearStudentContext();
+    setStudentCtx(null);
+    try { localStorage.removeItem(nameKey); } catch { /* geen opslag: niets te wissen */ }
+    progressRef.current = null;
+    setName('');
+    setDraftName('');
+    setSectionId(null);
   };
 
   const progress = progressRef.current;
@@ -640,12 +668,22 @@ function CourseReader({ course }: { course: Course }) {
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <A11yMenu value={a11y} onChange={setA11y} />
       </div>
+      {studentCtx && (
+        <div className="card" style={{ padding: '10px 14px', flex: 'none' }}>
+          <p className="hint" style={{ margin: 0 }}>
+            Je leest als <strong>{studentCtx.studentName}</strong> uit {studentCtx.className}.
+          </p>
+          <button className="btn btn-sm btn-quiet" style={{ marginTop: 4 }} onClick={switchStudent}>
+            Niet jij? Wissel.
+          </button>
+        </div>
+      )}
       <div className="card" style={{ padding: '12px 14px', flex: 'none' }}>
         <strong style={{ fontSize: '0.9rem' }}>📨 Voortgangscode</strong>
         <p className="hint" style={{ margin: '4px 0 8px' }}>
-          Werk je op je eigen toestel? Bezorg deze code aan je leerkracht om je voortgang door te geven.
+          Werk je op je eigen toestel? Toon deze code aan je leerkracht (scannen) of kopieer ze.
         </p>
-        <CopyButton text={progressCode} label="Code kopiëren" />
+        <CodeQr value={progressCode} label="jouw leesvoortgang" size={140} copyLabel="Code kopiëren" />
       </div>
       {noteCount > 0 && (
         <button className="btn btn-ghost btn-sm" style={{ flex: 'none' }} onClick={exportNotes}>
@@ -675,6 +713,11 @@ function CourseReader({ course }: { course: Course }) {
           <span className="badge badge-brand" aria-label={`Voortgang: ${pctDone} procent`}>{pctDone}%</span>
         )}
         <span className="badge">👤 {name}</span>
+        {studentCtx && (
+          <Link to={`/leerling/${studentCtx.classCode}`} className="btn btn-sm btn-ghost">
+            ← Mijn klas
+          </Link>
+        )}
       </header>
 
       <div style={{ display: 'flex', flex: 1, alignItems: 'stretch', minHeight: 0 }}>
@@ -835,9 +878,17 @@ function CourseReader({ course }: { course: Course }) {
                       <div style={{ width: `${pctDone}%` }} />
                     </div>
                     <p className="hint" style={{ margin: '0 0 8px' }}>
-                      Werk je op je eigen toestel? Bezorg je leerkracht je voortgangscode.
+                      Werk je op je eigen toestel? Bezorg je leerkracht je voortgangscode — laat
+                      hem de QR scannen, of kopieer de code.
                     </p>
-                    <CopyButton text={progressCode} label="Voortgangscode kopiëren" />
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                      <CodeQr value={progressCode} label="jouw leesvoortgang" size={170} copyLabel="Voortgangscode kopiëren" />
+                    </div>
+                    {studentCtx && (
+                      <p style={{ margin: '12px 0 0' }}>
+                        <Link to={`/leerling/${studentCtx.classCode}`}>← Terug naar mijn klas</Link>
+                      </p>
+                    )}
                   </div>
                 )}
               </>

@@ -63,6 +63,9 @@ export function PrivacyPage() {
     localStorage.removeItem('wf.attempts.v1');
     localStorage.removeItem('wf.live.v1');
     localStorage.removeItem('wf.courseprogress.v1');
+    // Op een gedeeld leerlingtoestel: ook wie er ingelogd was en welke
+    // klaslijsten via een klaspakket binnenkwamen (namen van leerlingen).
+    ['wf.student.v1', 'wf.handed.v1', 'wf.classpacks.v1'].forEach((k) => localStorage.removeItem(k));
     Object.keys(localStorage)
       .filter((k) => k.startsWith('wf.autosave.') || k.startsWith('wf.coursename.')
         || k.startsWith('wf.coursenotes.') || k.startsWith('wf.deadline.'))

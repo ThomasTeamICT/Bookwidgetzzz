@@ -56,6 +56,11 @@ const CourseViewerPage = lazyRetry(() => import('./pages/CourseViewerPage').then
 const CourseOpenPage = lazyRetry(() => import('./pages/CourseViewerPage').then((m) => ({ default: m.CourseOpenPage })), 'CourseViewerPage');
 const CourseTrackPage = lazyRetry(() => import('./pages/CourseTrackPage').then((m) => ({ default: m.CourseTrackPage })), 'CourseTrackPage');
 const CoursePrintPage = lazyRetry(() => import('./pages/CoursePrintPage').then((m) => ({ default: m.CoursePrintPage })), 'CoursePrintPage');
+const ClassesPage = lazyRetry(() => import('./pages/ClassesPage').then((m) => ({ default: m.ClassesPage })), 'ClassesPage');
+const ClassDashboardPage = lazyRetry(() => import('./pages/ClassDashboardPage').then((m) => ({ default: m.ClassDashboardPage })), 'ClassDashboardPage');
+const InboxPage = lazyRetry(() => import('./pages/InboxPage').then((m) => ({ default: m.InboxPage })), 'InboxPage');
+const ClassStudentPage = lazyRetry(() => import('./pages/ClassStudentPage').then((m) => ({ default: m.ClassStudentPage })), 'ClassStudentPage');
+const ClassOpenPage = lazyRetry(() => import('./pages/ClassOpenPage').then((m) => ({ default: m.ClassOpenPage })), 'ClassOpenPage');
 
 function PageLoader() {
   return (
@@ -89,6 +94,10 @@ const lz = (el: React.ReactNode) => <Suspense fallback={<PageLoader />}>{el}</Su
 const errorElement = <LoadError />;
 
 const router = createHashRouter([
+  // Leerlingzijde van het klassysteem, buiten de leerkrachtschil. `/klas/open`
+  // staat vóór het Layout-blok zodat het niet als `/klas/:id` gelezen wordt.
+  { path: '/klas/open', element: lz(<ClassOpenPage />), errorElement },
+  { path: '/leerling/:classCode', element: lz(<ClassStudentPage />), errorElement },
   {
     element: <Layout />,
     errorElement,
@@ -100,6 +109,9 @@ const router = createHashRouter([
       { path: '/resultaten/:id', element: lz(<ResultsPage />) },
       { path: '/cursussen', element: lz(<CoursesPage />) },
       { path: '/leerplannen', element: lz(<CurriculaPage />) },
+      { path: '/klassen', element: lz(<ClassesPage />) },
+      { path: '/klas/:id', element: lz(<ClassDashboardPage />) },
+      { path: '/inleverpunt', element: lz(<InboxPage />) },
       { path: '/cursus/volg/:id', element: lz(<CourseTrackPage />) },
       { path: '/importeren', element: lz(<ImportPage />) },
       { path: '/ai-studio', element: lz(<AIStudioPage />) },

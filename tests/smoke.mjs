@@ -232,14 +232,14 @@ check('printbare cursus', await page.locator('text=/Afdrukken|Inhoud/').first().
 // ── 15. Meedoen-pagina: 6-tekengrens + widget- én cursuscodes ───────────────
 console.log('15. Meedoen');
 await go('/#/meedoen');
-await page.fill('input[aria-label="Klascode van 6 tekens"]', 'ABCD');
+await page.fill('input[aria-label="Code van 6 tekens"]', 'ABCD');
 check('Start uit bij halve code', await page.getByRole('button', { name: /Start/ }).isDisabled());
-await page.fill('input[aria-label="Klascode van 6 tekens"]', quiz.code);
+await page.fill('input[aria-label="Code van 6 tekens"]', quiz.code);
 await page.getByRole('button', { name: /Start/ }).click();
 await sleep(500);
 check('widgetcode werkt', page.url().includes('/speel/'));
 await go('/#/meedoen');
-await page.fill('input[aria-label="Klascode van 6 tekens"]', demo.code);
+await page.fill('input[aria-label="Code van 6 tekens"]', demo.code);
 await page.getByRole('button', { name: /Start/ }).click();
 await sleep(500);
 check('cursuscode werkt', page.url().includes('/cursus/lees/'));
@@ -255,7 +255,7 @@ check('kapotte widgetlink → melding', await page.locator('text=/werkt niet|ong
 await go('/#/cursus/open?d=rommel');
 check('kapotte cursuslink → melding', await page.locator('text=/werkt niet|ongeldig|beschadigd/i').first().isVisible());
 await go('/#/dit-bestaat-niet');
-check('onbekende route → meedoen-pagina', await page.locator('input[aria-label="Klascode van 6 tekens"]').isVisible());
+check('onbekende route → meedoen-pagina', await page.locator('input[aria-label="Code van 6 tekens"]').isVisible());
 
 // ── 17. Pdf-laag: opslag, viewer, markeerstiften, cursusblok ────────────────
 console.log('17. Pdf-laag');
@@ -495,6 +495,110 @@ check('… ook na herladen', (await page.evaluate(() => document.querySelector('
 // e) privacypagina telt de media
 await go('/#/privacy');
 check('privacypagina toont mediateller', await page.locator('text=/Afbeeldingen, audio en bijlagen/').first().isVisible());
+
+// ── 20. Leerplannen ─────────────────────────────────────────────────────────
+console.log('20. Leerplannen');
+await go('/#/leerplannen');
+check('leerplanpagina rendert', await page.getByRole('heading', { name: /Leerplannen/ }).first().isVisible());
+check('voorbeeldleerplan geseed', await page.locator('text=/Voorbeeld/').first().isVisible());
+const nGoals = await page.evaluate(() => (JSON.parse(localStorage.getItem('wf.curricula.v1') || '[]')[0]?.goals ?? []).length);
+check(`voorbeeldleerplan heeft doelen (${nGoals})`, nGoals >= 10);
+const demoCoverage = await page.evaluate(() => {
+  const c = JSON.parse(localStorage.getItem('wf.courses.v1') || '[]').find((x) => x.title.startsWith('Voorbeeldcursus'));
+  return c ? { cur: !!c.curriculumId, codes: c.chapters.flatMap((ch) => ch.sections.flatMap((se) => se.goalCodes || [])).length } : null;
+});
+check('democursus hangt aan het leerplan met doelcodes', !!demoCoverage && demoCoverage.cur && demoCoverage.codes >= 3);
+await go('/#/cursussen');
+check('dekkingspercentage op de cursuskaart', await page.locator('text=/%/').first().isVisible());
+
+// ── 21. Importeren (zonder AI) ──────────────────────────────────────────────
+console.log('21. Importeren');
+await go('/#/importeren');
+check('importpagina rendert', await page.getByRole('heading', { name: /Bestaand materiaal/ }).first().isVisible());
+// het plakveld zit in een ingeklapt <details>: eerst openklappen
+await page.locator('details:has(textarea[placeholder="Plak hier je tekst…"]) > summary').click();
+await sleep(200);
+await page.locator('textarea[placeholder="Plak hier je tekst…"]').fill('# Smoke-hoofdstuk\n\n## Sectie een\n\nEerste alinea met **vet**.\n\n| kop A | kop B |\n|---|---|\n| 1 | 2 |\n\n## Sectie twee\n\n- punt een\n- punt twee\n');
+await page.getByRole('button', { name: /Tekst toevoegen als bron/ }).click();
+await sleep(300);
+await page.getByRole('button', { name: /Omzetten naar cursus/ }).first().click();
+await sleep(900);
+check('zonder AI omgezet: editor geopend', /#\/cursus\/bewerk\//.test(page.url()));
+const smokeCourse = await page.evaluate(() => {
+  const c = JSON.parse(localStorage.getItem('wf.courses.v1') || '[]').find((x) => x.title === 'Smoke-hoofdstuk');
+  return c ? { secties: c.chapters[0]?.sections.length, tabel: c.chapters[0]?.sections[0]?.blocks.some((b) => b.type === 'table') } : null;
+});
+check('koppen → secties, tabel → tabelblok', !!smokeCourse && smokeCourse.secties === 2 && smokeCourse.tabel === true);
+
+// ── 22. Klassen (leerkracht) ────────────────────────────────────────────────
+console.log('22. Klassen');
+await go('/#/klassen');
+check('klassenpagina rendert', await page.getByRole('heading', { name: /Klassen/ }).first().isVisible());
+check('voorbeeldklas geseed', await page.locator('text=/Voorbeeldklas/').first().isVisible());
+const klasId = await page.evaluate(() => JSON.parse(localStorage.getItem('wf.classes.v1') || '[]')[0]?.id);
+check('voorbeeldklas in opslag', !!klasId);
+await go(`/#/klas/${klasId}`);
+check('klasoverzicht rendert', await page.getByRole('heading', { name: /Voorbeeldklas/ }).first().isVisible());
+check('opdrachten aanwezig', (await page.evaluate(() => JSON.parse(localStorage.getItem('wf.assignments.v1') || '[]').length)) >= 1);
+check('matrix leerlingen × opdrachten', (await page.locator('table').count()) >= 1);
+await page.getByRole('button', { name: /Klaslink/ }).first().click();
+await page.waitForFunction(() => {
+  const el = document.querySelector('[aria-label="Klaspakketlink"]');
+  return el && /#\/klas\/open\?d=/.test(el.value || el.textContent || '');
+}, null, { timeout: 15000 }).catch(() => {});
+const klaslink = await page.evaluate(() => { const el = document.querySelector('[aria-label="Klaspakketlink"]'); return el ? (el.value || el.textContent || '') : ''; });
+check('klaslink gegenereerd', /#\/klas\/open\?d=/.test(klaslink));
+await page.keyboard.press('Escape');
+
+// ── 23. Leerlingflow via klaslink (vers toestel) ────────────────────────────
+console.log('23. Leerlingflow');
+const ctx2 = await browser.newContext({ viewport: { width: 420, height: 860 } });
+const leerling = await ctx2.newPage();
+leerling.on('pageerror', (e) => errors.push(`pageerror(leerling): ${e.message}`));
+leerling.on('console', (m) => { if (m.type() === 'error' && !/ERR_CERT_AUTHORITY_INVALID/.test(m.text())) errors.push(`console(leerling): ${m.text()}`); });
+await leerling.goto(klaslink.replace(/^https?:\/\/[^/]+/, BASE), { waitUntil: 'networkidle' });
+await sleep(1200);
+check('klaspakket overgenomen → leerlinghub', /#\/leerling\//.test(leerling.url()));
+check('naam kiezen', await leerling.getByRole('heading', { name: /Wie ben jij/ }).isVisible());
+const eerste = leerling.locator('button.btn-ghost').first();
+const naam = (await eerste.textContent()) || '';
+await eerste.click();
+await sleep(500);
+check('begroeting met voornaam', await leerling.locator('text=/^Dag /').first().isVisible());
+const opdrachten = leerling.locator('[aria-label="Mijn opdrachten"]');
+check('opdrachten zichtbaar op het leerlingtoestel', (await opdrachten.locator('a, button').count()) >= 1);
+await opdrachten.locator('a, button').first().click();
+await sleep(1000);
+check('opdracht opent speler of cursus', /#\/(speel|cursus\/lees)\//.test(leerling.url()));
+const ctxOpslag = await leerling.evaluate(() => JSON.parse(localStorage.getItem('wf.student.v1') || 'null'));
+// de knop toont "12 Naam": het nummer staat vóór de naam
+check('klasidentiteit bewaard op het toestel', !!ctxOpslag && !!ctxOpslag.studentId && naam.trim().endsWith(ctxOpslag.studentName));
+await ctx2.close();
+
+// ── 24. Inleverpunt: resultaatcode plakken ──────────────────────────────────
+console.log('24. Inleverpunt');
+const inboxWidget = await page.evaluate(() => {
+  const w = JSON.parse(localStorage.getItem('wf.widgets.v1')).find((x) => x.type === 'quiz');
+  return { id: w.id, code: w.code, qids: w.config.questions.map((q) => q.id) };
+});
+const inboxSub = {
+  id: 'smokeinbox1', widgetId: inboxWidget.id, widgetCode: inboxWidget.code, studentName: 'Codeleerling',
+  startedAt: Date.now() - 60000, submittedAt: Date.now(), durationSec: 60,
+  answers: { [inboxWidget.qids[0]]: 0 }, itemScores: { [inboxWidget.qids[0]]: { earned: 1, max: 1, mode: 'auto' } },
+  totalEarned: 1, totalMax: 1, status: 'graded',
+};
+const resultCode = 'WF1.' + LZString.compressToEncodedURIComponent(JSON.stringify(inboxSub));
+await go('/#/inleverpunt');
+check('inleverpunt rendert', await page.getByRole('heading', { name: /Inleverpunt/ }).first().isVisible());
+await page.locator('textarea').first().fill(`hier is mijn code: ${resultCode} groetjes`);
+await page.getByRole('button', { name: /Codes verwerken/ }).click();
+await sleep(600);
+check('code herkend en verwerkt', await page.locator('text=/Codeleerling/').first().isVisible());
+check('inzending bewaard', await page.evaluate(() => JSON.parse(localStorage.getItem('wf.submissions.v1')).some((s) => s.id === 'smokeinbox1')));
+await page.locator('textarea').first().fill(resultCode);
+await page.getByRole('button', { name: /Codes verwerken/ }).click();
+await sleep(500);
+check('dubbele code wordt niet nog eens bewaard', (await page.evaluate(() => JSON.parse(localStorage.getItem('wf.submissions.v1')).filter((s) => s.id === 'smokeinbox1').length)) === 1);
 
 // ── Slot ────────────────────────────────────────────────────────────────────
 console.log('\n──────────');

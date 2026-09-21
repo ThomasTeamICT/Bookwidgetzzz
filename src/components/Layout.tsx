@@ -164,6 +164,7 @@ export function Layout() {
           <NavLink to="/privacy" title="Privacy en gegevensbeheer">Privacy</NavLink>
         </nav>
         <div className="topbar-spacer" />
+        <Link to="/inleverpunt" className="btn btn-sm btn-ghost" title="Resultaat- en voortgangscodes van leerlingen plakken of scannen">📥 Inleverpunt</Link>
         <Link to="/meedoen" className="btn btn-sm btn-ghost">🎓 Ik ben leerling</Link>
         <button
           className="btn btn-quiet btn-icon"

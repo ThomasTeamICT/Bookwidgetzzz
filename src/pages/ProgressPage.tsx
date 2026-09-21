@@ -6,6 +6,7 @@ import type { Submission } from '../lib/types';
 import { EmptyState, useToast } from '../components/ui';
 import { downloadFile, formatDate, pct } from '../lib/utils';
 import { exportProgress, importProgress } from '../lib/progressTransfer';
+import { getStudentContext } from '../lib/studentContext';
 
 /**
  * "Mijn voortgang" voor de leerling op dit toestel.
@@ -59,7 +60,12 @@ export function ProgressPage() {
     return out;
   }, [subs]);
 
-  const [gekozen, setGekozen] = useState<string | null>(null);
+  // Werkt deze leerling onder een klasidentiteit? Dan beginnen we bij zijn
+  // eigen naam en tonen we bovenaan de weg terug naar zijn klas.
+  // tick is een bewuste herlees-trigger, geen echte afhankelijkheid
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const studentCtx = useMemo(() => getStudentContext(), [tick]);
+  const [gekozen, setGekozen] = useState<string | null>(() => getStudentContext()?.studentName ?? null);
   // canonieke schrijfwijze teruggeven: anders toont de select niets wanneer
   // dezelfde naam later met andere hoofdletters opnieuw indient
   const actieveNaam =
@@ -142,6 +148,19 @@ export function ProgressPage() {
 
       <div className="player-main">
         <h1 style={{ fontSize: '1.5rem' }}>📈 Mijn voortgang</h1>
+
+        {studentCtx && (
+          <section className="card card-pad" style={{ marginBottom: 16 }} aria-label="Mijn klas">
+            <h2 style={{ margin: 0, fontSize: '1.05rem' }}>👥 Mijn klas</h2>
+            <p style={{ color: 'var(--text-soft)', margin: '6px 0 10px' }}>
+              Je werkt als <strong>{studentCtx.studentName}</strong> in {studentCtx.className}. Daar
+              staan je opdrachten én de codes die je nog moet doorgeven.
+            </p>
+            <Link to={`/leerling/${studentCtx.classCode}`} className="btn btn-primary">
+              → Naar mijn klas
+            </Link>
+          </section>
+        )}
 
         <input
           ref={fileRef}

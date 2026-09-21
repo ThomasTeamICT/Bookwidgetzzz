@@ -8,7 +8,11 @@ import type { PlayerResult } from '../widgets/shared';
 import { pct, uid } from '../lib/utils';
 import { hasProgress } from '../lib/autosave';
 import { encodeSubmission } from '../lib/share';
+import { clearStudentContext, getStudentContext } from '../lib/studentContext';
 import { CopyButton } from '../components/ui';
+// QR-weergave (qrcode-bibliotheek) alleen laden als er echt een resultaatcode
+// getoond wordt: houdt de hoofdbundel, het kritieke leerlingpad, licht.
+const CodeQr = React.lazy(() => import('../components/CodeQr').then((m) => ({ default: m.CodeQr })));
 import { A11yMenu, loadA11y } from '../components/A11yMenu';
 
 /** Sleutel waaronder de deadline van één leerling bewaard wordt. */
@@ -59,7 +63,11 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
   const def = getTypeDef(widget.type);
   const needsName = recordSubmission && def.hasSubmissions && widget.settings.requireName;
 
-  const [name, setName] = useState('');
+  // Werkt deze leerling onder een klasidentiteit (klaslink/klaspakket)? Dan
+  // staat zijn naam vast: die komt uit de klaslijst, niet uit een tekstveld.
+  // Zo hangt élke inzending aan hetzelfde studentId — ook thuis, ook morgen.
+  const [studentCtx, setStudentCtx] = useState(() => getStudentContext());
+  const [name, setName] = useState(() => getStudentContext()?.studentName ?? '');
   // De gate is ook nodig zonder naamplicht: start() initialiseert timer,
   // pogingenteller, live-registratie en toetsmodus — die mogen niet worden
   // overgeslagen wanneer alleen requireName uit staat.
@@ -170,10 +178,14 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
       totalMax: result.max,
       status: result.hasPending ? 'submitted' : 'graded',
       ...(widget.settings.examMode ? { focusLosses: focusLossRef.current } : {}),
+      // Klasidentiteit meegeven: daarmee telt het klasoverzicht op leerling
+      // (niet op ingetikte naam), ook wanneer de code later binnenkomt.
+      ...(studentCtx ? { classId: studentCtx.classId } : {}),
+      ...(studentCtx?.studentId ? { studentId: studentCtx.studentId } : {}),
     };
     saveSubmission(sub);
     setCompletedSub(sub);
-  }, [recordSubmission, def, widget, name, doelProces, doelStreef, doelVrij]);
+  }, [recordSubmission, def, widget, name, doelProces, doelStreef, doelVrij, studentCtx]);
 
   // De widgetmodule zelf is het duurste stuk van de pagina. Zolang de leerling
   // dezelfde opdracht speelt verandert er niets aan haar props, dus houden we
@@ -188,9 +200,12 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
   // encodeSubmission comprimeert (lz-string) de volledige inzending, met de
   // media ingelijnd — async, dus als state.
   const [resultCode, setResultCode] = useState('');
+  // Een leerling met klasidentiteit werkt vaak op zijn eigen toestel: dan moet
+  // hij zijn resultaat kunnen doorgeven, net als bij een draagbare link.
+  const showResultCode = offerResultCode || !!studentCtx;
   useEffect(() => {
     let alive = true;
-    if (!offerResultCode || !completedSub) {
+    if (!showResultCode || !completedSub) {
       setResultCode('');
       return;
     }
@@ -198,7 +213,7 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
       .then((code) => { if (alive) setResultCode(code); })
       .catch(() => { if (alive) setResultCode(''); });
     return () => { alive = false; };
-  }, [offerResultCode, completedSub]);
+  }, [showResultCode, completedSub]);
 
   const mm = timeLeft !== null ? Math.floor(timeLeft / 60) : 0;
   const ss = timeLeft !== null ? timeLeft % 60 : 0;
@@ -230,6 +245,11 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
           </span>
         )}
         {name && <span className="badge">👤 {name}</span>}
+        {studentCtx && (
+          <Link to={`/leerling/${studentCtx.classCode}`} className="btn btn-sm btn-ghost">
+            ← Mijn klas
+          </Link>
+        )}
       </header>
 
       <div className={`player-main ${def.wide ? 'player-main-wide' : ''}`}>
@@ -271,19 +291,44 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
               )}
             </div>
             {needsName && (
-              <div className="field" style={{ textAlign: 'left' }}>
-                <label htmlFor="student-name">Jouw naam</label>
-                <input
-                  id="student-name"
-                  className="input"
-                  value={name}
-                  placeholder="Voornaam (of klasnummer)"
-                  onChange={(e) => setName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') start(); }}
-                  autoFocus
-                />
-                <span className="hint">Een voornaam of klasnummer is genoeg.</span>
-              </div>
+              studentCtx ? (
+                <div className="field" style={{ textAlign: 'left' }}>
+                  <label htmlFor="student-name">Jouw naam</label>
+                  <input
+                    id="student-name"
+                    className="input"
+                    value={name}
+                    readOnly
+                    aria-readonly="true"
+                    aria-describedby="student-name-hint"
+                  />
+                  <span className="hint" id="student-name-hint">
+                    Je werkt als <strong>{studentCtx.studentName}</strong> uit {studentCtx.className}.
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-quiet"
+                    style={{ alignSelf: 'flex-start' }}
+                    onClick={() => { clearStudentContext(); setStudentCtx(null); setName(''); }}
+                  >
+                    Niet jij? Wissel.
+                  </button>
+                </div>
+              ) : (
+                <div className="field" style={{ textAlign: 'left' }}>
+                  <label htmlFor="student-name">Jouw naam</label>
+                  <input
+                    id="student-name"
+                    className="input"
+                    value={name}
+                    placeholder="Voornaam (of klasnummer)"
+                    onChange={(e) => setName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') start(); }}
+                    autoFocus
+                  />
+                  <span className="hint">Een voornaam of klasnummer is genoeg.</span>
+                </div>
+              )
             )}
             {recordSubmission && def.hasSubmissions && (
               <details className="card" style={{ textAlign: 'left', padding: '10px 14px', margin: '4px 0 14px' }}>
@@ -375,23 +420,40 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
                 onSaved={(updated) => setCompletedSub(updated)}
               />
             )}
-            {offerResultCode && completedSub && (
+            {showResultCode && completedSub && (
               <div className="card card-pad" style={{ marginTop: 18 }}>
                 <h3>📮 Stuur je resultaat naar je leerkracht</h3>
                 {/* resultaatcode bevat ook de foutenanalyse als die vóór het kopiëren is ingevuld */}
                 <p style={{ color: 'var(--text-soft)', fontSize: '0.92rem' }}>
-                  Je werkte op je eigen toestel, dus je leerkracht ziet dit resultaat nog niet vanzelf.
-                  Kopieer deze resultaatcode en bezorg ze via je gebruikelijke kanaal (bv. Smartschool of mail).
-                  Je leerkracht plakt ze bij de resultaten.
+                  Werk je op je eigen toestel, dan ziet je leerkracht dit resultaat nog niet vanzelf.
+                  Laat hem deze QR-code scannen, of kopieer de code en bezorg ze via je gebruikelijke
+                  kanaal (bv. Smartschool of mail).
                 </p>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <input
-                    className="input input-sm" readOnly value={resultCode}
-                    aria-label="Resultaatcode" onFocus={(e) => e.target.select()}
-                    style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}
-                  />
-                  <CopyButton text={resultCode} label="Code kopiëren" />
-                </div>
+                {resultCode ? (
+                  <>
+                    <React.Suspense fallback={<span className="hint" role="status">QR-code maken…</span>}>
+                      <CodeQr value={resultCode} label="jouw resultaat" size={180} copyLabel="Code kopiëren" />
+                    </React.Suspense>
+                    <details style={{ marginTop: 10 }}>
+                      <summary style={{ cursor: 'pointer' }}>De code als tekst</summary>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                        <input
+                          className="input input-sm" readOnly value={resultCode}
+                          aria-label="Resultaatcode" onFocus={(e) => e.target.select()}
+                          style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}
+                        />
+                        <CopyButton text={resultCode} label="Code kopiëren" />
+                      </div>
+                    </details>
+                  </>
+                ) : (
+                  <p className="hint" role="status" aria-busy>Je code wordt klaargemaakt…</p>
+                )}
+                {studentCtx && (
+                  <p style={{ margin: '12px 0 0' }}>
+                    <Link to={`/leerling/${studentCtx.classCode}`}>← Terug naar mijn klas</Link>
+                  </p>
+                )}
               </div>
             )}
           </>

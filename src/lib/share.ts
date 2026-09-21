@@ -32,8 +32,9 @@ const KNOWN_TYPES = new Set(WIDGET_TYPES.map((t) => t.id));
 /**
  * Widget uit een draagbare link defensief saneren: onbekend type weigeren,
  * ontbrekende velden aanvullen zodat spelen/bewaren niet crasht.
+ * Ook gebruikt door lib/classPack.ts (widgets die in een klaspakket meereizen).
  */
-function sanitizeSharedWidget(raw: unknown): Widget | null {
+export function sanitizeSharedWidget(raw: unknown): Widget | null {
   if (!raw || typeof raw !== 'object') return null;
   const w = raw as Record<string, unknown>;
   if (typeof w.type !== 'string' || !KNOWN_TYPES.has(w.type as Widget['type'])) return null;
@@ -46,6 +47,9 @@ function sanitizeSharedWidget(raw: unknown): Widget | null {
     config: w.config,
     settings: { ...FALLBACK_SETTINGS, ...(typeof w.settings === 'object' && w.settings ? (w.settings as Partial<WidgetSettings>) : {}) },
     code: typeof w.code === 'string' && w.code ? (w.code as string) : makeCode(),
+    // Het leerplan mee overnemen: zonder curriculumId vallen de doelcodes van
+    // de vragen terug op "onbekend doel" bij de ontvanger (zie lib/goals.ts).
+    ...(typeof w.curriculumId === 'string' && w.curriculumId ? { curriculumId: w.curriculumId } : {}),
     createdAt: typeof w.createdAt === 'number' ? (w.createdAt as number) : Date.now(),
     updatedAt: Date.now(),
   };

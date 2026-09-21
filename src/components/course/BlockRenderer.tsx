@@ -6,6 +6,7 @@ import type {
 } from '../../lib/courseTypes';
 import { renderMarkdown } from '../../lib/markdown';
 import { bumpAttemptCount, getAttemptCount, getSubmissions, getWidget, saveSubmission } from '../../lib/storage';
+import { getStudentContext } from '../../lib/studentContext';
 import { getTypeDef, type WidgetTypeDef } from '../../widgets/registry';
 import type { PlayerResult } from '../../widgets/shared';
 import type { Submission } from '../../lib/types';
@@ -551,6 +552,9 @@ function WidgetBlockView({
 
   // Stabiele identiteit (net als in PlayerPage): zonder useCallback krijgt de
   // gememoiseerde speler hieronder bij elke render een nieuwe prop.
+  // Klasidentiteit (naam gekozen uit de klaslijst) hoort ook op inzendingen
+  // die ín een cursus gebeuren, anders matcht het klasoverzicht alleen op naam.
+  const studentCtx = useMemo(() => getStudentContext(), []);
   const onComplete = useCallback((result: PlayerResult) => {
     // exact hetzelfde patroon als PlayerPage: guard tegen dubbel opslaan en
     // tegen lege "afrondingen" zonder inhoud
@@ -575,10 +579,12 @@ function WidgetBlockView({
       totalEarned: result.earned,
       totalMax: result.max,
       status: result.hasPending ? 'submitted' : 'graded',
+      ...(studentCtx ? { classId: studentCtx.classId } : {}),
+      ...(studentCtx?.studentId ? { studentId: studentCtx.studentId } : {}),
     };
     saveSubmission(s);
     setSub(s);
-  }, [widget, def, name]);
+  }, [widget, def, name, studentCtx]);
 
   // De ingebedde oefening is verreweg het duurste onderdeel van een cursusblok.
   // De cursuslezer hertekent bij elke toetsaanslag in het zoekveld of in een
