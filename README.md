@@ -42,6 +42,40 @@ en maximale opvolgbaarheid.
 - **Instel-links voor een testgroep**: deel je AI-instellingen (aanbieder, model, sleutel)
   via één link — de ontvanger hoeft niets in te stellen.
 
+### 🎯 Leerplannen: het doelenregister waar alles aan hangt
+- **Leerplannen** (`#/leerplannen`): doelenlijsten met een stabiele **code** per doel
+  (bv. `NW 2.3`), rubriek/thema, niveau (basis/uitbreiding) en toelichting. Aanmaken
+  blanco in een doelentabel, **uit tekst of pdf** (de AI structureert een leerplan- of
+  minimumdoelentekst en behoudt de officiële nummering), of via JSON-import; export als JSON.
+  De app haalt de officiële documenten niet zelf op (auteursrecht, CORS) — de pagina wijst
+  naar onderwijsdoelen.be, GO!, Katholiek Onderwijs Vlaanderen, OVSG en POV.
+- **De doelcode is de ruggengraat**: een cursussectie draagt `goalCodes`, een quizvraag een
+  `goalCode`, een inzending levert dus score per doel, en de resultaten (en het klasoverzicht)
+  tellen dat op per leerling. Vrije-teksttags blijven werken voor wie geen leerplan gebruikt.
+- **Blanco vanuit leerplan**: kies een leerplan en de doelen (per thema), en de
+  AI-cursusbouwer bouwt een cursus die **dekkend** is: elk gekozen doel komt in een sectie,
+  niet enkel in verdieping, met een samenvatting per hoofdstuk en oefenquizzen waarvan de
+  vragen hun doelcode dragen. Combineerbaar met eigen bronmateriaal.
+- **Dekking**: per cursus een matrix leerplandoelen × hoofdstukken (secties én ingebedde
+  oefeningen), status per doel, percentage op de cursuskaart, lijst van hiaten en de knop
+  "Vul de hiaten" die de AI nieuwe secties laat schrijven voor de niet-gedekte doelen.
+- **Optimaliseren** van een bestaande cursus: taal vereenvoudigen, differentiëren (basis en
+  verdieping per sectie), controlevragen toevoegen, hiaten t.o.v. het leerplan vullen —
+  altijd met voorvertoning, mediablokken blijven staan.
+- **Oefeningen voorstellen** per sectie: de AI maakt widgets op maat van de sectie en haar
+  doelen, bewaart ze en bedt ze in.
+
+### 📥 Bestaand materiaal verwerken
+- **Importpagina** (`#/importeren`): sleep of kies **.docx, pdf, markdown, tekst, html** of
+  json (widget, vakgroeppakket, cursus), of plak tekst. Word-documenten worden client-side
+  omgezet (mammoth, lui geladen) naar markdown met koppen, lijsten en tabellen.
+- Vervolgstappen per bron: **AI-cursus bouwen** (de tekst gaat via een overdracht naar de
+  cursusbouwer, met optioneel een leerplan), **AI-oefeningen maken** (naar de AI-studio), of
+  **zonder AI omzetten naar een cursus**: `#` wordt hoofdstuk, `##` sectie, tabellen worden
+  tabelblokken — meteen bewerkbaar in de cursuseditor.
+- In de quiz-editor krijgt elke vraag een leerplandoel (autocomplete), en het
+  AI-editorpaneel koppelt bestaande vragen in één keer aan leerplandoelen.
+
 ### 📚 Cursusmodule: digitale cursussen (BrightBook-achtig, en verder)
 - **Authoring**: hoofdstukken → secties → 16 bloktypes (kop, tekst met markdown,
   afbeelding, video, audio, extern kader, kadertjes, citaat, tabel, kolommen, uitklapper,
