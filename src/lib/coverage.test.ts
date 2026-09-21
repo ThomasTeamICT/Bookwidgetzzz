@@ -1,0 +1,112 @@
+import { describe, expect, it } from 'vitest';
+import { computeCoverage, coveragePercent, uncoveredGoalLines } from './coverage';
+import type { Course } from './courseTypes';
+import type { Curriculum } from './curriculumTypes';
+import type { Widget } from './types';
+
+const curriculum = {
+  id: 'cur1',
+  title: 'Voorbeeld',
+  net: 'eigen',
+  subject: 'Natuurwetenschappen',
+  level: '1e graad',
+  goals: [
+    { id: 'g1', code: 'NW 1.1', text: 'Waterkringloop beschrijven', theme: 'Systeem aarde' },
+    { id: 'g2', code: 'NW 1.2', text: 'Wolken verklaren', theme: 'Systeem aarde' },
+    { id: 'g3', code: 'NW 2.1', text: 'Aggregatietoestanden', theme: 'Materie' },
+    { id: 'g4', code: 'NW 2.2', text: 'Toestandsveranderingen', theme: 'Materie' },
+  ],
+  createdAt: 0,
+  updatedAt: 0,
+} as Curriculum;
+
+const course = {
+  id: 'c1', title: 'Water', author: '', coverEmoji: '💧', code: 'ABC123',
+  curriculumId: 'cur1',
+  settings: { accentColor: '#000', requireName: true, showProgressToStudent: true },
+  createdAt: 0, updatedAt: 0,
+  chapters: [
+    {
+      id: 'ch1', title: 'Verdamping', emoji: '☁️',
+      sections: [
+        // kleine letters + dubbele spatie: moet genormaliseerd worden
+        { id: 's1', title: 'In de zon', goalCodes: ['nw  1.1'], blocks: [] },
+        { id: 's2', title: 'Oefenen', goalCodes: [], blocks: [{ id: 'b1', type: 'widget', widgetId: 'w1' }] },
+      ],
+    },
+    {
+      id: 'ch2', title: 'Neerslag', emoji: '🌧️',
+      sections: [
+        // enkel in een keuzesectie → telt niet als gedekt
+        { id: 's3', title: 'Van wolk tot regen', optional: true, goalCodes: ['NW 1.2', 'XX 9.9'], blocks: [] },
+        { id: 's4', title: 'Zonder doel', blocks: [] },
+      ],
+    },
+  ],
+} as unknown as Course;
+
+const widget = {
+  id: 'w1', type: 'quiz', title: 'Quiz materie', folderId: null, code: 'QQQ111',
+  settings: {}, createdAt: 0, updatedAt: 0,
+  config: { questions: [{ id: 'q1', goalCode: 'NW 2.1' }, { id: 'q2', goalCode: 'nw 2.1' }, { id: 'q3' }] },
+} as unknown as Widget;
+
+describe('computeCoverage', () => {
+  const res = computeCoverage(course, curriculum, [widget]);
+
+  it('koppelt secties aan doelen, ongeacht schrijfwijze van de code', () => {
+    const row = res.rows.find((r) => r.code === 'NW 1.1')!;
+    expect(row.sections.map((s) => s.sectionTitle)).toEqual(['In de zon']);
+    expect(row.status).toBe('covered');
+  });
+
+  it('telt een ingebedde oefening mee als dekking', () => {
+    const row = res.rows.find((r) => r.code === 'NW 2.1')!;
+    expect(row.sections).toHaveLength(0);
+    expect(row.widgets.map((w) => w.title)).toEqual(['Quiz materie']);
+    expect(row.status).toBe('covered');
+  });
+
+  it('markeert doelen die alleen in een keuzesectie staan', () => {
+    expect(res.rows.find((r) => r.code === 'NW 1.2')!.status).toBe('optional');
+  });
+
+  it('markeert doelen die nergens voorkomen', () => {
+    expect(res.rows.find((r) => r.code === 'NW 2.2')!.status).toBe('missing');
+  });
+
+  it('vat samen hoeveel doelen gedekt zijn', () => {
+    expect(res.covered).toBe(2);
+    expect(res.total).toBe(4);
+    expect(res.percent).toBe(50);
+    expect(res.summary).toBe('Dekkend: 2 van 4 doelen.');
+    expect(res.uncovered.map((r) => r.code)).toEqual(['NW 1.2', 'NW 2.2']);
+  });
+
+  it('signaleert codes die niet in het leerplan staan en secties zonder code', () => {
+    expect(res.unknownCodes).toEqual(['XX 9.9']);
+    expect(res.sectionsWithoutCode.map((s) => s.sectionTitle)).toEqual(['Zonder doel']);
+  });
+
+  it('negeert widgets die niet in de cursus ingebed staan', () => {
+    const los = { ...widget, id: 'w2' } as Widget;
+    const zonder = computeCoverage(course, curriculum, [los]);
+    expect(zonder.rows.find((r) => r.code === 'NW 2.1')!.status).toBe('missing');
+  });
+
+  it('kan om met een ontbrekend leerplan en een leerplan zonder doelen', () => {
+    const geen = computeCoverage(course, undefined);
+    expect(geen.rows).toEqual([]);
+    expect(geen.percent).toBe(0);
+    expect(geen.summary).toContain('geen doelen');
+    expect(computeCoverage(course, { ...curriculum, goals: [] }).total).toBe(0);
+  });
+
+  it('levert een percentage en promptregels voor de hiaten', () => {
+    expect(coveragePercent(course, curriculum, [widget])).toBe(50);
+    expect(uncoveredGoalLines(res)).toEqual([
+      'NW 1.2 — Wolken verklaren',
+      'NW 2.2 — Toestandsveranderingen',
+    ]);
+  });
+});

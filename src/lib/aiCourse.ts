@@ -10,6 +10,8 @@
 import type { Widget } from './types';
 import type { Course, CourseBlock, CourseSection } from './courseTypes';
 import { allSections } from './courseTypes';
+import type { CurriculumGoal } from './curriculumTypes';
+import { normalizeGoalCode, normalizeGoalCodes } from './curriculum';
 import { sanitizeCourse } from './courses';
 import { quizSchemaText, sanitizeGeneratedWidgets } from './aiWidgetGen';
 import { makeCode, uid } from './utils';
@@ -44,9 +46,33 @@ Antwoord met ALLEEN geldige JSON, zonder uitleg of markdown-hekken.`;
 /** Meer bron dan dit gaat niet mee: houdt de prompt binnen het contextvenster. */
 export const MAX_SOURCE_CHARS = 60000;
 
+/** Doelenlijst voor in een prompt: "WIS 2.3 — De leerlingen … (Getallenleer, uitbreiding)". */
+export function goalListText(goals: CurriculumGoal[]): string {
+  return goals
+    .map((g) => {
+      const extra = [g.theme?.trim(), g.level === 'uitbreiding' ? 'uitbreiding' : ''].filter(Boolean).join(' · ');
+      return `- ${normalizeGoalCode(g.code)} — ${g.text.trim()}${extra ? ` (${extra})` : ''}`;
+    })
+    .join('\n');
+}
+
+/** Het regeltje dat in élke leerplanprompt terugkomt. */
+function goalCodeRules(goals: CurriculumGoal[]): string {
+  const codes = goals.map((g) => normalizeGoalCode(g.code));
+  return `Elke sectie krijgt een veld "goalCodes": een lijst met de codes van de leerplandoelen waaraan die sectie werkt.
+- Gebruik UITSLUITEND codes uit de lijst hierboven, exact zoals ze er staan (${codes.slice(0, 6).join(', ')}${codes.length > 6 ? ', …' : ''}).
+- Samen moeten de secties ALLE ${codes.length} doelen dekken: geen enkel doel mag overblijven. Een doel mag in meerdere secties terugkomen.
+- Zet een doel nooit alleen in een sectie met "optional": true — verdieping ziet niet elke leerling.
+- Vul daarnaast ook "goals" in: dezelfde doelen in leerlingtaal ("Ik kan …").`;
+}
+
 export interface NewCourseRequest {
   /** Leerplandoelen (vrije tekst). Verplicht als er geen bronmateriaal is. */
   goals: string;
+  /** Gekozen leerplandoelen mét code — het skelet van een "blanco vanuit leerplan". */
+  curriculumGoals?: CurriculumGoal[];
+  /** Voorgestelde titel (bv. uit de importpagina). */
+  title?: string;
   /** Eigen cursustekst of pdf-tekst: de AI blijft er inhoudelijk strikt bij. */
   sourceText?: string;
   audience?: string;
@@ -61,12 +87,19 @@ export interface NewCourseRequest {
 export function buildNewCoursePrompt(req: NewCourseRequest): { system: string; prompt: string } {
   const parts: string[] = [];
   parts.push('Bouw een volledige digitale cursus.');
+  if (req.title?.trim()) parts.push(`Voorgestelde titel (mag je verfijnen): ${req.title.trim()}`);
   if (req.subject?.trim()) parts.push(`Vak/onderwerp: ${req.subject.trim()}`);
   if (req.audience?.trim()) parts.push(`Doelgroep: ${req.audience.trim()}`);
   if (req.chapterCount && req.chapterCount > 0) parts.push(`Richtaantal hoofdstukken: ${req.chapterCount}.`);
   if (req.extraWishes?.trim()) parts.push(`Extra wensen van de leerkracht: ${req.extraWishes.trim()}`);
   const source = (req.sourceText ?? '').trim();
   const goals = req.goals.trim();
+  const curGoals = req.curriculumGoals ?? [];
+  if (curGoals.length) {
+    parts.push(
+      `\nDeze LEERPLANDOELEN (met hun officiële code) vormen het skelet van de cursus:\n${goalListText(curGoals)}\n\n${goalCodeRules(curGoals)}`
+    );
+  }
   if (goals) {
     parts.push(`\nDeze LEERPLANDOELEN vormen het skelet van de cursus — dek ze allemaal en verwijs ernaar in de "goals" van de secties:\n${goals}`);
   }
@@ -79,11 +112,18 @@ export function buildNewCoursePrompt(req: NewCourseRequest): { system: string; p
   }
   parts.push(`\n${BLOCK_SCHEMA}`);
 
-  let envelope = `Geef terug: {"course":{"title":"…","subtitle":"…","coverEmoji":"één emoji","chapters":[{"title":"…","emoji":"…","sections":[{"title":"…","goals":["…"],"optional":false,"blocks":[blok,…]}]}]}}`;
+  if (curGoals.length) {
+    parts.push('Sluit ELK hoofdstuk af met een korte samenvattingssectie ("Samenvatting van dit hoofdstuk") die de kern in enkele zinnen of een lijstje herhaalt.');
+  }
+
+  let envelope = `Geef terug: {"course":{"title":"…","subtitle":"…","coverEmoji":"één emoji","chapters":[{"title":"…","emoji":"…","sections":[{"title":"…","goals":["…"],"goalCodes":["…"],"optional":false,"blocks":[blok,…]}]}]}}`;
   if (req.withQuizzes) {
     envelope = envelope.slice(0, -1) + `,"widgets":[{"type":"quiz","title":"…","config":{…}}]}
 Maak per hoofdstuk één oefenquiz van 4 à 6 vragen over dat hoofdstuk, in dezelfde volgorde als de hoofdstukken.
 ${quizSchemaText()}`;
+    if (curGoals.length) {
+      envelope += `\nGeef elke vraag ook een "goalCode": de code van het leerplandoel dat ze toetst, uit dezelfde lijst.`;
+    }
   }
   parts.push(`\n${envelope}`);
   return { system: COURSE_SYSTEM, prompt: parts.join('\n\n') };
@@ -102,6 +142,7 @@ function compactCourse(course: Course): string {
         id: se.id,
         title: se.title,
         goals: se.goals,
+        goalCodes: se.goalCodes,
         optional: se.optional || undefined,
         blocks: se.blocks.map((b) => {
           if (MEDIA.has(b.type)) return { type: 'keep', id: b.id, was: b.type };
@@ -125,23 +166,191 @@ function compactCourse(course: Course): string {
   return JSON.stringify(compact);
 }
 
-export function buildReworkPrompt({ course, wishes }: { course: Course; wishes: string }): { system: string; prompt: string } {
+export function buildReworkPrompt({
+  course, wishes, extraRules, goalContext,
+}: {
+  course: Course;
+  wishes: string;
+  /** Extra opdrachtregels (bv. de gekozen optimalisaties). */
+  extraRules?: string;
+  /** Leerplancontext: de doelenlijst waaraan de cursus gekoppeld is. */
+  goalContext?: string;
+}): { system: string; prompt: string } {
   const prompt = `Herwerk de onderstaande bestaande cursus.
 
 Wat de leerkracht anders wil: ${wishes.trim() || 'verbeter de structuur en de didactische kwaliteit.'}
-
+${extraRules?.trim() ? `
+${extraRules.trim()}
+` : ''}
 BELANGRIJKE regels:
 - Behoud het "id" van secties waarvan de inhoud in essentie dezelfde blijft (zo blijft de leesvoortgang van leerlingen geldig). Nieuwe of sterk veranderde secties krijgen géén id.
 - Blokken van het type {"type":"keep","id":"…"} zijn mediablokken (afbeeldingen, video's, oefeningen) die je NIET mag wijzigen of weglaten: zet exact datzelfde keep-blok op de best passende plek terug.
+- Behoud de "goalCodes" die al op een sectie staan; voeg er enkel codes uit de leerplanlijst aan toe.
 - Geef de VOLLEDIGE herwerkte cursus terug, niet alleen de wijzigingen.
-
+${goalContext?.trim() ? `
+${goalContext.trim()}
+` : ''}
 ${BLOCK_SCHEMA}
 
-Geef terug: {"course":{"title":"…","subtitle":"…","coverEmoji":"…","chapters":[{"title":"…","emoji":"…","sections":[{"id":"(alleen bij behouden secties)","title":"…","goals":["…"],"optional":false,"blocks":[blok,…]}]}]}}
+Geef terug: {"course":{"title":"…","subtitle":"…","coverEmoji":"…","chapters":[{"title":"…","emoji":"…","sections":[{"id":"(alleen bij behouden secties)","title":"…","goals":["…"],"goalCodes":["…"],"optional":false,"blocks":[blok,…]}]}]}}
 
 === HUIDIGE CURSUS (compact) ===
 ${compactCourse(course)}`;
   return { system: COURSE_SYSTEM, prompt };
+}
+
+// ── Optimaliseren: presets die je combineert met eigen wensen ───────────────
+
+export type OptimizePreset = 'taal' | 'differentiatie' | 'controlevragen' | 'hiaten';
+
+export const OPTIMIZE_PRESETS: { id: OptimizePreset; label: string; hint: string }[] = [
+  {
+    id: 'taal',
+    label: 'Vereenvoudig de taal',
+    hint: 'Leerlingtaal, korte zinnen, schooltaalwoorden uitgelegd in een begrippenlijst.',
+  },
+  {
+    id: 'differentiatie',
+    label: 'Differentieer',
+    hint: 'Per sectie een basisdeel; verdieping komt als aparte keuzesectie erachter.',
+  },
+  {
+    id: 'controlevragen',
+    label: 'Voeg controlevragen toe',
+    hint: 'Per sectie een accordion “Check jezelf” en een afvinklijst.',
+  },
+  {
+    id: 'hiaten',
+    label: 'Vul de hiaten t.o.v. het leerplan',
+    hint: 'Nieuwe secties voor de doelen die nog nergens aan bod komen; bestaande secties blijven ongemoeid.',
+  },
+];
+
+const PRESET_RULES: Record<OptimizePreset, string> = {
+  taal: '- TAAL: herschrijf alle lopende tekst in leerlingtaal: korte zinnen (max ±15 woorden), actieve vorm, één idee per zin. Elk schooltaal- of vakwoord dat je gebruikt, staat uitgelegd in een "terms"-blok in diezelfde sectie. Laat geen leerstof weg.',
+  differentiatie: '- DIFFERENTIATIE: geef elke sectie een duidelijk basisdeel dat iedereen aankan. Wat verdieping is, zet je in een APARTE sectie met "optional": true, met een titel die begint met "Verdieping —", meteen na de basissectie. Herhaal in de verdiepingssectie dezelfde "goalCodes" als de basissectie.',
+  controlevragen: '- CONTROLEVRAGEN: sluit elke sectie af met (1) een accordion-blok met de titel "Check jezelf" waarin elk item een vraag is en de tekst het antwoord, en (2) een checklist-blok "Ik kan nu…" met de doelen van die sectie in leerlingtaal.',
+  hiaten: '- HIATEN: laat bestaande secties en hun inhoud ONGEMOEID (zelfde id, zelfde blokken, zelfde goalCodes) en voeg enkel NIEUWE secties toe voor de niet-gedekte doelen hieronder. Zet elke nieuwe sectie in het best passende hoofdstuk (of maak één nieuw hoofdstuk achteraan), geef ze géén id, en vul hun "goalCodes" met exact de codes van de doelen die ze dekken.',
+};
+
+export interface OptimizeRequest {
+  course: Course;
+  presets: OptimizePreset[];
+  /** Vrije wensen van de leerkracht (mag leeg zijn als er presets zijn). */
+  wishes: string;
+  /** Doelen die nog niet gedekt zijn (nodig voor de preset 'hiaten'). */
+  uncovered?: CurriculumGoal[];
+  /** Alle doelen van het gekoppelde leerplan, als context. */
+  curriculumGoals?: CurriculumGoal[];
+}
+
+export function buildOptimizePrompt(req: OptimizeRequest): { system: string; prompt: string } {
+  const rules = req.presets.map((p) => PRESET_RULES[p]).filter(Boolean);
+  const wants = req.presets
+    .map((p) => OPTIMIZE_PRESETS.find((x) => x.id === p)?.label.toLowerCase())
+    .filter(Boolean)
+    .join(', ');
+  const wishes = [wants ? `optimaliseer de cursus: ${wants}` : '', req.wishes.trim()]
+    .filter(Boolean)
+    .join('. ');
+  const parts: string[] = [];
+  if (rules.length) parts.push(`Voer deze optimalisaties uit:\n${rules.join('\n')}`);
+  const uncovered = req.uncovered ?? [];
+  if (req.presets.includes('hiaten')) {
+    parts.push(
+      uncovered.length
+        ? `Deze leerplandoelen komen nog NIET aan bod in een gewone (niet-optionele) sectie — maak er nieuwe secties voor:\n${goalListText(uncovered)}`
+        : 'Alle leerplandoelen zijn al gedekt: voeg dan géén secties toe en meld dat door de cursus ongewijzigd terug te geven.'
+    );
+  }
+  const all = req.curriculumGoals ?? [];
+  const goalContext = all.length
+    ? `LEERPLAN waaraan deze cursus gekoppeld is — gebruik in "goalCodes" uitsluitend codes uit deze lijst:\n${goalListText(all)}`
+    : '';
+  return buildReworkPrompt({
+    course: req.course,
+    wishes: wishes || 'verbeter de didactische kwaliteit',
+    extraRules: parts.join('\n\n'),
+    goalContext,
+  });
+}
+
+// ── Oefeningen voorstellen bij één sectie ───────────────────────────────────
+
+/** De tekstuele inhoud van een sectie, voor in een prompt. */
+export function sectionPlainText(section: CourseSection, maxChars = 6000): string {
+  const out: string[] = [];
+  for (const b of section.blocks) {
+    switch (b.type) {
+      case 'heading': out.push(`## ${b.text}`); break;
+      case 'text': out.push(b.markdown); break;
+      case 'callout': out.push(`${b.title ? `${b.title}: ` : ''}${b.text}`); break;
+      case 'quote': out.push(`"${b.text}"${b.source ? ` — ${b.source}` : ''}`); break;
+      case 'columns': out.push(`${b.left}\n${b.right}`); break;
+      case 'table': out.push(b.rows.map((r) => r.join(' | ')).join('\n')); break;
+      case 'terms': out.push(b.items.map((i) => `${i.term}: ${i.uitleg}`).join('\n')); break;
+      case 'accordion': out.push(b.items.map((i) => `${i.title}: ${i.text}`).join('\n')); break;
+      case 'checklist': out.push(b.items.map((i) => `- ${i.text}`).join('\n')); break;
+      default: break;
+    }
+  }
+  return out.join('\n\n').slice(0, maxChars);
+}
+
+export interface SectionExercisesRequest {
+  course: Course;
+  section: CourseSection;
+  chapterTitle?: string;
+  /** Leerplandoelen van deze sectie (met code). */
+  goals?: CurriculumGoal[];
+  /** Aantal oefeningen (1–3). */
+  count?: number;
+  wishes?: string;
+}
+
+export function buildSectionExercisesPrompt(req: SectionExercisesRequest): { system: string; prompt: string } {
+  const count = Math.min(3, Math.max(1, req.count ?? 1));
+  const goals = req.goals ?? [];
+  const content = sectionPlainText(req.section);
+  const system = `Je bent een ervaren Vlaamse leerkracht en toetsontwikkelaar die oefeningen maakt voor Boosterz.
+Kwaliteitsregels:
+- Toets ALLEEN wat in de sectie staat; verzin er geen leerstof bij.
+- Meerkeuze: afleiders zijn plausibele misvattingen, nooit flauwekul.
+- Geef bij elke vraag een korte "explanation" (feedback is een leermoment).
+- Helder Nederlands (Vlaanderen), afgestemd op de doelgroep.
+- Antwoord met ALLEEN geldige JSON: {"widgets":[{"type":"quiz","title":"…","config":{…}}]}`;
+  const parts: string[] = [];
+  parts.push(
+    `Maak ${count} oefening(en) bij één sectie van de cursus "${req.course.title}"`
+    + `${req.chapterTitle ? ` (hoofdstuk "${req.chapterTitle}")` : ''}, sectie "${req.section.title}".`
+  );
+  parts.push(`De EERSTE oefening is altijd een "quiz" van 4 à 6 vragen.${count > 1 ? ' De overige mogen ook van het type "flashcards", "pairs" of "checklist" zijn als dat didactisch beter past.' : ''}`);
+  if (goals.length) {
+    parts.push(
+      `Leerplandoelen van deze sectie:\n${goalListText(goals)}\n`
+      + `Geef elke vraag een "goalCode" met exact één code uit deze lijst.`
+    );
+  }
+  if (req.wishes?.trim()) parts.push(`Extra wensen van de leerkracht: ${req.wishes.trim()}`);
+  parts.push(
+    content.trim()
+      ? `=== INHOUD VAN DE SECTIE ===\n${content}\n=== EINDE ===`
+      : 'De sectie bevat nog geen tekst: baseer je op de titel en de leerdoelen hierboven.'
+  );
+  parts.push(quizSchemaText());
+  parts.push(`Geef terug: {"widgets":[{"type":"quiz","title":"…","config":{"questions":[vraag,…],"layout":"single"}}]}`);
+  return { system, prompt: parts.join('\n\n') };
+}
+
+/** AI-antwoord met oefeningen → bruikbare widgets (hergebruikt de widgetsanering). */
+export function sanitizeSectionExercises(
+  json: unknown,
+  opts: { curriculumId?: string; allowedGoalCodes?: string[] } = {}
+): { widgets: Widget[]; warnings: string[] } {
+  // De vragen dragen goalCodes: alleen codes uit de sectie tellen mee.
+  const res = sanitizeGeneratedWidgets(json, { allowedGoalCodes: normalizeGoalCodes(opts.allowedGoalCodes) });
+  const widgets = res.widgets.map((w) => (opts.curriculumId ? { ...w, curriculumId: opts.curriculumId } : w));
+  return { widgets, warnings: res.warnings };
 }
 
 export function buildSectionPrompt({
@@ -225,7 +434,43 @@ function resolveKeepBlocks(raw: unknown, base: Course | undefined, warnings: str
   return raw;
 }
 
-export function sanitizeAICourse(json: unknown, opts: { base?: Course } = {}): AICourseResult {
+/**
+ * De goalCodes die uit sanitizeCourse komen zijn al genormaliseerd en
+ * ontdubbeld; hier kijken we nog of de AI binnen de gevraagde lijst bleef en
+ * hangen we het leerplan aan de cursus.
+ */
+function applyGoalCodes(course: Course, opts: SanitizeAICourseOptions, warnings: string[]) {
+  const curriculumId = opts.curriculumId ?? opts.base?.curriculumId;
+  if (curriculumId) course.curriculumId = curriculumId;
+  const allowed = opts.allowedGoalCodes?.length ? new Set(normalizeGoalCodes(opts.allowedGoalCodes)) : null;
+  if (!allowed) return;
+  let dropped = 0;
+  for (const chapter of course.chapters) {
+    for (const section of chapter.sections) {
+      if (!section.goalCodes?.length) continue;
+      const kept = section.goalCodes.filter((c) => allowed.has(c));
+      dropped += section.goalCodes.length - kept.length;
+      section.goalCodes = kept.length ? kept : undefined;
+    }
+  }
+  if (dropped > 0) {
+    warnings.push(`${dropped} doelcode(s) van de AI stonden niet in je leerplan en zijn weggelaten.`);
+  }
+}
+
+export interface SanitizeAICourseOptions {
+  /** Bestaande cursus bij herwerken/optimaliseren. */
+  base?: Course;
+  /** Leerplan waaraan de cursus hangt; komt op course.curriculumId terecht. */
+  curriculumId?: string;
+  /**
+   * Codes die de AI mocht gebruiken. Alles daarbuiten wordt weggelaten (de AI
+   * verzint al eens een code) — zonder lijst blijven alle codes staan.
+   */
+  allowedGoalCodes?: string[];
+}
+
+export function sanitizeAICourse(json: unknown, opts: SanitizeAICourseOptions = {}): AICourseResult {
   const warnings: string[] = [];
   const envelope = (json && typeof json === 'object' ? json : {}) as Record<string, unknown>;
   const rawCourse = (envelope.course ?? envelope.c ?? json) as Record<string, unknown>;
@@ -243,6 +488,9 @@ export function sanitizeAICourse(json: unknown, opts: { base?: Course } = {}): A
     updatedAt: Date.now(),
   };
   const course = sanitizeCourse(full);
+  if (course) {
+    applyGoalCodes(course, opts, warnings);
+  }
   if (!course) {
     return {
       course: base ?? (sanitizeCourse({ title: 'Cursus', chapters: [{ title: 'Hoofdstuk 1', sections: [{ title: 'Inleiding', blocks: [] }] }] }) as Course),
@@ -254,7 +502,7 @@ export function sanitizeAICourse(json: unknown, opts: { base?: Course } = {}): A
   let quizzes: (Widget | null)[] = [];
   if (Array.isArray(envelope.widgets) && envelope.widgets.length) {
     quizzes = (envelope.widgets as unknown[]).map((w, i) => {
-      const gen = sanitizeGeneratedWidgets({ widgets: [w] });
+      const gen = sanitizeGeneratedWidgets({ widgets: [w] }, { allowedGoalCodes: normalizeGoalCodes(opts.allowedGoalCodes) });
       warnings.push(...gen.warnings.map((msg) => `Quiz ${i + 1}: ${msg}`));
       return gen.widgets.find((x) => x.type === 'quiz') ?? null;
     });

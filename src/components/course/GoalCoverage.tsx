@@ -1,5 +1,9 @@
 import { useMemo, type CSSProperties } from 'react';
+import { Link } from 'react-router-dom';
 import type { Course, CourseChapter, CourseSection } from '../../lib/courseTypes';
+import type { Curriculum } from '../../lib/curriculumTypes';
+import type { Widget } from '../../lib/types';
+import { computeCoverage, type CoverageRow } from '../../lib/coverage';
 import { EmptyState } from '../ui';
 
 // ── Doelendekking ───────────────────────────────────────────────────────────
@@ -29,7 +33,190 @@ function shortTitle(title: string, max = 14): string {
   return t.length <= max ? t : `${t.slice(0, max - 1).trimEnd()}…`;
 }
 
-export function GoalCoverage({ course }: { course: Course }): JSX.Element {
+export function GoalCoverage({
+  course, curriculum, widgets = [], onFillGaps,
+}: {
+  course: Course;
+  /** Leerplan van de cursus; aanwezig = matrix op leerplandoelen. */
+  curriculum?: Curriculum;
+  /** Widgets van dit toestel — de ingebedde exemplaren tellen mee. */
+  widgets?: Widget[];
+  /** "✨ Vul de hiaten": opent de optimalisatie met de niet-gedekte doelen. */
+  onFillGaps?: () => void;
+}): JSX.Element {
+  if (curriculum) {
+    return (
+      <CurriculumCoverage course={course} curriculum={curriculum} widgets={widgets} onFillGaps={onFillGaps} />
+    );
+  }
+  return <FreeTextCoverage course={course} />;
+}
+
+// ── Matrix op leerplandoelen (cursus met curriculumId) ──────────────────────
+
+const STATUS_META: Record<CoverageRow['status'], { icon: string; label: string; badge: string }> = {
+  covered: { icon: '✅', label: 'gedekt', badge: 'badge badge-ok' },
+  optional: { icon: '⚠️', label: 'alleen in verdieping', badge: 'badge badge-warn' },
+  missing: { icon: '❌', label: 'niet gedekt', badge: 'badge badge-err' },
+};
+
+function CurriculumCoverage({
+  course, curriculum, widgets, onFillGaps,
+}: {
+  course: Course;
+  curriculum: Curriculum;
+  widgets: Widget[];
+  onFillGaps?: () => void;
+}): JSX.Element {
+  const result = useMemo(() => computeCoverage(course, curriculum, widgets), [course, curriculum, widgets]);
+
+  const sticky: CSSProperties = {
+    position: 'sticky',
+    left: 0,
+    background: 'var(--bg-raised)',
+    zIndex: 1,
+    textAlign: 'left',
+    padding: '7px 12px',
+  };
+
+  if (result.total === 0) {
+    return (
+      <EmptyState icon="🎯" title="Dit leerplan bevat nog geen doelen">
+        <p>Vul de doelenlijst aan, dan verschijnt hier de dekking van je cursus.</p>
+        <Link to="/leerplannen" className="btn btn-primary">🎯 Naar Leerplannen</Link>
+      </EmptyState>
+    );
+  }
+
+  return (
+    <div>
+      <p style={{ marginTop: 0 }} aria-live="polite">
+        <strong>{result.summary}</strong>{' '}
+        <span className="hint">
+          Leerplan: {curriculum.title}
+          {curriculum.example ? ' (voorbeeld)' : ''}
+        </span>
+      </p>
+
+      {result.uncovered.length > 0 && onFillGaps && (
+        <p style={{ margin: '0 0 12px' }}>
+          <button className="btn btn-sm btn-ai" onClick={onFillGaps}>✨ Vul de hiaten</button>{' '}
+          <span className="hint">De AI maakt nieuwe secties voor de doelen die nog niet aan bod komen.</span>
+        </p>
+      )}
+
+      <div className="card" style={{ overflowX: 'auto', marginBottom: 16 }}>
+        <table className="data" style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <thead>
+            <tr>
+              <th scope="col" style={{ ...sticky, minWidth: 240 }}>Leerplandoel</th>
+              {course.chapters.map((ch) => (
+                <th
+                  key={ch.id}
+                  scope="col"
+                  title={ch.title}
+                  style={{ padding: '7px 8px', fontSize: '0.82rem', whiteSpace: 'nowrap', borderBottom: '1px solid var(--line)' }}
+                >
+                  {ch.emoji ? `${ch.emoji} ` : ''}{shortTitle(ch.title)}
+                </th>
+              ))}
+              <th scope="col" style={{ padding: '7px 8px', fontSize: '0.82rem', borderBottom: '1px solid var(--line)' }}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.rows.map((row) => {
+              const meta = STATUS_META[row.status];
+              return (
+                <tr key={row.goal.id} style={{ borderTop: '1px solid var(--line)' }}>
+                  <th scope="row" style={{ ...sticky, fontWeight: 600, fontSize: '0.86rem' }}>
+                    <span style={{ fontFamily: 'monospace' }}>{row.goal.code}</span>{' '}
+                    <span style={{ fontWeight: 500 }}>{row.goal.text}</span>
+                    {row.goal.level === 'uitbreiding' && <span className="badge" style={{ marginLeft: 6 }}>uitbreiding</span>}
+                  </th>
+                  {course.chapters.map((ch) => {
+                    const secs = row.sections.filter((s) => s.chapterId === ch.id);
+                    const wids = row.widgets.filter((w) => ch.sections.some((se) => se.id === w.sectionId));
+                    const titles = [
+                      ...secs.map((s) => (s.optional ? `${s.sectionTitle} ◇` : s.sectionTitle)),
+                      ...wids.map((w) => `🧩 ${w.title}`),
+                    ];
+                    return (
+                      <td
+                        key={ch.id}
+                        style={{ textAlign: 'center', padding: '6px 8px', fontWeight: 600 }}
+                        title={titles.length > 0 ? titles.join(' · ') : undefined}
+                        aria-label={
+                          titles.length > 0
+                            ? `${titles.length} plaats(en) met dit doel in “${ch.title}”: ${titles.join(', ')}`
+                            : `Dit doel komt niet voor in “${ch.title}”`
+                        }
+                      >
+                        {secs.length > 0 ? secs.length : ''}{wids.length > 0 ? ' 🧩' : ''}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
+                    <span className={meta.badge}>{meta.icon} {meta.label}</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {result.uncovered.length > 0 ? (
+        <div className="card card-pad" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0 }}>Nog niet gedekt ({result.uncovered.length})</h3>
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            {result.uncovered.map((row) => (
+              <li key={row.goal.id} style={{ fontSize: '0.9rem', marginBottom: 3 }}>
+                <strong style={{ fontFamily: 'monospace' }}>{row.goal.code}</strong> {row.goal.text}
+                {row.status === 'optional' && <span className="hint"> — staat enkel in een keuzesectie ◇</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p><span aria-hidden>✅</span> Alle doelen van dit leerplan komen aan bod in een gewone sectie.</p>
+      )}
+
+      {result.sectionsWithoutCode.length > 0 && (
+        <div className="card card-pad" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0 }}>Secties zonder doelcode ({result.sectionsWithoutCode.length})</h3>
+          <p className="hint" style={{ marginTop: -6 }}>
+            Koppel een code bij de sectie-instellingen: die voedt de dekking, de heatmaps én het
+            klasoverzicht per leerling.
+          </p>
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            {result.sectionsWithoutCode.map((s) => (
+              <li key={s.sectionId} style={{ fontSize: '0.9rem' }}>
+                {s.chapterTitle} › {s.sectionTitle}{s.optional && <span className="hint"> ◇ keuzesectie</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {result.unknownCodes.length > 0 && (
+        <p className="callout warn" role="status">
+          ⚠️ Deze codes staan wel in de cursus, maar niet in dit leerplan:{' '}
+          <strong>{result.unknownCodes.join(', ')}</strong>. Pas ze aan of voeg ze toe aan je{' '}
+          <Link to="/leerplannen">leerplan</Link>.
+        </p>
+      )}
+
+      <p className="hint" style={{ marginBottom: 0 }}>
+        💡 Cijfer = aantal secties met dit doel in dat hoofdstuk; 🧩 = een ingebedde oefening toetst het.
+        Keuzesecties zijn gemarkeerd met ◇ en tellen niet als dekkend.
+      </p>
+    </div>
+  );
+}
+
+// ── Terugval: vrije-tekstdoelen (cursus zonder leerplan) ────────────────────
+
+function FreeTextCoverage({ course }: { course: Course }): JSX.Element {
   const { rows, sectionsWithGoal, totalSections, missing } = useMemo(() => {
     const byKey = new Map<string, GoalRow>();
     let withGoal = 0;

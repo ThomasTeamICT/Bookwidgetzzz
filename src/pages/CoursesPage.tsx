@@ -1,35 +1,96 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import type { Course } from '../lib/courseTypes';
+import type { Curriculum } from '../lib/curriculumTypes';
 import type { Widget } from '../lib/types';
 import {
   adoptSharedCourse, createCourse, deleteCourse, ensureDemoCourse,
   exportCourseJson, getCourse, getCourseProgressAll, getCourses,
   importCourseJson, saveCourse, sharedCourseDiffers,
 } from '../lib/courses';
-import { onStorageChange, getPrefs } from '../lib/storage';
+import { getCurricula } from '../lib/curriculum';
+import { computeCoverage } from '../lib/coverage';
+import { takeHandoff } from '../lib/handoff';
+import { onStorageChange, getPrefs, getWidgets } from '../lib/storage';
 import { downloadFile, formatDateShort, makeCode, uid } from '../lib/utils';
 import { ConfirmModal, EmptyState, Field, Modal, useToast } from '../components/ui';
 import { CourseShareModal } from '../components/course/CourseShareModal';
 import { CourseAIModal } from '../components/course/CourseAIModal';
 
+/** Alles wat de AI-cursusbouwer vooringevuld kan krijgen. */
+interface AIStart {
+  focus: 'source' | 'curriculum';
+  source?: string;
+  title?: string;
+  curriculumId?: string;
+  goalCodes?: string[];
+  originNote?: string;
+}
+
 export function CoursesPage() {
   const navigate = useNavigate();
   const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [courses, setCourses] = useState<Course[]>([]);
+  const [curricula, setCurricula] = useState<Curriculum[]>([]);
+  const [widgets, setWidgets] = useState<Widget[]>([]);
   const [newOpen, setNewOpen] = useState(false);
-  const [aiOpen, setAiOpen] = useState(false);
+  const [aiStart, setAiStart] = useState<AIStart | null>(null);
   const [shareTarget, setShareTarget] = useState<Course | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Course | null>(null);
   const [importConflict, setImportConflict] = useState<{ course: Course; widgets: Widget[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const reload = () => setCourses(getCourses());
+  const reload = () => {
+    setCourses(getCourses());
+    setCurricula(getCurricula());
+    setWidgets(getWidgets());
+  };
   useEffect(() => {
-    ensureDemoCourse();
     reload();
+    // Voorbeeldinhoud lui laden (zoals in App.tsx): het voorbeeldleerplan moet
+    // er eerst staan, want de democursus hangt zich eraan vast.
+    void import('../lib/seed')
+      .then((m) => m.ensureExampleCurriculum())
+      .catch(() => { /* zonder voorbeeldleerplan werkt alles gewoon verder */ })
+      .then(() => { ensureDemoCourse(); reload(); });
     return onStorageChange(reload);
   }, []);
+
+  // Binnenkomen vanaf de importpagina: /cursussen?ai=nieuw met het
+  // bronmateriaal in sessionStorage (lib/handoff.ts). Eén keer ophalen, de
+  // query daarna wissen zodat een herlaadbeurt niets opnieuw opent.
+  const handoffDone = useRef(false);
+  useEffect(() => {
+    if (handoffDone.current || searchParams.get('ai') !== 'nieuw') return;
+    handoffDone.current = true;
+    const h = takeHandoff();
+    setAiStart({
+      focus: h?.source?.trim() ? 'source' : 'curriculum',
+      source: h?.source,
+      title: h?.title,
+      curriculumId: h?.curriculumId,
+      goalCodes: h?.goalCodes,
+      originNote: h?.origin ? `Bron uit ${h.origin}` : h?.source ? 'Bron uit de importpagina' : undefined,
+    });
+    if (h?.origin) toast(`Bron uit ${h.origin} overgenomen`, 'ok');
+    const next = new URLSearchParams(searchParams);
+    next.delete('ai');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, toast]);
+
+  /** Leerplantitel + dekkingspercentage per cursus (alleen met curriculumId). */
+  const coverageByCourse = useMemo(() => {
+    const map = new Map<string, { title: string; percent: number; covered: number; total: number }>();
+    for (const course of courses) {
+      if (!course.curriculumId) continue;
+      const cur = curricula.find((c) => c.id === course.curriculumId);
+      if (!cur) continue;
+      const res = computeCoverage(course, cur, widgets);
+      map.set(course.id, { title: cur.title, percent: res.percent, covered: res.covered, total: res.total });
+    }
+    return map;
+  }, [courses, curricula, widgets]);
 
   const duplicate = (course: Course) => {
     const copy: Course = JSON.parse(JSON.stringify(course));
@@ -70,25 +131,47 @@ export function CoursesPage() {
           <p className="sub">Digitale cursussen die je per hoofdstuk deelt en opvolgt — met oefeningen erin.</p>
         </div>
         <div className="page-head-actions">
-          <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>📥 Importeren</button>
+          <Link to="/importeren" className="btn btn-ghost" title="Vertrek van een document, pdf of presentatie die je al hebt">
+            📥 Uit bestaand materiaal
+          </Link>
+          <button
+            className="btn btn-ai"
+            onClick={() => setAiStart({ focus: 'curriculum' })}
+            title="Kies je leerplandoelen; de AI bouwt een cursus die ze allemaal dekt"
+          >
+            🎯 Blanco vanuit leerplan
+          </button>
+          <button className="btn btn-primary" onClick={() => setNewOpen(true)}>➕ Zelf bouwen</button>
+          <button className="btn btn-quiet" onClick={() => fileRef.current?.click()} title="Een cursusbestand (.json) terugzetten">
+            📂 JSON openen
+          </button>
           <input ref={fileRef} type="file" accept="application/json,.json" hidden
             onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f); e.target.value = ''; }} />
-          <button className="btn btn-ai" onClick={() => setAiOpen(true)} title="Een volledige cursus laten bouwen vanuit je cursustekst, een pdf of je leerplandoelen">
-            ✨ AI-cursusbouwer
-          </button>
-          <button className="btn btn-primary" onClick={() => setNewOpen(true)}>➕ Nieuwe cursus</button>
         </div>
       </div>
 
       {courses.length === 0 ? (
         <EmptyState icon="📚" title="Nog geen cursussen">
           <p>
-            Bouw een digitale cursus met hoofdstukken, tekst, video en ingebedde oefeningen —
-            of laat de AI-cursusbouwer een voorzet maken vanuit je cursustekst, een pdf of je leerplandoelen.
+            Er zijn drie manieren om te starten. Kies er een — je kan achteraf altijd alles zelf
+            aanpassen, en de AI blijft een voorzet die jij nakijkt.
           </p>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn btn-ai" onClick={() => setAiOpen(true)}>✨ AI-cursusbouwer</button>
-            <button className="btn btn-primary" onClick={() => setNewOpen(true)}>➕ Zelf bouwen</button>
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', textAlign: 'left', marginTop: 8 }}>
+            <div className="card card-pad">
+              <strong>📥 Uit bestaand materiaal</strong>
+              <p className="hint">Je hebt al een cursustekst, een pdf of een presentatie? Lees ze in en laat er een digitale cursus van maken.</p>
+              <Link to="/importeren" className="btn btn-sm btn-ghost">Materiaal inlezen</Link>
+            </div>
+            <div className="card card-pad">
+              <strong>🎯 Blanco vanuit leerplan</strong>
+              <p className="hint">Kies je leerplandoelen; de AI bouwt een dekkende cursus met de doelcodes al op de secties.</p>
+              <button className="btn btn-sm btn-ai" onClick={() => setAiStart({ focus: 'curriculum' })}>Doelen kiezen</button>
+            </div>
+            <div className="card card-pad">
+              <strong>➕ Zelf bouwen</strong>
+              <p className="hint">Begin met een leeg hoofdstuk en bouw sectie per sectie — met of zonder AI-hulp onderweg.</p>
+              <button className="btn btn-sm btn-primary" onClick={() => setNewOpen(true)}>Lege cursus</button>
+            </div>
           </div>
         </EmptyState>
       ) : (
@@ -96,6 +179,7 @@ export function CoursesPage() {
           {courses.map((course) => {
             const sections = course.chapters.reduce((a, c) => a + c.sections.length, 0);
             const readers = getCourseProgressAll(course.id).length;
+            const cov = coverageByCourse.get(course.id);
             return (
               <div key={course.id} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
                 <div
@@ -115,6 +199,15 @@ export function CoursesPage() {
                     {course.chapters.length} hoofdstuk{course.chapters.length === 1 ? '' : 'ken'} · {sections} secties ·
                     code <strong style={{ fontFamily: 'monospace' }}>{course.code}</strong> · bijgewerkt {formatDateShort(course.updatedAt)}
                   </p>
+                  {cov && (
+                    <p style={{ margin: 0, fontSize: '0.84rem' }}>
+                      🎯 {cov.title}
+                      <br />
+                      <span className="badge" title={`${cov.covered} van ${cov.total} leerplandoelen komen aan bod in een gewone sectie`}>
+                        dekking {cov.percent}% ({cov.covered}/{cov.total})
+                      </span>
+                    </p>
+                  )}
                   <p className="hint" style={{ margin: 0 }}>👥 {readers} lezer{readers === 1 ? '' : 's'}</p>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
                     <Link to={`/cursus/bewerk/${course.id}`} className="btn btn-sm btn-primary">✏️ Bewerken</Link>
@@ -150,10 +243,16 @@ export function CoursesPage() {
           }}
         />
       )}
-      {aiOpen && (
+      {aiStart && (
         <CourseAIModal
           mode="new"
-          onClose={() => setAiOpen(false)}
+          focus={aiStart.focus}
+          initialSource={aiStart.source}
+          initialTitle={aiStart.title}
+          initialCurriculumId={aiStart.curriculumId}
+          initialGoalCodes={aiStart.goalCodes}
+          originNote={aiStart.originNote}
+          onClose={() => setAiStart(null)}
           onResult={(course) => {
             saveCourse(course);
             navigate(`/cursus/bewerk/${course.id}`);

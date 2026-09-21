@@ -1,10 +1,62 @@
 import type { Widget } from './types';
+import type { Curriculum } from './curriculumTypes';
 import { getPrefs, getWidgets, savePrefs, saveWidget } from './storage';
+import { EXAMPLE_CURRICULUM_ID, getCurricula, getCurriculum, saveCurriculum } from './curriculum';
 import { createWidget } from '../widgets/registry';
 import { uid } from './utils';
 
+// ── Voorbeeldleerplan ───────────────────────────────────────────────────────
+//
+// Géén officieel document: een geloofwaardig uittreksel zodat de doelenlijst,
+// de dekking en de heatmaps meteen iets tonen. De échte leerplannen haal je
+// bij je net (zie de callout op /leerplannen).
+
+const EXAMPLE_GOALS: { code: string; text: string; theme: string; level?: 'basis' | 'uitbreiding'; note?: string }[] = [
+  { code: 'NW 1.1', theme: 'Wetenschappelijke vaardigheden', text: 'De leerlingen voeren onder begeleiding een eenvoudig onderzoek uit volgens de stappen van de onderzoekscyclus.', level: 'basis' },
+  { code: 'NW 1.2', theme: 'Wetenschappelijke vaardigheden', text: 'De leerlingen noteren waarnemingen en meetresultaten nauwkeurig in een tabel.', level: 'basis' },
+  { code: 'NW 1.3', theme: 'Wetenschappelijke vaardigheden', text: 'De leerlingen stellen meetresultaten voor in een grafiek en lezen er gegevens uit af.', level: 'basis' },
+  { code: 'NW 1.4', theme: 'Wetenschappelijke vaardigheden', text: 'De leerlingen beoordelen de betrouwbaarheid van hun meetresultaten en stellen verbeteringen voor.', level: 'uitbreiding' },
+  { code: 'NW 2.1', theme: 'Materie', text: 'De leerlingen onderscheiden de drie aggregatietoestanden van een stof aan de hand van waarneembare kenmerken.', level: 'basis' },
+  { code: 'NW 2.2', theme: 'Materie', text: 'De leerlingen beschrijven de toestandsveranderingen smelten, stollen, verdampen en condenseren met voorbeelden uit het dagelijks leven.', level: 'basis' },
+  { code: 'NW 2.3', theme: 'Materie', text: 'De leerlingen leggen met het deeltjesmodel uit waarom een stof van toestand verandert bij verwarmen of afkoelen.', level: 'uitbreiding' },
+  { code: 'NW 3.1', theme: 'Energie', text: 'De leerlingen geven voorbeelden van energiebronnen en energieomzettingen in en om de school.', level: 'basis' },
+  { code: 'NW 3.2', theme: 'Energie', text: 'De leerlingen lichten toe dat de zon de belangrijkste energiebron is voor processen op aarde.', level: 'basis' },
+  { code: 'NW 3.3', theme: 'Energie', text: 'De leerlingen onderzoeken hoe warmte zich verplaatst en geven voorbeelden van isolatie.', level: 'basis' },
+  { code: 'NW 4.1', theme: 'Systeem aarde', text: 'De leerlingen beschrijven de waterkringloop met de begrippen verdamping, condensatie, neerslag en infiltratie.', level: 'basis', note: 'Sluit aan bij de toestandsveranderingen uit NW 2.2.' },
+  { code: 'NW 4.2', theme: 'Systeem aarde', text: 'De leerlingen verklaren hoe wolken en neerslag ontstaan.', level: 'basis' },
+  { code: 'NW 4.3', theme: 'Systeem aarde', text: 'De leerlingen geven het belang van zoet water voor mens en natuur aan en illustreren hoe menselijk handelen de waterkwaliteit beïnvloedt.', level: 'basis' },
+  { code: 'NW 4.4', theme: 'Systeem aarde', text: 'De leerlingen leggen het verband tussen de waterkringloop en weersverschijnselen in onze streken.', level: 'uitbreiding' },
+];
+
+/**
+ * Plaatst het voorbeeldleerplan als er nog geen enkel leerplan is. Idempotent:
+ * bestaat het al (op id), dan gebeurt er niets; werkt de leerkracht al met
+ * eigen leerplannen, dan dringen we ons voorbeeld niet op.
+ */
+export function ensureExampleCurriculum(): Curriculum | undefined {
+  const existing = getCurriculum(EXAMPLE_CURRICULUM_ID);
+  if (existing) return existing;
+  if (getCurricula().length > 0) return undefined;
+  const now = Date.now();
+  const cur: Curriculum = {
+    id: EXAMPLE_CURRICULUM_ID,
+    title: 'Voorbeeld — natuurwetenschappen 1e graad: doelenlijst (uittreksel, geen officieel document)',
+    net: 'eigen',
+    subject: 'Natuurwetenschappen',
+    level: '1e graad A-stroom',
+    source: 'Voorbeeldmateriaal van Boosterz — vervang dit door je eigen leerplan of de minimumdoelen.',
+    example: true,
+    goals: EXAMPLE_GOALS.map((g) => ({ id: uid(), ...g })),
+    createdAt: now,
+    updatedAt: now,
+  };
+  saveCurriculum(cur);
+  return cur;
+}
+
 /** Plaatst een paar voorbeeldwidgets bij het allereerste bezoek. */
 export function seedIfEmpty() {
+  ensureExampleCurriculum();
   const prefs = getPrefs();
   if (prefs.seeded || getWidgets().length > 0) return;
 

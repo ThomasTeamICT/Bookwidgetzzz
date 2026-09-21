@@ -9,6 +9,7 @@ import type {
 import { allSections, referencedPdfIds, referencedWidgetIds } from './courseTypes';
 import { deletePdf } from './pdfStore';
 import { makeCode, uid } from './utils';
+import { EXAMPLE_CURRICULUM_ID, getCurriculum, normalizeGoalCodes } from './curriculum';
 import { cleanupOrphanMedia, getWidget, getWidgets, notifyChange, reportWriteFailure, saveWidget } from './storage';
 import { collectMediaRefs, countUnresolvedMedia, inlineMedia, parseWithMedia, stringifyWithMedia } from './mediaStore';
 import { defaultSettings, getTypeDef, WIDGET_TYPES } from '../widgets/registry';
@@ -211,6 +212,8 @@ export function mergeProgressRecords(a: CourseProgress, b: CourseProgress): Cour
   const newer = b.lastSeenAt >= a.lastSeenAt ? b : a;
   const merged: CourseProgress = {
     ...a,
+    classId: newer.classId ?? a.classId ?? b.classId,
+    studentId: newer.studentId ?? a.studentId ?? b.studentId,
     startedAt: Math.min(a.startedAt || Date.now(), b.startedAt || Date.now()),
     lastSeenAt: Math.max(a.lastSeenAt, b.lastSeenAt),
     lastSectionId: newer.lastSectionId ?? a.lastSectionId ?? b.lastSectionId,
@@ -324,6 +327,9 @@ function sanitizeSharedWidget(raw: unknown): Widget | null {
     config: { ...base, ...(w.config as Record<string, unknown>) },
     settings: { ...defaultSettings(), ...(typeof w.settings === 'object' && w.settings ? (w.settings as Partial<WidgetSettings>) : {}) },
     code: typeof w.code === 'string' && w.code ? (w.code as string) : makeCode(),
+    // Leerplan van de widget bewaren: zonder dit veld vallen de goalCodes van
+    // de vragen terug op "onbekend leerplan" bij de dekking en het klasoverzicht.
+    curriculumId: typeof w.curriculumId === 'string' && w.curriculumId ? (w.curriculumId as string) : undefined,
     createdAt: typeof w.createdAt === 'number' ? (w.createdAt as number) : Date.now(),
     updatedAt: Date.now(),
   };
@@ -460,6 +466,10 @@ export function decodeCourseProgress(code: string): CourseProgress | null {
       courseId: p.courseId,
       courseCode: typeof p.courseCode === 'string' ? p.courseCode : '',
       studentName: p.studentName.trim().slice(0, 60),
+      // Klas en leerling uit de klaslijst mee bewaren: het klasoverzicht
+      // koppelt de voortgang daarmee aan de juiste leerling (lib/classes.ts).
+      classId: typeof p.classId === 'string' && p.classId ? p.classId : undefined,
+      studentId: typeof p.studentId === 'string' && p.studentId ? p.studentId : undefined,
       sections,
       lastSectionId: typeof p.lastSectionId === 'string' ? p.lastSectionId : undefined,
       lastSeenAt: typeof p.lastSeenAt === 'number' ? p.lastSeenAt : Date.now(),
@@ -624,11 +634,16 @@ export function sanitizeCourse(raw: unknown): Course | null {
               const blocks = Array.isArray(se.blocks)
                 ? se.blocks.map(sanitizeBlock).filter((x): x is CourseBlock => x !== null)
                 : [];
+              // Leerplancodes zijn de ruggengraat (zie lib/curriculum.ts):
+              // normaliseren en ontdubbelen zodat "wis 2.3" en "WIS  2.3" één
+              // doel blijven, hier én in de widgets en het klasoverzicht.
+              const goalCodes = normalizeGoalCodes(se.goalCodes);
               return {
                 id: s(se.id) || uid(),
                 title: s(se.title).trim() || 'Sectie',
                 blocks,
                 goals: Array.isArray(se.goals) ? se.goals.filter((g): g is string => typeof g === 'string' && g.trim() !== '') : undefined,
+                goalCodes: goalCodes.length ? goalCodes : undefined,
                 optional: se.optional === true,
               };
             })
@@ -653,6 +668,7 @@ export function sanitizeCourse(raw: unknown): Course | null {
     coverEmoji: s(c.coverEmoji) || '📘',
     code: s(c.code) || makeCode(),
     chapters,
+    curriculumId: s(c.curriculumId) || undefined,
     settings: {
       accentColor: s(st.accentColor) || '#4f46e5',
       requireName: st.requireName !== false,
@@ -671,6 +687,9 @@ export function ensureDemoCourse() {
   const course = createCourse('Voorbeeldcursus: de waterkringloop');
   course.subtitle = 'Zo ziet een digitale cursus voor je leerlingen eruit';
   course.coverEmoji = '💧';
+  // Aan het voorbeeldleerplan hangen (als dat er staat), zodat de doelendekking
+  // meteen iets toont. Zie lib/seed.ts → ensureExampleCurriculum().
+  if (getCurriculum(EXAMPLE_CURRICULUM_ID)) course.curriculumId = EXAMPLE_CURRICULUM_ID;
   course.chapters = [
     {
       id: uid(), title: 'Verdamping en wolken', emoji: '☁️',
@@ -678,6 +697,7 @@ export function ensureDemoCourse() {
         {
           id: uid(), title: 'Wat gebeurt er met water in de zon?',
           goals: ['Ik kan uitleggen wat verdamping is'],
+          goalCodes: ['NW 4.1', 'NW 2.2'],
           blocks: [
             { id: uid(), type: 'callout', kind: 'goal', title: 'Wat leer je hier?', text: 'Na deze pagina kan je uitleggen wat verdamping is en waar wolken vandaan komen.' },
             { id: uid(), type: 'text', markdown: 'De zon verwarmt het water in zeeën, rivieren en plassen. Een deel van dat water wordt **waterdamp**: onzichtbaar kleine druppeltjes die opstijgen in de lucht.\n\nDit proces heet **verdamping**. Hoe warmer het is, hoe sneller water verdampt.' },
@@ -693,6 +713,7 @@ export function ensureDemoCourse() {
         },
         {
           id: uid(), title: 'Oefen even',
+          goalCodes: ['NW 2.1'],
           blocks: [
             { id: uid(), type: 'text', markdown: 'Test of je de begrippen al kent. Deze oefening staat *in* de cursus — je resultaat komt bij je leerkracht terecht.' },
             ...(demoWidget ? [{ id: uid(), type: 'widget', widgetId: demoWidget.id } as CourseBlock] : []),
@@ -706,6 +727,7 @@ export function ensureDemoCourse() {
         {
           id: uid(), title: 'Van wolk tot regen',
           optional: true,
+          goalCodes: ['NW 4.2', 'NW 4.4'],
           blocks: [
             { id: uid(), type: 'text', markdown: 'Dit is een **verdiepingssectie** — ze telt niet mee voor "cursus afgewerkt". Handig voor uitbreidingsleerstof.' },
             { id: uid(), type: 'quote', text: 'Regen is gewoon een wolk die het niet meer houdt.', source: 'Een weerman' },

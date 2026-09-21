@@ -3,6 +3,7 @@
 // uit pdf/tekst, dekking) staat in aiCurriculum.ts en de leerplanpagina.
 
 import type { Curriculum, CurriculumGoal } from './curriculumTypes';
+import { CURRICULUM_NETS } from './curriculumTypes';
 import { notifyChange, reportWriteFailure } from './storage';
 import { uid } from './utils';
 
@@ -91,4 +92,173 @@ export function goalLabel(code: string, curriculumId?: string, maxChars = 90): s
   if (!hit) return code;
   const t = hit.goal.text.length > maxChars ? hit.goal.text.slice(0, maxChars - 1) + '…' : hit.goal.text;
   return `${hit.goal.code} — ${t}`;
+}
+
+// ── Uitbreidingen: labels, groeperen, saneren, JSON-uitwisseling ────────────
+
+/**
+ * Vast id van het meegeleverde voorbeeldleerplan (zie lib/seed.ts). Staat hier
+ * zodat ook de democursus ernaar kan verwijzen zonder de voorbeelddata zelf te
+ * moeten inladen.
+ */
+export const EXAMPLE_CURRICULUM_ID = 'wf-voorbeeld-nw-1egraad';
+
+/** Leesbare naam van een net/uitgever. */
+export function netLabel(net: string): string {
+  return CURRICULUM_NETS.find((n) => n.id === net)?.label ?? 'Eigen doelenlijst';
+}
+
+/** Korte omschrijving van een leerplan voor lijsten en keuzevelden. */
+export function curriculumLabel(cur: Curriculum): string {
+  return [cur.subject, cur.level].filter(Boolean).join(' · ') || netLabel(cur.net);
+}
+
+/** Lijst doelcodes opschonen: trimmen, normaliseren, leeg weg, ontdubbelen. */
+export function normalizeGoalCodes(codes: unknown): string[] {
+  if (!Array.isArray(codes)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of codes) {
+    if (typeof raw !== 'string') continue;
+    const code = normalizeGoalCode(raw);
+    if (!code || seen.has(code)) continue;
+    seen.add(code);
+    out.push(code);
+  }
+  return out;
+}
+
+export interface GoalThemeGroup {
+  /** Lege string = doelen zonder thema. */
+  theme: string;
+  goals: CurriculumGoal[];
+}
+
+/** Doelen gegroepeerd per thema, in volgorde van eerste voorkomen. */
+export function goalsByTheme(goals: CurriculumGoal[]): GoalThemeGroup[] {
+  const groups = new Map<string, GoalThemeGroup>();
+  for (const goal of goals) {
+    const theme = (goal.theme ?? '').trim();
+    const group = groups.get(theme) ?? { theme, goals: [] };
+    group.goals.push(goal);
+    groups.set(theme, group);
+  }
+  return [...groups.values()];
+}
+
+/** Doelen opzoeken bij een lijst codes (volgorde van de codes blijft). */
+export function goalsForCodes(codes: string[], curriculumId?: string): CurriculumGoal[] {
+  const out: CurriculumGoal[] = [];
+  for (const code of normalizeGoalCodes(codes)) {
+    const hit = findGoalByCode(code, curriculumId);
+    if (hit) out.push(hit.goal);
+  }
+  return out;
+}
+
+/** Doeltekst afkappen voor chips en tabellen. */
+export function shortGoalText(text: string, maxChars = 60): string {
+  const t = text.trim().replace(/\s+/g, ' ');
+  return t.length > maxChars ? `${t.slice(0, maxChars - 1)}…` : t;
+}
+
+function str(v: unknown, fallback = ''): string {
+  return typeof v === 'string' ? v : fallback;
+}
+
+/** Eén doel defensief saneren (JSON-import, AI-antwoord). */
+export function sanitizeGoal(raw: unknown): CurriculumGoal | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const g = raw as Record<string, unknown>;
+  const text = str(g.text ?? g.doel ?? g.omschrijving).trim().replace(/\s+/g, ' ');
+  if (!text) return null; // een doel zonder tekst zegt niets
+  const code = normalizeGoalCode(str(g.code ?? g.nummer));
+  const level = g.level === 'uitbreiding' ? 'uitbreiding' : g.level === 'basis' ? 'basis' : undefined;
+  const theme = str(g.theme ?? g.thema ?? g.rubriek).trim();
+  const note = str(g.note ?? g.toelichting).trim();
+  return {
+    id: str(g.id) || uid(),
+    code,
+    text,
+    theme: theme || undefined,
+    level,
+    note: note || undefined,
+  };
+}
+
+/**
+ * Lijst doelen saneren: lege doelen vallen weg, codes worden genormaliseerd en
+ * ontdubbeld. Doelen zonder code krijgen er zelf een, opgebouwd per thema:
+ * "<PREFIX> <thema-nr>.<volgnr>" (bv. "NW 2.3").
+ */
+export function sanitizeGoals(raw: unknown, opts: { autoPrefix?: string } = {}): CurriculumGoal[] {
+  const list = Array.isArray(raw) ? raw : [];
+  const goals: CurriculumGoal[] = [];
+  for (const item of list) {
+    const goal = sanitizeGoal(item);
+    if (goal) goals.push(goal);
+  }
+  const prefix = normalizeGoalCode(opts.autoPrefix ?? 'DOEL') || 'DOEL';
+  const themeNumbers = new Map<string, number>();
+  const perTheme = new Map<string, number>();
+  const used = new Set<string>();
+  const out: CurriculumGoal[] = [];
+  for (const goal of goals) {
+    let code = goal.code;
+    if (!code) {
+      const theme = (goal.theme ?? '').trim().toLowerCase();
+      let nr = themeNumbers.get(theme);
+      if (nr === undefined) {
+        nr = themeNumbers.size + 1;
+        themeNumbers.set(theme, nr);
+      }
+      const seq = (perTheme.get(theme) ?? 0) + 1;
+      perTheme.set(theme, seq);
+      code = `${prefix} ${nr}.${seq}`;
+    }
+    if (used.has(code)) continue; // dubbele code = dubbel doel
+    used.add(code);
+    out.push({ ...goal, code });
+  }
+  return out;
+}
+
+/** Volledig leerplan defensief saneren (JSON-import of gedeeld bestand). */
+export function sanitizeCurriculum(raw: unknown): Curriculum | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const outer = raw as Record<string, unknown>;
+  const c = (outer.curriculum && typeof outer.curriculum === 'object'
+    ? outer.curriculum
+    : outer.leerplan && typeof outer.leerplan === 'object'
+      ? outer.leerplan
+      : outer) as Record<string, unknown>;
+  const goals = sanitizeGoals(c.goals ?? c.doelen, { autoPrefix: str(c.subject).slice(0, 3) || 'DOEL' });
+  if (!goals.length) return null;
+  const net = CURRICULUM_NETS.some((n) => n.id === c.net) ? (c.net as Curriculum['net']) : 'eigen';
+  return {
+    id: str(c.id) || uid(),
+    title: str(c.title ?? c.titel).trim() || 'Leerplan',
+    net,
+    subject: str(c.subject ?? c.vak).trim(),
+    level: str(c.level ?? c.niveau).trim(),
+    source: str(c.source ?? c.bron).trim() || undefined,
+    example: c.example === true || undefined,
+    goals,
+    createdAt: typeof c.createdAt === 'number' ? c.createdAt : Date.now(),
+    updatedAt: typeof c.updatedAt === 'number' ? c.updatedAt : Date.now(),
+  };
+}
+
+/** Leerplan als JSON-bestand (met kop, zodat import het herkent). */
+export function exportCurriculumJson(cur: Curriculum): string {
+  return JSON.stringify({ app: 'boosterz', kind: 'leerplan', v: 1, curriculum: cur }, null, 2);
+}
+
+/** JSON-bestand inlezen; null als er niets bruikbaars in staat. */
+export function importCurriculumJson(json: string): Curriculum | null {
+  try {
+    return sanitizeCurriculum(JSON.parse(json));
+  } catch {
+    return null;
+  }
 }

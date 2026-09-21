@@ -8,12 +8,17 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { Course, CourseBlockType, CourseChapter, CourseSection } from '../lib/courseTypes';
 import { allSections } from '../lib/courseTypes';
+import type { Curriculum } from '../lib/curriculumTypes';
 import { courseReadUrl, getCourse, makeBlock, saveCourse } from '../lib/courses';
+import { getCurricula, getCurriculum } from '../lib/curriculum';
+import { getWidgets } from '../lib/storage';
 import { uid } from '../lib/utils';
 import { CheckRow, ConfirmModal, EmptyState, Field, Modal, useToast } from '../components/ui';
 import { BLOCK_META, BlockEditor, PALETTE_ORDER, duplicateBlock } from '../components/course/blockEditors';
 import { CourseAIModal } from '../components/course/CourseAIModal';
+import { GoalCodeInput } from '../components/curriculum/GoalCodeInput';
 import { GoalCoverage } from '../components/course/GoalCoverage';
+import type { OptimizePreset } from '../lib/aiCourse';
 
 // ── Immutabele hulpjes ──────────────────────────────────────────────────────
 
@@ -44,7 +49,12 @@ type PendingDelete =
   | { kind: 'chapter'; chapterId: string }
   | { kind: 'section'; chapterId: string; sectionId: string };
 
-type AIModalState = { mode: 'rework' } | { mode: 'section'; sectionId: string } | null;
+type AIModalState =
+  | { mode: 'rework' }
+  | { mode: 'optimize'; preset?: OptimizePreset }
+  | { mode: 'section'; sectionId: string }
+  | { mode: 'exercises'; sectionId: string }
+  | null;
 
 // ── De pagina ───────────────────────────────────────────────────────────────
 
@@ -115,6 +125,15 @@ export function CourseEditorPage() {
       flush();
     };
   }, []);
+
+  // Leerplan van de cursus (voor de doelcodes en de dekking). De widgets halen
+  // we pas op als het dekkingspaneel echt opengaat — dat scheelt werk bij elke
+  // toetsaanslag in de editor.
+  const curriculum: Curriculum | undefined = useMemo(
+    () => (course?.curriculumId ? getCurriculum(course.curriculumId) : undefined),
+    [course?.curriculumId]
+  );
+  const widgets = useMemo(() => (goalsOpen ? getWidgets() : []), [goalsOpen]);
 
   if (!course) {
     return (
@@ -215,6 +234,13 @@ export function CourseEditorPage() {
           ✨ Herwerk met AI
         </button>
         <button
+          className="btn btn-sm btn-ai"
+          onClick={() => setAiModal({ mode: 'optimize' })}
+          title="Taal vereenvoudigen, differentiëren, controlevragen toevoegen of de hiaten t.o.v. het leerplan vullen"
+        >
+          ✨ Optimaliseer
+        </button>
+        <button
           className="btn btn-sm btn-ghost"
           onClick={() => setGoalsOpen(true)}
           title="Welke leerplandoelen zijn gedekt, en welke secties dragen nog geen doel?"
@@ -259,8 +285,10 @@ export function CourseEditorPage() {
             key={selected.section.id}
             chapter={selected.chapter}
             section={selected.section}
+            curriculumId={course.curriculumId}
             onPatch={(fn) => mutateSection(selected.section.id, fn)}
             onOpenAI={() => setAiModal({ mode: 'section', sectionId: selected.section.id })}
+            onOpenExercises={() => setAiModal({ mode: 'exercises', sectionId: selected.section.id })}
             onOpenPalette={setPaletteAt}
           />
         ) : (
@@ -278,7 +306,12 @@ export function CourseEditorPage() {
 
       {goalsOpen && (
         <Modal title="🎯 Doelendekking" onClose={() => setGoalsOpen(false)} wide>
-          <GoalCoverage course={course} />
+          <GoalCoverage
+            course={course}
+            curriculum={curriculum}
+            widgets={widgets}
+            onFillGaps={() => { setGoalsOpen(false); setAiModal({ mode: 'optimize', preset: 'hiaten' }); }}
+          />
         </Modal>
       )}
 
@@ -299,7 +332,8 @@ export function CourseEditorPage() {
         <CourseAIModal
           mode={aiModal.mode}
           course={course}
-          sectionId={aiModal.mode === 'section' ? aiModal.sectionId : undefined}
+          sectionId={aiModal.mode === 'section' || aiModal.mode === 'exercises' ? aiModal.sectionId : undefined}
+          initialPreset={aiModal.mode === 'optimize' ? aiModal.preset : undefined}
           onClose={() => setAiModal(null)}
           onResult={(result: Course) => {
             setCourse(result);
@@ -400,8 +434,14 @@ function StructurePane({
                   <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {se.title.trim() || 'Naamloze sectie'}
                   </span>
-                  {(se.goals?.length ?? 0) > 0 && (
-                    <span title="Heeft leerdoelen" aria-label="heeft leerdoelen" style={{ fontSize: '0.8rem' }}>🎯</span>
+                  {((se.goals?.length ?? 0) + (se.goalCodes?.length ?? 0)) > 0 && (
+                    <span
+                      title={se.goalCodes?.length ? `Leerplandoelen: ${se.goalCodes.join(', ')}` : 'Heeft leerdoelen'}
+                      aria-label="heeft leerdoelen"
+                      style={{ fontSize: '0.8rem' }}
+                    >
+                      🎯
+                    </span>
                   )}
                   {se.optional && (
                     <span className="badge" style={{ fontSize: '0.64rem', padding: '1px 6px' }} title="Verdiepings-/keuzesectie">
@@ -431,12 +471,15 @@ function StructurePane({
 // ── Rechterkolom: de geselecteerde sectie ───────────────────────────────────
 
 function SectionPane({
-  chapter, section, onPatch, onOpenAI, onOpenPalette,
+  chapter, section, curriculumId, onPatch, onOpenAI, onOpenExercises, onOpenPalette,
 }: {
   chapter: CourseChapter;
   section: CourseSection;
+  /** Leerplan van de cursus: bepaalt de suggesties bij de doelcodes. */
+  curriculumId?: string;
   onPatch: (fn: (s: CourseSection) => CourseSection) => void;
   onOpenAI: () => void;
+  onOpenExercises: () => void;
   onOpenPalette: (index: number) => void;
 }) {
   const goals = section.goals ?? [];
@@ -461,6 +504,9 @@ function SectionPane({
           <button className="btn btn-sm btn-ai" onClick={onOpenAI} title="Laat AI deze sectie vullen met inhoud">
             ✨ Vul deze sectie met AI
           </button>
+          <button className="btn btn-sm btn-ai" onClick={onOpenExercises} title="Laat AI oefeningen maken bij de inhoud en de doelen van deze sectie">
+            ✨ Stel oefeningen voor
+          </button>
         </div>
         <div style={{ marginTop: 8 }}>
           <CheckRow
@@ -469,8 +515,13 @@ function SectionPane({
             label="Verdiepings-/keuzesectie (telt niet mee voor 'afgewerkt')"
           />
         </div>
+        <GoalCodeInput
+          value={section.goalCodes ?? []}
+          curriculumId={curriculumId}
+          onChange={(codes) => onPatch((s) => ({ ...s, goalCodes: codes.length ? codes : undefined }))}
+        />
         <Field
-          label="🎯 Leerdoelen (optioneel)"
+          label="🎯 Leerdoelen in eigen woorden (optioneel)"
           hint="Wat kan de leerling na deze sectie? Zichtbaar als feed-up en in de voortgangsweergave."
         >
           <div>
@@ -657,6 +708,7 @@ function CourseSettingsModal({
           onChange={(e) => set({ author: e.target.value })}
         />
       </Field>
+      <CurriculumSetting course={course} onChange={set} />
       <CheckRow
         checked={course.settings.requireName}
         onChange={(v) => setSettings({ requireName: v })}
@@ -668,5 +720,46 @@ function CourseSettingsModal({
         label="Voortgangsbalk zichtbaar voor de leerling"
       />
     </Modal>
+  );
+}
+
+// ── Leerplan van de cursus ──────────────────────────────────────────────────
+
+function CurriculumSetting({ course, onChange }: { course: Course; onChange: (patch: Partial<Course>) => void }) {
+  const [curricula, setCurricula] = useState<Curriculum[]>([]);
+  useEffect(() => setCurricula(getCurricula()), []);
+  const current = curricula.find((c) => c.id === course.curriculumId);
+
+  return (
+    <Field
+      label="🎯 Leerplan"
+      hint="Bepaalt welke doelcodes je per sectie kan kiezen en waartegen de doelendekking rekent."
+    >
+      <div>
+        <select
+          className="select"
+          value={course.curriculumId ?? ''}
+          aria-label="Leerplan van deze cursus"
+          onChange={(e) => onChange({ curriculumId: e.target.value || undefined })}
+        >
+          <option value="">— geen leerplan —</option>
+          {curricula.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.title}{c.example ? ' (voorbeeld)' : ''}
+            </option>
+          ))}
+          {course.curriculumId && !current && (
+            <option value={course.curriculumId}>Leerplan niet gevonden op dit toestel</option>
+          )}
+        </select>
+        <p className="hint" style={{ margin: '6px 0 0' }}>
+          {current
+            ? `${current.goals.length} doel(en) beschikbaar.`
+            : 'Nog geen leerplan gekozen — zonder leerplan werk je met vrije doelen in eigen woorden.'}
+          {' '}
+          <Link to="/leerplannen" target="_blank" rel="noopener">Leerplannen beheren ↗</Link>
+        </p>
+      </div>
+    </Field>
   );
 }
