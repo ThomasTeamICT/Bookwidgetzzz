@@ -93,8 +93,9 @@ en maximale opvolgbaarheid.
   ingediend, score, leesvoortgang), per leerling de **score per leerplandoel** over alle
   opdrachten heen, openstaand nakijkwerk, CSV-export.
 - Bewust serverloos: niets verlaat het toestel behalve wat de leerkracht of leerling zelf
-  deelt (link, QR, code). Wil je later toch live synchronisatie tussen toestellen, dan is dat
-  een aparte, expliciete keuze (zie Beperkingen).
+  deelt (link, QR, code). Live synchronisatie tussen toestellen is uitgewerkt als
+  **klaskanaal** (relay met end-to-end-encryptie, contract in `src/lib/sync/types.ts`,
+  ontwerp in [docs/KLASKANAAL.md](docs/KLASKANAAL.md)) en wacht op een beslissing van de school.
 
 ### 📚 Cursusmodule: digitale cursussen (BrightBook-achtig, en verder)
 - **Authoring**: hoofdstukken → secties → 16 bloktypes (kop, tekst met markdown,
