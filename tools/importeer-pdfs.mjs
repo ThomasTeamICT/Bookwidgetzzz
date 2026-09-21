@@ -36,9 +36,17 @@ await page.getByLabel('Titel van de samengevoegde cursus').fill(title);
 await page.getByRole('button', { name: /Samenvoegen tot één cursus/ }).click();
 await page.waitForFunction(() => /#\/cursus\/bewerk\//.test(location.hash), null, { timeout: 60000 });
 await page.waitForTimeout(800);
-const course = await page.evaluate((t) => JSON.parse(localStorage.getItem('wf.courses.v1')).find((c) => c.title === t), title);
-fs.writeFileSync(outFile, JSON.stringify(course));
-console.log('hoofdstukken:', course.chapters.length);
+const { course, widgets } = await page.evaluate((t) => {
+  const c = JSON.parse(localStorage.getItem('wf.courses.v1')).find((x) => x.title === t);
+  const ids = new Set();
+  for (const ch of c.chapters) for (const s of ch.sections) for (const b of s.blocks) if (b.type === 'widget') ids.add(b.widgetId);
+  const ws = JSON.parse(localStorage.getItem('wf.widgets.v1') || '[]').filter((w) => ids.has(w.id));
+  return { course: c, widgets: ws };
+}, title);
+// Zelfde vorm als een cursusbestand: { course, widgets } — de afgeleide
+// oefeningen (begrippenquiz, koppelspel, invuloefeningen, werkblad) reizen mee.
+fs.writeFileSync(outFile, JSON.stringify({ course, widgets }));
+console.log('hoofdstukken:', course.chapters.length, '| afgeleide widgets:', widgets.length);
 for (const ch of course.chapters) {
   const counts = {};
   for (const s of ch.sections) for (const bl of s.blocks) counts[bl.type] = (counts[bl.type] || 0) + 1;

@@ -615,12 +615,18 @@ await page.waitForFunction(() => /#\/cursus\/bewerk\//.test(location.hash), null
 await sleep(500);
 const pdfCourse = await page.evaluate(() => JSON.parse(localStorage.getItem('wf.courses.v1')).find((c) => /Proefcursus/.test(c.title)));
 const pdfSections = pdfCourse?.chapters[0]?.sections ?? [];
-check('genummerde titels worden secties', pdfSections.map((x) => x.title).join('|') === 'Inleiding|1.1 Wat is een kracht?|1.2 Welke soorten krachten zijn er?|Kernbegrippen');
+check('genummerde titels worden secties (+ afgeleide sectie Oefeningen)', pdfSections.map((x) => x.title).join('|') === 'Inleiding|1.1 Wat is een kracht?|1.2 Welke soorten krachten zijn er?|Kernbegrippen|Oefeningen');
 const sec11 = pdfSections[1]?.blocks ?? [];
 check('labels worden callouts (Voorbeeld → info, Oefening → doel)', sec11.some((b) => b.type === 'callout' && b.kind === 'info') && sec11.some((b) => b.type === 'callout' && b.kind === 'goal'));
 check('"Let op" wordt een waarschuwing', (pdfSections[2]?.blocks ?? []).some((b) => b.type === 'callout' && b.kind === 'warn'));
 const termsBlock = (pdfSections[3]?.blocks ?? []).find((b) => b.type === 'terms');
 check('begrippenlijst wordt een termenblok met 4 termen', termsBlock?.items?.length === 4 && termsBlock.items[0].term === 'Kracht');
+const oefSec = pdfCourse?.chapters[0]?.sections.find((x) => x.title === 'Oefeningen');
+const oefIds = (oefSec?.blocks ?? []).filter((b) => b.type === 'widget').map((b) => b.widgetId);
+const oefTypes = await page.evaluate((ids) => JSON.parse(localStorage.getItem('wf.widgets.v1')).filter((w) => ids.includes(w.id)).map((w) => w.type).sort(), oefIds);
+check('oefeningen afgeleid: sectie Oefeningen met begrippenquiz en koppelspel', oefTypes.join() === 'pairs,quiz');
+const pdfQuiz = await page.evaluate((ids) => JSON.parse(localStorage.getItem('wf.widgets.v1')).find((w) => ids.includes(w.id) && w.type === 'quiz'), oefIds);
+check('begrippenquiz: 4 meerkeuzevragen met de term als juist antwoord + koppelvraag', pdfQuiz?.config.questions.filter((q) => q.type === 'mc').length === 4 && pdfQuiz.config.questions.every((q) => q.type !== 'mc' || q.options[q.correctIndex] && q.options.length === 4) && pdfQuiz.config.questions.some((q) => q.type === 'match'));
 
 // ── 26. Voorbeeldcursus (bestaand materiaal, 14 hoofdstukken) laden ────────
 console.log('26. Voorbeeldcursus laden');
@@ -633,7 +639,23 @@ const exSections = (example?.chapters ?? []).flatMap((c) => c.sections);
 check('elke sectie draagt doelcodes van het voorbeeldleerplan', exSections.length > 100 && exSections.every((x) => Array.isArray(x.goalCodes) && x.goalCodes.length > 0));
 const exBlocks = exSections.flatMap((x) => x.blocks);
 check('afbeeldingen uit de pdf\'s zitten erin (≥ 100)', exBlocks.filter((b) => b.type === 'image').length >= 100);
-check('flitskaarten per hoofdstuk als widgetblok', exBlocks.filter((b) => b.type === 'widget').length === 14 && (await page.evaluate(() => JSON.parse(localStorage.getItem('wf.widgets.v1')).filter((w) => w.type === 'flashcards' && /^nw-vb-flits-/.test(w.id)).length)) === 14);
+const exWidgets = await page.evaluate((ids) => JSON.parse(localStorage.getItem('wf.widgets.v1')).filter((w) => ids.includes(w.id)).map((w) => ({ id: w.id, type: w.type, code: w.code, title: w.title })), exBlocks.filter((b) => b.type === 'widget').map((b) => b.widgetId));
+const exWidgetRefs = exBlocks.filter((b) => b.type === 'widget').length;
+check('flitskaarten per hoofdstuk als widgetblok', exWidgets.filter((w) => w.type === 'flashcards' && /^nw-vb-flits-/.test(w.id)).length === 14);
+check(`elk widgetblok verwijst naar een meegeleverde widget (${exWidgetRefs})`, exWidgetRefs >= 100 && exWidgets.length === exWidgetRefs);
+const exTypes = [...new Set(exWidgets.map((w) => w.type))];
+check(`oefeningen in minstens 8 widgettypes (${exTypes.join(', ')})`, exTypes.length >= 8 && ['quiz', 'worksheet', 'pairs', 'exitticket'].every((t) => exTypes.includes(t)));
+check('afgeleide oefeningen: begrippenquiz, koppelspel, invuloefeningen en werkblad met opdrachten', exWidgets.filter((w) => /^Begrippenquiz/.test(w.title)).length === 14 && exWidgets.filter((w) => /^Koppelspel/.test(w.title)).length === 14 && exWidgets.filter((w) => /^Invuloefening/.test(w.title)).length >= 50 && exWidgets.filter((w) => /^Opdrachten/.test(w.title)).length >= 10);
+check('handgeschreven oefeningen per hoofdstuk (≥ 4)', exWidgets.filter((w) => /^nw-vb-oef-/.test(w.id)).length >= 14 * 4);
+// Eén widget van elk type openen in de speler: rendert zonder fouten.
+for (const t of exTypes) {
+  const w = exWidgets.find((x) => x.type === t && /^nw-vb-oef-/.test(x.id)) ?? exWidgets.find((x) => x.type === t);
+  const before = errors.length;
+  await go(`/#/speel/${w.code}`);
+  await sleep(700);
+  const body = await page.evaluate(() => document.body.innerText);
+  check(`speler rendert ${t} (${w.title.slice(0, 40)})`, errors.length === before && body.includes(w.title.slice(0, 20)));
+}
 check('cursus hangt aan het voorbeeldleerplan', example?.curriculumId === 'wf-voorbeeld-nw-1egraad');
 await go(`/#/cursus/lees/${example?.code}`);
 await page.getByLabel(/Jouw naam/).fill('Testleerling');

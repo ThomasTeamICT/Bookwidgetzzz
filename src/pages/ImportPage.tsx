@@ -16,7 +16,10 @@ import {
   markdownToCourse, mergeSourcesToCourse, saveImportedCourse, saveImportedPack, saveImportedWidget,
 } from '../lib/importers';
 import type { ExtractedSource } from '../lib/importers';
+import type { Course } from '../lib/courseTypes';
 import { saveCourse } from '../lib/courses';
+import { saveWidget } from '../lib/storage';
+import { deriveExercises, describeDerived } from '../lib/deriveExercises';
 import { setHandoff } from '../lib/handoff';
 import { getCurricula } from '../lib/curriculum';
 import { EmptyState, Field, useToast } from '../components/ui';
@@ -50,6 +53,7 @@ export function ImportPage() {
   const [curriculumId, setCurriculumId] = useState('');
   const [sectionLevel, setSectionLevel] = useState<2 | 3>(2);
   const [mergeTitle, setMergeTitle] = useState('');
+  const [deriveOn, setDeriveOn] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const curricula = useMemo(() => getCurricula(), []);
@@ -122,15 +126,30 @@ export function ImportPage() {
       toast('Er staat nog geen tekst in deze bron.', 'err');
       return;
     }
-    const course = markdownToCourse(item.text, item.title.trim() || item.origin, { sectionLevel });
-    if (curriculumId) course.curriculumId = curriculumId;
-    saveCourse(course);
+    const built = markdownToCourse(item.text, item.title.trim() || item.origin, { sectionLevel });
+    if (curriculumId) built.curriculumId = curriculumId;
+    const { course, note } = finishCourse(built);
     const sections = course.chapters.reduce((n, ch) => n + ch.sections.length, 0);
     toast(
-      `Cursus “${course.title}” aangemaakt — ${course.chapters.length} hoofdstuk${course.chapters.length === 1 ? '' : 'ken'}, ${sections} sectie${sections === 1 ? '' : 's'}`,
+      `Cursus “${course.title}” aangemaakt — ${course.chapters.length} hoofdstuk${course.chapters.length === 1 ? '' : 'ken'}, ${sections} sectie${sections === 1 ? '' : 's'}${note}`,
       'ok'
     );
     navigate(`/cursus/bewerk/${course.id}`);
+  }
+
+  /**
+   * Optioneel oefeningen afleiden (begrippenquiz, koppelspel, invuloefeningen,
+   * werkblad met de opdrachten) en alles bewaren. Zie lib/deriveExercises.ts.
+   */
+  function finishCourse(built: Course): { course: Course; note: string } {
+    if (!deriveOn) {
+      saveCourse(built);
+      return { course: built, note: '' };
+    }
+    const derived = deriveExercises(built, { curriculumId: built.curriculumId });
+    for (const w of derived.widgets) saveWidget(w);
+    saveCourse(derived.course);
+    return { course: derived.course, note: derived.widgets.length ? ` — ${describeDerived(derived.counts)}` : '' };
   }
 
   /** Alle tekstbronnen samen: elk bestand een hoofdstuk (in de volgorde van de lijst). */
@@ -141,15 +160,15 @@ export function ImportPage() {
       return;
     }
     const title = mergeTitle.trim() || 'Cursus';
-    const course = mergeSourcesToCourse(
+    const built = mergeSourcesToCourse(
       texts.map((it) => ({ title: it.title.trim() || it.origin, text: it.text })),
       title,
       { sectionLevel }
     );
-    if (curriculumId) course.curriculumId = curriculumId;
-    saveCourse(course);
+    if (curriculumId) built.curriculumId = curriculumId;
+    const { course, note } = finishCourse(built);
     const sections = course.chapters.reduce((n, ch) => n + ch.sections.length, 0);
-    toast(`Cursus “${course.title}” aangemaakt — ${course.chapters.length} hoofdstukken, ${sections} secties`, 'ok');
+    toast(`Cursus “${course.title}” aangemaakt — ${course.chapters.length} hoofdstukken, ${sections} secties${note}`, 'ok');
     navigate(`/cursus/bewerk/${course.id}`);
   }
 
@@ -347,6 +366,17 @@ export function ImportPage() {
               <option value="3">Koppen van niveau 3 (### of genummerde tussentitels zoals 1.1)</option>
             </select>
           </Field>
+          <label className="check" style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 6 }}>
+            <input type="checkbox" checked={deriveOn} onChange={(e) => setDeriveOn(e.target.checked)} />
+            <span>
+              <strong>Oefeningen afleiden bij omzetten zonder AI.</strong>{' '}
+              <span className="hint">
+                Uit een begrippenlijst komt een begrippenquiz en een koppelspel, uit de vette kernbegrippen per sectie een
+                invuloefening, en de kadertjes “Oefening:”/“Opdracht:” worden een werkblad met open vragen. Allemaal
+                zonder AI, dus voorspelbaar; de AI-stap maakt er later rijkere vragen bij.
+              </span>
+            </span>
+          </label>
           {items.filter((it) => it.kind === 'text').length >= 2 && (
             <div className="callout" style={{ marginTop: 6 }}>
               <span aria-hidden>📚</span>

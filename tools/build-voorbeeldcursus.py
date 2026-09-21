@@ -7,7 +7,10 @@ Bouwt de voorbeeldcursus natuurwetenschappen (public/voorbeelden/…) uit
    afbeelding op de pagina en zet ze op de juiste plek in de sectie).
 
 Daarbovenop: doelcodes per sectie (voorbeeldleerplan), flitskaarten uit elke
-begrippenlijst, en de metadata van de cursus. De pdf's zelf zitten niet in de
+begrippenlijst, de handgeschreven oefeningen uit tools/oefeningen/h*.json
+(zie SCHEMA.md daar) en de metadata van de cursus. De oefeningen die de
+importpagina zelf afleidt (begrippenquiz, koppelspel, invuloefeningen,
+werkblad met opdrachten) zitten al in de dump van stap 1. De pdf's zelf zitten niet in de
 repo (materiaal van een leerkracht); dit script documenteert hoe het voorbeeld
 tot stand kwam en maakt het herhaalbaar als de importpipeline verandert.
 
@@ -253,14 +256,122 @@ def flashcards_widget(chapter, hn, short):
     return None
 
 
+
+# ── Handgeschreven oefeningen (tools/oefeningen/h*.json) ────────────────────
+OEF_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'oefeningen')
+QUIZ_LIKE = {'quiz': 'single', 'exitticket': 'single', 'worksheet': 'scroll'}
+
+
+def convert_question(q, goal_code):
+    t = q['type']
+    out = {'id': uid('q'), 'type': t, 'prompt': q['prompt'], 'points': q.get('points', 2 if t == 'long' else (0 if t == 'info' else 1))}
+    for k in ('explanation', 'hint'):
+        if q.get(k):
+            out[k] = q[k]
+    if goal_code and t != 'info':
+        out['goalCode'] = goal_code
+    if t == 'mc':
+        out.update(options=q['options'], correctIndex=q['correctIndex'])
+    elif t == 'multi':
+        out.update(options=q['options'], correctIndices=q['correctIndices'])
+    elif t == 'tf':
+        out['answer'] = bool(q['answer'])
+    elif t == 'short':
+        out.update(accepted=q['accepted'], caseSensitive=False)
+    elif t == 'long':
+        out['modelAnswer'] = q['modelAnswer']
+        if q.get('rubric'):
+            out['rubric'] = [{'criterion': r['criterion'], 'points': r['points']} for r in q['rubric']]
+            out['points'] = sum(r['points'] for r in q['rubric']) or out['points']
+        out['allowDraw'] = True
+    elif t == 'gap':
+        out['text'] = q['text']
+    elif t == 'match':
+        out['pairs'] = [{'left': p['left'], 'right': p['right']} for p in q['pairs']]
+    elif t == 'order':
+        out['items'] = list(q['items'])
+    elif t == 'number':
+        out.update(answer=q['answer'], tolerance=q.get('tolerance', 0))
+    elif t == 'dropdown':
+        out.update(text=q['text'], shuffle=bool(q.get('shuffle', True)))
+    elif t == 'marktext':
+        out.update(text=q['text'], penalizeWrong=bool(q.get('penalizeWrong', False)))
+    elif t == 'sort':
+        cats = [{'id': uid('cat'), 'name': c} for c in q['categories']]
+        by_name = {c['name']: c['id'] for c in cats}
+        out.update(categories=cats, items=[{'id': uid('it'), 'text': i['text'], 'categoryId': by_name[i['category']]} for i in q['items']])
+    elif t == 'table':
+        out.update(columns=q['columns'], rows=[{'id': uid('r'), 'cells': r['cells'], 'answers': r['answers']} for r in q['rows']], caseSensitive=False)
+    return out
+
+
+def convert_widget(o, hn, idx, goal_code):
+    t = o['type']
+    c = o['config']
+    if t in QUIZ_LIKE:
+        config = {'questions': [convert_question(q, goal_code) for q in c['questions']], 'layout': QUIZ_LIKE[t]}
+        if t == 'quiz':
+            config['stepCheck'] = True
+    elif t == 'pairs':
+        config = {'pairs': [{'id': uid('p'), 'left': p['left'], 'right': p['right']} for p in c['pairs']]}
+    elif t == 'memory':
+        config = {'pairs': [{'id': uid('m'), 'a': p['a'], 'b': p['b']} for p in c['pairs']]}
+    elif t == 'scramble':
+        config = {'mode': c['mode'], 'items': [{'id': uid('s'), 'text': i['text'], **({'hint': i['hint']} if i.get('hint') else {})} for i in c['items']]}
+    elif t == 'hangman':
+        config = {'words': [{'word': w['word'], 'hint': w['hint']} for w in c['words']], 'maxErrors': 8}
+    elif t == 'wordsearch':
+        config = {'words': [w.upper() for w in c['words']], 'size': max(12, max(len(w) for w in c['words'])), 'allowDiagonal': True, 'allowReverse': False}
+    elif t == 'crossword':
+        config = {'entries': [{'id': uid('c'), 'word': e['word'].upper(), 'clue': e['clue']} for e in c['entries']]}
+    elif t == 'poll':
+        config = {'question': c['question'], 'options': c['options'], 'allowMultiple': bool(c.get('allowMultiple', False)), 'showResults': True}
+    elif t == 'checklist':
+        config = {'title': c['title'], 'items': [{'id': uid('ck'), 'text': i} for i in c['items']]}
+    else:
+        raise ValueError(f'onbekend type {t}')
+    return {
+        'id': f'nw-vb-oef-{hn}-{idx:02d}', 'type': t, 'title': o['titel'], 'folderId': None,
+        'config': config, 'settings': {}, 'code': code_for(9000 + int(hn.rstrip('ab')) * 40 + (20 if hn.endswith('b') else 0) + idx),
+        'curriculumId': CURRICULUM_ID, 'createdAt': NOW, 'updatedAt': NOW,
+    }
+
+
+def add_authored(chapter, hn):
+    path = os.path.join(OEF_DIR, f'h{hn}.json')
+    if not os.path.exists(path):
+        return []
+    data = json.load(open(path, encoding='utf-8'))
+    widgets = []
+    for idx, o in enumerate(data['oefeningen'], 1):
+        key = str(o['sectie']).strip().lower()
+        sec = next((s for s in chapter['sections'] if s['title'].lower().startswith(key)), None)
+        if sec is None:
+            print(f'  ! h{hn}: sectie {o["sectie"]!r} niet gevonden voor {o["titel"]!r}')
+            continue
+        w = convert_widget(o, hn, idx, (sec.get('goalCodes') or [None])[0])
+        widgets.append(w)
+        block = {'id': uid('wb'), 'type': 'widget', 'widgetId': w['id'], 'note': o['toelichting']}
+        if o.get('plaats') == 'begin':
+            sec['blocks'].insert(0, block)
+        else:
+            sec['blocks'].append(block)
+    return widgets
+
 # ── Samenstellen ────────────────────────────────────────────────────────────
 NOW = int(time.time() * 1000)
 raw = json.load(open(RAW))
 course = raw.get('course', raw)
 pdfs = sorted(glob.glob(os.path.join(PDFDIR, '*Hoofdstuk*.pdf')), key=chapter_key)
+# De oefeningen die de importpagina zelf afleidde reizen mee uit de dump.
 widgets = []
+for w in raw.get('widgets', []):
+    w['curriculumId'] = CURRICULUM_ID
+    widgets.append(w)
+derived_n = len(widgets)
 total_img = 0
 total_bytes = 0
+authored_n = 0
 for ch in course['chapters']:
     key = chapter_key(ch['title'].replace('Hoofdstuk ', 'Hoofdstuk_'))
     pdf = next((p for p in pdfs if chapter_key(os.path.basename(p)) == key), None)
@@ -277,7 +388,10 @@ for ch in course['chapters']:
     w = flashcards_widget(ch, hn, short)
     if w:
         widgets.append(w)
-    print(f"{ch['title'][:46]:46} secties={len(ch['sections']):2} afb={n if pdf else 0:2} flits={'ja' if w else 'nee'}")
+    authored = add_authored(ch, hn)
+    widgets.extend(authored)
+    authored_n += len(authored)
+    print(f"{ch['title'][:46]:46} secties={len(ch['sections']):2} afb={n if pdf else 0:2} flits={'ja' if w else 'nee'} oefeningen={len(authored)}")
 
 course.update({
     'id': COURSE_ID,
@@ -289,8 +403,13 @@ course.update({
     'curriculumId': CURRICULUM_ID,
     'createdAt': NOW, 'updatedAt': NOW,
 })
+ids = {w['id'] for w in widgets}
+missing = [b['widgetId'] for ch in course['chapters'] for s_ in ch['sections'] for b in s_['blocks'] if b['type'] == 'widget' and b['widgetId'] not in ids]
+if missing:
+    raise SystemExit(f'widgetblokken zonder widget: {missing[:5]}')
 payload = {'app': 'boosterz', 'kind': 'cursus', 'v': 1, 'course': course, 'widgets': widgets}
 os.makedirs(os.path.dirname(OUT_JSON), exist_ok=True)
 with open(OUT_JSON, 'w', encoding='utf-8') as f:
     json.dump(payload, f, ensure_ascii=False, separators=(',', ':'))
-print(f'\n{OUT_JSON}: {os.path.getsize(OUT_JSON)//1024} kB, {total_img} afbeeldingen ({total_bytes//1024} kB), {len(widgets)} flitskaartensets')
+print(f'\n{OUT_JSON}: {os.path.getsize(OUT_JSON)//1024} kB, {total_img} afbeeldingen ({total_bytes//1024} kB), '
+      f'{len(widgets)} widgets ({derived_n} afgeleid door de importpagina, {authored_n} handgeschreven, {len(widgets) - derived_n - authored_n} flitskaartensets)')
