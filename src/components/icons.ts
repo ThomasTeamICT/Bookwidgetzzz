@@ -1,0 +1,43 @@
+/**
+ * Vaste iconen voor acties die op veel schermen terugkomen. Gebruik deze
+ * namen in plaats van zelf een Lucide-icoon te kiezen: zo ziet "Delen" er
+ * overal hetzelfde uit. De volledige afspraken staan in docs/ontwerp/ICONEN.md.
+ */
+export {
+  SquarePen as EditIcon,
+  Share2 as ShareIcon,
+  Users as AssignIcon,
+  CopyPlus as DuplicateIcon,
+  Printer as PrintIcon,
+  FileUp as ImportIcon,
+  FileDown as ExportIcon,
+  ChartColumn as ResultsIcon,
+  Sparkles as AIIcon,
+  Trash as DeleteIcon,
+  Play as TryIcon,
+  ArrowLeft as BackIcon,
+  Plus as AddIcon,
+  Search as SearchIcon,
+  Ellipsis as MoreIcon,
+  X as CloseIcon,
+  Target as GoalIcon,
+  BookOpen as CourseIcon,
+  GraduationCap as StudentIcon,
+  QrCode as QrIcon,
+  Link as LinkIcon,
+  Copy as CopyIcon,
+  Lightbulb as TipIcon,
+  Info as InfoIcon,
+  TriangleAlert as WarningIcon,
+  Lock as PrivacyIcon,
+  GripVertical as DragIcon,
+  ArrowUp as MoveUpIcon,
+  ArrowDown as MoveDownIcon,
+  Eye as PreviewIcon,
+  Folder as FolderIcon,
+  Settings as SettingsIcon,
+  Download as DownloadIcon,
+  Upload as UploadIcon,
+  Check as CheckIcon,
+  RotateCcw as RetryIcon,
+} from 'lucide-react';
