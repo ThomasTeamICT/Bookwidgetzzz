@@ -73,11 +73,24 @@ export async function startBrowser({ model = 'gemini-3.7-flash', seedAI = true }
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Wacht tot een AI-aanvraag klaar is: het gebruikslog groeit, of er verschijnt een fout. */
-export async function waitForAI(page, before, { timeout = 240000 } = {}) {
-  await page.waitForFunction((n) => {
-    try { return JSON.parse(localStorage.getItem('wf.aiusage.v1') || '[]').length > n; } catch { return false; }
-  }, before, { timeout });
+/**
+ * Wacht tot een AI-aanvraag klaar is: het gebruikslog groeit, of er verschijnt
+ * een fout (AIErrorBox: role="alert", of een foutmelding-toast). Dat laatste
+ * was hier lang alleen een belofte in dit commentaar, geen code — een AI-fout
+ * die de app zelf al meteen keurig toont (bv. een 503 van de aanbieder) liet de
+ * test toch de volle `timeout` blind uitzitten voor ze het als mislukt meldde,
+ * met een nietszeggende "Timeout exceeded" i.p.v. de echte oorzaak. `skipErrorCheck`
+ * (gezet door runAIStep als er al vóór de klik een fout op het scherm stond,
+ * bv. bij een "Opnieuw proberen") schakelt die kortere weg uit, want dan is een
+ * bestaande fout geen signaal dat DEZE aanroep al klaar is.
+ */
+export async function waitForAI(page, before, { timeout = 240000, skipErrorCheck = false } = {}) {
+  await page.waitForFunction(({ n, skipErrorCheck }) => {
+    try {
+      if (JSON.parse(localStorage.getItem('wf.aiusage.v1') || '[]').length > n) return true;
+    } catch { /* leest niet, dan maar op de fouttekst vertrouwen */ }
+    return !skipErrorCheck && document.querySelector('[role="alert"], .toast-err') !== null;
+  }, { n: before, skipErrorCheck }, { timeout });
 }
 
 export async function usageCount(page) {

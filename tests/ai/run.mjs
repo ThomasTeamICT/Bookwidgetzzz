@@ -52,12 +52,18 @@ async function goto(page, hash) {
   await sleep(400);
 }
 
-/** Voert een AI-aanroep uit via de UI en meet duur + tokengebruik. */
+/**
+ * Voert een AI-aanroep uit via de UI en meet duur + tokengebruik. Stond er al
+ * vóór de klik een fout op het scherm (bv. "Opnieuw proberen" na een mislukte
+ * poging), dan bewijst die niets over DEZE aanroep — waitForAI valt dan terug
+ * op enkel het gebruikslog afwachten (zie helpers.mjs).
+ */
 async function runAIStep(page, aiCalls, flow, task, clickFn, { timeout = AI_TIMEOUT } = {}) {
   const before = await usageCount(page);
+  const hadErrorBefore = (await page.locator('[role="alert"], .toast-err').count().catch(() => 0)) > 0;
   const t0 = Date.now();
   await clickFn();
-  await waitForAI(page, before, { timeout });
+  await waitForAI(page, before, { timeout, skipErrorCheck: hadErrorBefore });
   const durationMs = Date.now() - t0;
   const usage = await lastUsage(page);
   aiCalls.push({
@@ -92,11 +98,71 @@ function wordCount(s) {
 }
 
 /**
+ * Foutdiagnose voor een mislukte AI-stap: leest de zichtbare fouttekst (elementen
+ * met role="alert", in de dialoog of op de pagina — AIErrorBox in aiCommon.tsx
+ * rendert fouten altijd zo — en .toast-err-toasts) en de laatste AI-gebruikslog-
+ * regel (wf.aiusage.v1[0]). Wordt in het detail van de FAIL-check gezet zodat een
+ * mislukking niet stil blijft: was er een aanroep (tokens, model) en wat zei de
+ * app zelf erover.
+ */
+async function failureDetail(page) {
+  const alerts = (await page.locator('[role="alert"]').allTextContents().catch(() => [])).map((t) => t.trim()).filter(Boolean);
+  const toasts = (await page.locator('.toast-err').allTextContents().catch(() => [])).map((t) => t.trim()).filter(Boolean);
+  const usage = await lastUsage(page);
+  const bits = [];
+  if (alerts.length) bits.push(`fout op scherm: ${alerts.join(' / ')}`);
+  if (toasts.length) bits.push(`foutmelding (toast): ${toasts.join(' / ')}`);
+  bits.push(`laatste AI-log: ${usage ? JSON.stringify(usage) : '(geen — geen enkele aanroep gelogd)'}`);
+  return bits.join(' | ');
+}
+
+async function widgetById(page, id) {
+  return (await readLS(page, 'wf.widgets.v1', [])).find((w) => w.id === id) ?? null;
+}
+
+async function courseById(page, id) {
+  return (await readLS(page, 'wf.courses.v1', [])).find((c) => c.id === id) ?? null;
+}
+
+/** Widgets die als widget-blok in een cursus zijn ingebed — voor de inhoudelijke nakijkronde. */
+async function embeddedWidgetsOf(page, course) {
+  if (!course) return [];
+  const ids = new Set(
+    course.chapters.flatMap((ch) => ch.sections.flatMap((s) => s.blocks.filter((b) => b.type === 'widget').map((b) => b.widgetId)))
+  );
+  const widgets = await readLS(page, 'wf.widgets.v1', []);
+  return widgets.filter((w) => ids.has(w.id));
+}
+
+function sectionsById(course) {
+  const map = new Map();
+  for (const ch of course.chapters) for (const s of ch.sections) map.set(s.id, s);
+  return map;
+}
+
+/**
+ * Secties die verschillen tussen twee cursusversies — het "voor" en "na" van wat
+ * een AI-stap precies wijzigde. Een nieuwe sectie (bv. "Vul de hiaten") komt er
+ * ook in, met before: null.
+ */
+function changedSections(before, after) {
+  const b = sectionsById(before);
+  const a = sectionsById(after);
+  const out = [];
+  for (const [id, sAfter] of a) {
+    const sBefore = b.get(id) ?? null;
+    if (!sBefore || JSON.stringify(sBefore) !== JSON.stringify(sAfter)) out.push({ id, before: sBefore, after: sAfter });
+  }
+  return out;
+}
+
+/**
  * Wacht op de "toepassen"-knop van een AI-voorstel; verschijnt ze niet (fout of
  * een te lang/afgekapt AI-antwoord), dan één keer "Opnieuw proberen" klikken —
  * precies wat een leerkracht ook zou doen. Sluit de dialoog nadien altijd
  * (Escape) zodat een mislukt voorstel geen knoppen op de onderliggende pagina
- * blokkeert voor de volgende stap.
+ * blokkeert voor de volgende stap. Faalt het toch, dan komt er een foutdiagnose
+ * mee terug (zie failureDetail) zodat de aanroeper die in de FAIL-check kan zetten.
  */
 async function applyOrRetryOnce(page, dialog, applyName, { aiCalls, flow, task, timeout = 20000 } = {}) {
   let applied = await dialog.getByRole('button', { name: applyName }).isVisible({ timeout }).catch(() => false);
@@ -108,9 +174,14 @@ async function applyOrRetryOnce(page, dialog, applyName, { aiCalls, flow, task, 
       applied = await dialog.getByRole('button', { name: applyName }).isVisible({ timeout }).catch(() => false);
     }
   }
-  if (applied) await dialog.getByRole('button', { name: applyName }).click();
-  else await page.keyboard.press('Escape').catch(() => {});
-  return applied;
+  let detail = '';
+  if (applied) {
+    await dialog.getByRole('button', { name: applyName }).click();
+  } else {
+    detail = await failureDetail(page);
+    await page.keyboard.press('Escape').catch(() => {});
+  }
+  return { applied, detail };
 }
 
 /** Bron uit de echte voorbeeldcursus (public/voorbeelden/…): geen verzonnen tekst. */
@@ -129,7 +200,14 @@ function loadExampleCourseText() {
     return blocks.join('\n\n');
   };
   const spijsvertering = textOf('Hoofdstuk 5: Het spijsverteringsstelsel', '3.').slice(0, 2600);
-  const massadichtheid = textOf('Hoofdstuk 13: Massa, volume en massadichtheid', '').slice(0, 3000);
+  // Niet op 3000 tekens knippen zoals eerst: "massadichtheid" valt in hoofdstuk 13
+  // pas vanaf teken ~5165 uit (definitie, formule, ijzer/water/hout-voorbeelden) —
+  // ervoor staat het woord alleen terloops in de inleiding. Bij 3000 tekens kreeg
+  // de AI dus enkel de aankondiging van het begrip, nooit de uitleg zelf, en was
+  // een cursus zonder massadichtheid het juiste antwoord op onvolledige bron —
+  // geen AI- of appfout. De volledige tekst (7521 tekens) blijft ruim onder
+  // MAX_SOURCE_CHARS (60000, lib/aiCourse.ts) en bevat alleen text-blokken.
+  const massadichtheid = textOf('Hoofdstuk 13: Massa, volume en massadichtheid', '');
   return { spijsvertering, massadichtheid };
 }
 
@@ -232,7 +310,9 @@ async function flowLeerplan(page, report, aiCalls) {
   const created = after1.find((c) => !beforeIds.has(c.id) && c.id !== EXAMPLE_CURRICULUM_ID);
   report.check(flow, 'nieuw leerplan staat in wf.curricula.v1', !!created, JSON.stringify(after1.map((c) => c.id)));
   let codes = [];
+  let goalsFull = [];
   if (created) {
+    goalsFull = created.goals; // { id, code, text, theme, level, note } — voor de inhoudelijke nakijkronde
     codes = created.goals.map((g) => g.code);
     report.check(flow, 'geen enkele code is leeg', codes.every((c) => c.trim() !== ''), codes.join(', '));
     report.check(flow, 'codes zijn uniek', new Set(codes.map((c) => c.toUpperCase())).size === codes.length, codes.join(', '));
@@ -240,7 +320,7 @@ async function flowLeerplan(page, report, aiCalls) {
 
   // ── Doelen toevoegen: 3 nieuwe + 2 al bestaande (zelfde code) ────────────
   let toastText = '';
-  let addedGoals = [];
+  let goalsFullAfterAdd = [];
   if (created) {
     // "✔ Leerplan aanmaken" toont meteen de editor van het nieuwe leerplan
     // (geen aparte "Bewerken"-klik nodig, we zitten al niet meer op de lijst).
@@ -273,14 +353,16 @@ async function flowLeerplan(page, report, aiCalls) {
       report.check(flow, 'toast: 3 toegevoegd en 2 overgeslagen', addedN === 3 && skippedN === 2, toastText);
       const after2 = await readLS(page, 'wf.curricula.v1', []);
       const updated = after2.find((c) => c.id === created.id);
-      addedGoals = updated ? updated.goals.map((g) => g.code) : [];
+      goalsFullAfterAdd = updated ? updated.goals : [];
     }
   }
 
   saveJson(flow, {
     inputText: AARDRIJKSKUNDE_TEKST, meta: { title: 'AI-test: aardrijkskunde 1e graad', subject: 'Aardrijkskunde', level: '1e graad A-stroom' },
     foundCount, curriculumId: created?.id ?? null, codes,
-    addInputText: AARDRIJKSKUNDE_TEKST_UITBREIDING, addToast: toastText, goalsAfterAdd: addedGoals,
+    // Volledige doelen (code, tekst, thema, niveau) voor de inhoudelijke nakijkronde.
+    goals: goalsFull,
+    addInputText: AARDRIJKSKUNDE_TEKST_UITBREIDING, addToast: toastText, goalsAfterAdd: goalsFullAfterAdd,
   });
 }
 
@@ -329,17 +411,20 @@ async function flowStudio(page, report, aiCalls, ctx, texts) {
     const previewShown = await page.getByRole('heading', { name: '💾 Bewaren' }).isVisible({ timeout: 15000 }).catch(() => false);
     let warningsText = [];
     if (previewShown) warningsText = await page.locator('[role="status"]', { hasText: '⚠️' }).allTextContents().catch(() => []);
-    report.check(flow, `ronde ${i + 1}: voorstel verschenen voor ${roundTypes.join(', ')}`, previewShown, warningsText.join(' | '));
+    const roundDetail = previewShown ? warningsText.join(' | ') : (warningsText.join(' | ') || (await failureDetail(page)));
+    report.check(flow, `ronde ${i + 1}: voorstel verschenen voor ${roundTypes.join(', ')}`, previewShown, roundDetail);
+    if (!previewShown) await shot(page, `${flow}-ronde${i + 1}-geen-voorstel`);
 
     let newTypes = [];
     if (previewShown) {
       await page.getByRole('button', { name: /widgets? bewaren/ }).click();
       await page.getByRole('heading', { name: /Klaar — /, exact: false }).waitFor({ timeout: 15000 }).catch(() => {});
       const all = await readLS(page, 'wf.widgets.v1', []);
+      // Volledige Widget-objecten (config: vragen, opties, hints, …) voor de nakijkronde.
       const fresh = all.filter((w) => !seenWidgetIds.has(w.id));
       fresh.forEach((w) => { seenWidgetIds.add(w.id); studioWidgetIds.push(w.id); });
       newTypes = fresh.map((w) => w.type);
-      roundsOutput.push({ roundTypes, warningsText, saved: fresh.map((w) => ({ id: w.id, type: w.type, title: w.title, code: w.code })) });
+      roundsOutput.push({ roundTypes, warningsText, saved: fresh });
     } else {
       roundsOutput.push({ roundTypes, warningsText, saved: [] });
     }
@@ -353,7 +438,10 @@ async function flowStudio(page, report, aiCalls, ctx, texts) {
     }
   }
 
-  saveJson('studio', { source: texts.spijsvertering, doelgroep: '1e graad secundair', curriculumId: EXAMPLE_CURRICULUM_ID, goalCodes: ['NW 5.1', 'NW 5.2'], rounds: roundsOutput });
+  saveJson('studio', {
+    source: texts.spijsvertering, doelgroep: '1e graad secundair', curriculumId: EXAMPLE_CURRICULUM_ID,
+    goalCodes: ['NW 5.1', 'NW 5.2'], differentiatie: true, rounds: roundsOutput,
+  });
 
   // ── Elke bewaarde widget openen in de speler: geen page/console-fouten ──
   const allWidgets = await readLS(page, 'wf.widgets.v1', []);
@@ -403,44 +491,63 @@ async function flowEditor(page, report, aiCalls, ctx) {
   await page.getByRole('button', { name: '✨ AI-assistent' }).click();
   const dialog = page.getByRole('dialog', { name: /AI-hulp/ });
 
-  const questionsBefore = (await readLS(page, 'wf.widgets.v1', [])).find((w) => w.id === state.quizWidgetId).config.questions;
+  // Volledig widget-object (config: vragen, opties, juiste antwoorden, hints, …) —
+  // de "brontekst" voor de editor-AI is de bestaande widget zelf, zie hieronder.
+  const widgetBefore = await widgetById(page, state.quizWidgetId);
+  out.widgetBefore = widgetBefore;
+  const questionsBefore = widgetBefore.config.questions;
 
   // 1. Vragen bijmaken
   await dialog.getByRole('button', { name: 'Vragen bijmaken' }).click();
   await dialog.getByLabel('Aantal').fill('3');
   await dialog.getByLabel('Focus of onderwerp (optioneel)').fill('de maag');
   await runAIStep(page, aiCalls, flow, 'vragen bijmaken', () => dialog.getByRole('button', { name: '✨ Voorstel maken' }).click());
-  await dialog.getByRole('button', { name: '✔ Toepassen' }).waitFor({ timeout: 15000 });
-  await dialog.getByRole('button', { name: '✔ Toepassen' }).click();
+  const applied1 = await dialog.getByRole('button', { name: '✔ Toepassen' }).isVisible({ timeout: 15000 }).catch(() => false);
+  const detail1 = applied1 ? '' : await failureDetail(page);
+  if (applied1) await dialog.getByRole('button', { name: '✔ Toepassen' }).click();
+  else await shot(page, `${flow}-vragen-bijmaken-mislukt`);
   await sleep(1200);
-  const afterAdd = (await readLS(page, 'wf.widgets.v1', [])).find((w) => w.id === state.quizWidgetId).config.questions;
-  report.check(flow, `"Vragen bijmaken": +3 vragen (${questionsBefore.length} → ${afterAdd.length})`, afterAdd.length === questionsBefore.length + 3, `${questionsBefore.length} -> ${afterAdd.length}`);
-  out.addQuestions = { before: questionsBefore.length, after: afterAdd.length };
+  const widgetAfterAdd = await widgetById(page, state.quizWidgetId);
+  const afterAdd = widgetAfterAdd.config.questions;
+  report.check(
+    flow, `"Vragen bijmaken": +3 vragen (${questionsBefore.length} → ${afterAdd.length})`,
+    applied1 && afterAdd.length === questionsBefore.length + 3,
+    applied1 ? `${questionsBefore.length} -> ${afterAdd.length}` : detail1
+  );
+  out.addQuestions = { opdracht: { aantal: '3', focus: 'de maag' }, before: questionsBefore.length, after: afterAdd.length, widgetAfter: widgetAfterAdd };
 
   // 2. Hulp aanvullen
   await runAIStep(page, aiCalls, flow, 'hulp aanvullen', () => dialog.getByRole('button', { name: 'Hulp aanvullen' }).click());
   const applied2 = await dialog.getByRole('button', { name: '✔ Toepassen' }).isVisible({ timeout: 15000 }).catch(() => false);
+  const detail2 = applied2 ? '' : await failureDetail(page);
   if (applied2) await dialog.getByRole('button', { name: '✔ Toepassen' }).click();
-  report.check(flow, '"Hulp aanvullen" leverde een voorstel op', applied2);
+  else await shot(page, `${flow}-hulp-aanvullen-mislukt`);
+  report.check(flow, '"Hulp aanvullen" leverde een voorstel op', applied2, detail2);
   await sleep(1000);
+  out.hulpAanvullen = { applied: applied2, widgetAfter: await widgetById(page, state.quizWidgetId) };
 
   // 3. Glossarium maken
   await runAIStep(page, aiCalls, flow, 'glossarium maken', () => dialog.getByRole('button', { name: 'Glossarium maken' }).click());
   const applied3 = await dialog.getByRole('button', { name: '✔ Toepassen' }).isVisible({ timeout: 15000 }).catch(() => false);
+  const detail3 = applied3 ? '' : await failureDetail(page);
   if (applied3) await dialog.getByRole('button', { name: '✔ Toepassen' }).click();
-  report.check(flow, '"Glossarium maken" leverde een voorstel op', applied3);
+  else await shot(page, `${flow}-glossarium-mislukt`);
+  report.check(flow, '"Glossarium maken" leverde een voorstel op', applied3, detail3);
   await sleep(1000);
+  out.glossarium = { applied: applied3, widgetAfter: await widgetById(page, state.quizWidgetId) };
 
   // 4. Afleiders versterken — juiste antwoorden en aantal opties ongewijzigd
-  const beforeMc = (await readLS(page, 'wf.widgets.v1', [])).find((w) => w.id === state.quizWidgetId).config.questions
+  const beforeMc = (await widgetById(page, state.quizWidgetId)).config.questions
     .filter((q) => q.type === 'mc' || q.type === 'multi');
   await runAIStep(page, aiCalls, flow, 'afleiders versterken', () => dialog.getByRole('button', { name: 'Afleiders versterken' }).click());
   const applied4 = await dialog.getByRole('button', { name: '✔ Toepassen' }).isVisible({ timeout: 15000 }).catch(() => false);
+  const detail4 = applied4 ? '' : await failureDetail(page);
   if (applied4) await dialog.getByRole('button', { name: '✔ Toepassen' }).click();
+  else await shot(page, `${flow}-afleiders-mislukt`);
   await sleep(1000);
+  const widgetAfterMc = await widgetById(page, state.quizWidgetId);
   if (applied4 && beforeMc.length > 0) {
-    const afterMc = (await readLS(page, 'wf.widgets.v1', [])).find((w) => w.id === state.quizWidgetId).config.questions
-      .filter((q) => q.type === 'mc' || q.type === 'multi');
+    const afterMc = widgetAfterMc.config.questions.filter((q) => q.type === 'mc' || q.type === 'multi');
     const sameCount = afterMc.length === beforeMc.length;
     const correctIntact = beforeMc.every((qb) => {
       const qa = afterMc.find((x) => x.id === qb.id);
@@ -450,25 +557,28 @@ async function flowEditor(page, report, aiCalls, ctx) {
     });
     report.check(flow, '"Afleiders versterken": juiste antwoorden ongewijzigd, zelfde aantal opties', sameCount && correctIntact, `mc-vragen voor=${beforeMc.length} na=${afterMc.length}`);
   } else {
-    report.check(flow, '"Afleiders versterken" leverde een voorstel op', applied4, beforeMc.length === 0 ? 'geen mc/multi-vragen om te versterken' : '');
+    report.check(flow, '"Afleiders versterken" leverde een voorstel op', applied4, beforeMc.length === 0 ? 'geen mc/multi-vragen om te versterken' : detail4);
   }
+  out.afleidersVersterken = { applied: applied4, widgetAfter: widgetAfterMc };
 
   // 5. Koppel vragen aan leerplandoelen (voorbeeldleerplan)
   await dialog.getByRole('button', { name: 'Koppel vragen aan leerplandoelen' }).click();
   await dialog.getByLabel('Leerplan', { exact: true }).selectOption(EXAMPLE_CURRICULUM_ID);
   await runAIStep(page, aiCalls, flow, 'vragen aan leerplandoelen koppelen', () => dialog.getByRole('button', { name: '✨ Voorstel maken' }).click());
   const applied5 = await dialog.getByRole('button', { name: '✔ Toepassen' }).isVisible({ timeout: 15000 }).catch(() => false);
+  const detail5 = applied5 ? '' : await failureDetail(page);
   if (applied5) await dialog.getByRole('button', { name: '✔ Toepassen' }).click();
+  else await shot(page, `${flow}-doelen-koppelen-mislukt`);
   await sleep(1000);
+  const widgetAfterGoalLink = await widgetById(page, state.quizWidgetId);
   if (applied5) {
     const curriculum = (await readLS(page, 'wf.curricula.v1', [])).find((c) => c.id === EXAMPLE_CURRICULUM_ID);
     const validCodes = new Set(curriculum.goals.map((g) => g.code));
-    const afterGoals = (await readLS(page, 'wf.widgets.v1', [])).find((w) => w.id === state.quizWidgetId).config.questions
-      .filter((q) => q.goalCode).map((q) => q.goalCode);
+    const afterGoals = widgetAfterGoalLink.config.questions.filter((q) => q.goalCode).map((q) => q.goalCode);
     report.check(flow, 'alle gekoppelde codes bestaan in het voorbeeldleerplan', afterGoals.every((c) => validCodes.has(c)), afterGoals.join(', '));
-    out.goalLink = afterGoals;
+    out.goalLink = { opdracht: { curriculumId: EXAMPLE_CURRICULUM_ID }, codes: afterGoals, widgetAfter: widgetAfterGoalLink };
   } else {
-    report.check(flow, '"Koppel vragen aan leerplandoelen" leverde een voorstel op', false);
+    report.check(flow, '"Koppel vragen aan leerplandoelen" leverde een voorstel op', false, detail5);
   }
 
   await page.keyboard.press('Escape');
@@ -482,16 +592,23 @@ async function flowEditor(page, report, aiCalls, ctx) {
     await page.getByRole('button', { name: '✨ AI-assistent' }).click();
     const d = page.getByRole('dialog', { name: /AI-hulp/ });
     const field = key === 'flashcardsWidgetId' ? 'cards' : 'pairs';
-    const before = (await readLS(page, 'wf.widgets.v1', [])).find((w) => w.id === id).config[field].length;
+    const widgetBeforeItems = await widgetById(page, id);
+    const before = widgetBeforeItems.config[field].length;
     await d.getByRole('button', { name: 'Items bijmaken' }).click();
     await d.getByLabel('Aantal').fill('4');
     await runAIStep(page, aiCalls, flow, 'items bijmaken', () => d.getByRole('button', { name: '✨ Voorstel maken' }).click());
     const appliedItems = await d.getByRole('button', { name: '✔ Toepassen' }).isVisible({ timeout: 15000 }).catch(() => false);
+    const detailItems = appliedItems ? '' : await failureDetail(page);
     if (appliedItems) await d.getByRole('button', { name: '✔ Toepassen' }).click();
+    else await shot(page, `${flow}-items-bijmaken-${label}-mislukt`);
     await sleep(1200);
-    const after = (await readLS(page, 'wf.widgets.v1', [])).find((w) => w.id === id).config[field].length;
-    report.check(flow, `"Items bijmaken" op ${label}-widget: +4 items (${before} → ${after})`, appliedItems && after === before + 4, `${before} -> ${after}`);
-    out[`items_${label}`] = { before, after };
+    const widgetAfterItems = await widgetById(page, id);
+    const after = widgetAfterItems.config[field].length;
+    report.check(
+      flow, `"Items bijmaken" op ${label}-widget: +4 items (${before} → ${after})`,
+      appliedItems && after === before + 4, appliedItems ? `${before} -> ${after}` : detailItems
+    );
+    out[`items_${label}`] = { opdracht: { aantal: '4' }, before, after, widgetBefore: widgetBeforeItems, widgetAfter: widgetAfterItems };
     await page.keyboard.press('Escape');
   }
 
@@ -514,9 +631,10 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
     const dNew = page.getByRole('dialog', { name: '✨ AI-cursusbouwer' });
     await dNew.getByLabel('Leerplan', { exact: true }).selectOption(EXAMPLE_CURRICULUM_ID);
     await dNew.locator('fieldset', { hasText: 'Krachten en beweging' }).getByRole('button', { name: 'heel thema' }).click();
-    await dNew.getByLabel('Vak / onderwerp').fill('Natuurwetenschappen — krachten');
-    await dNew.getByLabel('Doelgroep').fill('1e graad A-stroom');
-    await dNew.getByLabel('Aantal hoofdstukken').fill('2');
+    const opdrachtA = { theme: 'Krachten en beweging', subject: 'Natuurwetenschappen — krachten', audience: '1e graad A-stroom', chapterCount: '2' };
+    await dNew.getByLabel('Vak / onderwerp').fill(opdrachtA.subject);
+    await dNew.getByLabel('Doelgroep').fill(opdrachtA.audience);
+    await dNew.getByLabel('Aantal hoofdstukken').fill(opdrachtA.chapterCount);
     const withQuizzesChecked = await dNew.locator('input[type=checkbox]').last().isChecked().catch(() => false);
     report.check(flow, '5a: "oefenquiz maken" staat standaard aan', withQuizzesChecked);
 
@@ -535,7 +653,9 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
         previewOk = await dNew.getByRole('button', { name: '✔ Cursus aanmaken' }).isVisible({ timeout: 20000 }).catch(() => false);
       }
     }
-    report.check(flow, '5a: voorvertoning verschenen', previewOk);
+    const detailA = previewOk ? '' : await failureDetail(page);
+    report.check(flow, '5a: voorvertoning verschenen', previewOk, detailA);
+    if (!previewOk) await shot(page, `${flow}-5a-geen-voorvertoning`);
 
     if (previewOk) {
       const goalText = await goalTextBefore();
@@ -558,7 +678,11 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
         const widgets = await readLS(page, 'wf.widgets.v1', []);
         const embeddedOk = widgetIds.length > 0 && widgetIds.every((id) => widgets.some((w) => w.id === id));
         report.check(flow, '5a: oefenquizzen als widget-blokken ingebed en aanwezig in wf.widgets.v1', embeddedOk, `${widgetIds.length} widget-blok(ken)`);
-        out.a = { courseId: courseA.id, chapters: courseA.chapters.length, codesUsed, widgetIds };
+        // Volledig cursus-object + ingebedde widgets voor de inhoudelijke nakijkronde.
+        out.a = {
+          courseId: courseA.id, chapters: courseA.chapters.length, codesUsed, widgetIds,
+          opdracht: opdrachtA, course: courseA, embeddedWidgets: await embeddedWidgetsOf(page, courseA),
+        };
       }
     }
   } catch (e) {
@@ -570,8 +694,9 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
   try {
     await goto(page, '/#/importeren');
     await page.locator('summary', { hasText: '✍️ Of plak je tekst rechtstreeks' }).click();
-    await page.getByPlaceholder('bv. "Hoofdstuk 3 — de waterkringloop"').fill('Massa, volume en massadichtheid (AI-test)');
-    await page.locator('textarea[placeholder="Plak hier je tekst…"]').fill(texts.massadichtheid);
+    const opdrachtB = { title: 'Massa, volume en massadichtheid (AI-test)', sourceText: texts.massadichtheid, curriculumId: EXAMPLE_CURRICULUM_ID };
+    await page.getByPlaceholder('bv. "Hoofdstuk 3 — de waterkringloop"').fill(opdrachtB.title);
+    await page.locator('textarea[placeholder="Plak hier je tekst…"]').fill(opdrachtB.sourceText);
     await page.getByRole('button', { name: '+ Tekst toevoegen als bron' }).click();
     await sleep(300);
     await page.getByLabel('Leerplan (optioneel)').selectOption(EXAMPLE_CURRICULUM_ID);
@@ -589,7 +714,9 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
         previewOkB = await dImport.getByRole('button', { name: '✔ Cursus aanmaken' }).isVisible({ timeout: 20000 }).catch(() => false);
       }
     }
-    report.check(flow, '5b: voorvertoning verschenen', previewOkB);
+    const detailB = previewOkB ? '' : await failureDetail(page);
+    report.check(flow, '5b: voorvertoning verschenen', previewOkB, detailB);
+    if (!previewOkB) await shot(page, `${flow}-5b-geen-voorvertoning`);
     if (previewOkB) {
       await dImport.getByRole('button', { name: '✔ Cursus aanmaken' }).click();
       await page.waitForURL(/#\/cursus\/bewerk\//, { timeout: 15000 }).catch(() => {});
@@ -600,8 +727,15 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
       if (courseB) {
         ctx.state.courseBId = courseB.id;
         const allText = JSON.stringify(courseB).toLowerCase();
-        report.check(flow, '5b: cursusinhoud bevat "massadichtheid"', allText.includes('massadichtheid'));
-        out.b = { courseId: courseB.id, title: courseB.title };
+        const hasWord = allText.includes('massadichtheid');
+        // Detail bij een FAIL: staat het kernwoord er wél in een andere vorm (bv.
+        // los "dichtheid")? Zo kunnen we harnas-/checkprobleem onderscheiden van
+        // een inhoudelijk probleem — zie tests/ai/run.mjs-opdracht, punt 2.
+        report.check(flow, '5b: cursusinhoud bevat "massadichtheid"', hasWord, hasWord ? '' : `titel="${courseB.title}" — bevat wel los "dichtheid": ${allText.includes('dichtheid')}`);
+        out.b = {
+          courseId: courseB.id, title: courseB.title, opdracht: opdrachtB,
+          course: courseB, embeddedWidgets: await embeddedWidgetsOf(page, courseB),
+        };
       }
     }
   } catch (e) {
@@ -620,47 +754,94 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
     await nav.locator('button[aria-current="true"]').click();
     await sleep(300);
 
+    // "Checkpoint" van de cursus vóór elke stap — zo kunnen we na elke AI-actie
+    // exact opzoeken welke sectie(s) ze wijzigde, zonder aannames over welke
+    // sectie-id actief is (nav.aria-current draagt geen id in de DOM).
+    let courseCheckpoint = await courseById(page, ctx.state.courseAId);
+
     // Vul deze sectie met AI
+    const sectionOpdracht = 'Leg uit wat een kracht is, met een herkenbaar voorbeeld uit het dagelijks leven en een korte begrippenlijst.';
     await page.getByRole('button', { name: '✨ Vul deze sectie met AI' }).click();
     const dSection = page.getByRole('dialog', { name: '✨ Sectie vullen met AI' });
-    await dSection.getByLabel('Wat moet er in deze sectie komen?').fill('Leg uit wat een kracht is, met een herkenbaar voorbeeld uit het dagelijks leven en een korte begrippenlijst.');
-    const blocksBefore = (await readLS(page, 'wf.courses.v1', [])).find((c) => c.id === ctx.state.courseAId).chapters.flatMap((ch) => ch.sections.flatMap((s) => s.blocks)).length;
+    await dSection.getByLabel('Wat moet er in deze sectie komen?').fill(sectionOpdracht);
+    const blocksBefore = courseCheckpoint.chapters.flatMap((ch) => ch.sections.flatMap((s) => s.blocks)).length;
     await runAIStep(page, aiCalls, flow, 'sectie-inhoud', () => dSection.getByRole('button', { name: '✨ Genereren' }).click());
-    const sectionApplied = await applyOrRetryOnce(page, dSection, '✔ Toepassen', { aiCalls, flow, task: 'sectie-inhoud' });
+    const sectionResult = await applyOrRetryOnce(page, dSection, '✔ Toepassen', { aiCalls, flow, task: 'sectie-inhoud' });
+    const sectionApplied = sectionResult.applied;
     if (sectionApplied) await page.locator('text=✓ Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
-    const blocksAfter = (await readLS(page, 'wf.courses.v1', [])).find((c) => c.id === ctx.state.courseAId).chapters.flatMap((ch) => ch.sections.flatMap((s) => s.blocks)).length;
-    report.check(flow, '5c: "Vul deze sectie met AI" voegde blokken toe', sectionApplied && blocksAfter > blocksBefore, `${blocksBefore} -> ${blocksAfter}`);
+    else await shot(page, `${flow}-5c-sectie-vullen-mislukt`);
+    const courseAfterFill = await courseById(page, ctx.state.courseAId);
+    const blocksAfter = courseAfterFill.chapters.flatMap((ch) => ch.sections.flatMap((s) => s.blocks)).length;
+    report.check(
+      flow, '5c: "Vul deze sectie met AI" voegde blokken toe', sectionApplied && blocksAfter > blocksBefore,
+      sectionApplied ? `${blocksBefore} -> ${blocksAfter}` : sectionResult.detail
+    );
+    const sectionsChangedByFill = changedSections(courseCheckpoint, courseAfterFill);
+    courseCheckpoint = courseAfterFill;
 
     // Stel oefeningen voor
+    const exerciseCount = '2';
     await page.getByRole('button', { name: '✨ Stel oefeningen voor' }).click();
     const dExerc = page.getByRole('dialog', { name: '✨ Oefeningen voorstellen' });
-    await dExerc.getByLabel('Aantal oefeningen').fill('2');
-    const widgetsBefore = (await readLS(page, 'wf.widgets.v1', [])).length;
+    await dExerc.getByLabel('Aantal oefeningen').fill(exerciseCount);
+    const widgetIdsBeforeExerc = new Set((await readLS(page, 'wf.widgets.v1', [])).map((w) => w.id));
     await runAIStep(page, aiCalls, flow, 'oefeningen bij een sectie', () => dExerc.getByRole('button', { name: '✨ Genereren' }).click());
-    const exercApplied = await applyOrRetryOnce(page, dExerc, '✔ Oefeningen toevoegen', { aiCalls, flow, task: 'oefeningen bij een sectie' });
+    const exercResult = await applyOrRetryOnce(page, dExerc, '✔ Oefeningen toevoegen', { aiCalls, flow, task: 'oefeningen bij een sectie' });
+    const exercApplied = exercResult.applied;
     if (exercApplied) await page.locator('text=✓ Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
-    const widgetsAfter = (await readLS(page, 'wf.widgets.v1', [])).length;
-    report.check(flow, '5c: "Stel oefeningen voor" leverde nieuwe widgets op', exercApplied && widgetsAfter > widgetsBefore, `${widgetsBefore} -> ${widgetsAfter}`);
+    else await shot(page, `${flow}-5c-oefeningen-mislukt`);
+    const widgetsAfterExercList = await readLS(page, 'wf.widgets.v1', []);
+    const widgetsBefore = widgetIdsBeforeExerc.size;
+    const widgetsAfter = widgetsAfterExercList.length;
+    report.check(
+      flow, '5c: "Stel oefeningen voor" leverde nieuwe widgets op', exercApplied && widgetsAfter > widgetsBefore,
+      exercApplied ? `${widgetsBefore} -> ${widgetsAfter}` : exercResult.detail
+    );
+    const newExerciseWidgets = widgetsAfterExercList.filter((w) => !widgetIdsBeforeExerc.has(w.id));
+    const courseAfterExercises = await courseById(page, ctx.state.courseAId);
+    const sectionsChangedByExercises = changedSections(courseCheckpoint, courseAfterExercises);
+    courseCheckpoint = courseAfterExercises;
 
     // Optimaliseer: Vereenvoudig de taal
     await page.getByRole('button', { name: '✨ Optimaliseer' }).click();
     const dOpt1 = page.getByRole('dialog', { name: '✨ Cursus optimaliseren' });
     await dOpt1.locator('label.checkbox-row', { hasText: 'Vereenvoudig de taal' }).locator('input[type=radio]').check();
     await runAIStep(page, aiCalls, flow, 'cursus optimaliseren', () => dOpt1.getByRole('button', { name: '✨ Genereren' }).click());
-    const opt1Applied = await applyOrRetryOnce(page, dOpt1, '✔ Optimalisatie toepassen', { aiCalls, flow, task: 'cursus optimaliseren' });
+    const opt1Result = await applyOrRetryOnce(page, dOpt1, '✔ Optimalisatie toepassen', { aiCalls, flow, task: 'cursus optimaliseren' });
+    const opt1Applied = opt1Result.applied;
     if (opt1Applied) await page.locator('text=✓ Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
-    report.check(flow, '5c: "Optimaliseer — Vereenvoudig de taal" toegepast', opt1Applied);
+    else await shot(page, `${flow}-5c-optimaliseer-taal-mislukt`);
+    report.check(flow, '5c: "Optimaliseer — Vereenvoudig de taal" toegepast', opt1Applied, opt1Applied ? '' : opt1Result.detail);
+    const courseAfterOpt1 = await courseById(page, ctx.state.courseAId);
+    const sectionsChangedByOpt1 = changedSections(courseCheckpoint, courseAfterOpt1);
+    courseCheckpoint = courseAfterOpt1;
 
     // Optimaliseer: Voeg controlevragen toe
     await page.getByRole('button', { name: '✨ Optimaliseer' }).click();
     const dOpt2 = page.getByRole('dialog', { name: '✨ Cursus optimaliseren' });
     await dOpt2.locator('label.checkbox-row', { hasText: 'Voeg controlevragen toe' }).locator('input[type=radio]').check();
     await runAIStep(page, aiCalls, flow, 'cursus optimaliseren', () => dOpt2.getByRole('button', { name: '✨ Genereren' }).click());
-    const opt2Applied = await applyOrRetryOnce(page, dOpt2, '✔ Optimalisatie toepassen', { aiCalls, flow, task: 'cursus optimaliseren' });
+    const opt2Result = await applyOrRetryOnce(page, dOpt2, '✔ Optimalisatie toepassen', { aiCalls, flow, task: 'cursus optimaliseren' });
+    const opt2Applied = opt2Result.applied;
     if (opt2Applied) await page.locator('text=✓ Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
-    report.check(flow, '5c: "Optimaliseer — Voeg controlevragen toe" toegepast', opt2Applied);
+    else await shot(page, `${flow}-5c-optimaliseer-controlevragen-mislukt`);
+    report.check(flow, '5c: "Optimaliseer — Voeg controlevragen toe" toegepast', opt2Applied, opt2Applied ? '' : opt2Result.detail);
+    const courseAfterOpt2 = await courseById(page, ctx.state.courseAId);
+    const sectionsChangedByOpt2 = changedSections(courseCheckpoint, courseAfterOpt2);
 
-    out.c = { blocksBefore, blocksAfter, widgetsBefore, widgetsAfter, opt1Applied, opt2Applied };
+    // Volledig cursus-object (na alle 5c-stappen) + de ingebedde widgets, en per
+    // stap het "voor" en "na" van precies de sectie(s) die ze wijzigde.
+    out.c = {
+      blocksBefore, blocksAfter, widgetsBefore, widgetsAfter, opt1Applied, opt2Applied,
+      opdracht: {
+        sectionOpdracht, exerciseCount,
+        opt1Preset: { id: 'taal', label: 'Vereenvoudig de taal' },
+        opt2Preset: { id: 'controlevragen', label: 'Voeg controlevragen toe' },
+      },
+      course: courseAfterOpt2, embeddedWidgets: await embeddedWidgetsOf(page, courseAfterOpt2),
+      newExerciseWidgets,
+      sectionsChangedByFill, sectionsChangedByExercises, sectionsChangedByOpt1, sectionsChangedByOpt2,
+    };
   } catch (e) {
     report.check(flow, '5c: sectie-AI en optimaliseren zonder fout', false, String(e).slice(0, 300));
     await shot(page, `${flow}-5c-fout`);
@@ -685,14 +866,17 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
     await dCov.getByRole('button', { name: '✨ Vul de hiaten' }).click();
     const dFill = page.getByRole('dialog', { name: '✨ Cursus optimaliseren' });
     await runAIStep(page, aiCalls, flow, 'cursus optimaliseren', () => dFill.getByRole('button', { name: '✨ Genereren' }).click());
-    const fillApplied = await applyOrRetryOnce(page, dFill, '✔ Optimalisatie toepassen', { aiCalls, flow, task: 'cursus optimaliseren' });
+    const fillResult = await applyOrRetryOnce(page, dFill, '✔ Optimalisatie toepassen', { aiCalls, flow, task: 'cursus optimaliseren' });
+    const fillApplied = fillResult.applied;
     if (fillApplied) await page.locator('text=✓ Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
-    report.check(flow, '5d: "Vul de hiaten" leverde een toepasbaar voorstel op', fillApplied);
+    else await shot(page, `${flow}-5d-vul-hiaten-mislukt`);
+    report.check(flow, '5d: "Vul de hiaten" leverde een toepasbaar voorstel op', fillApplied, fillApplied ? '' : fillResult.detail);
 
-    const demoAfterFill = (await readLS(page, 'wf.courses.v1', [])).find((c) => c.id === demo.id);
+    const demoAfterFill = await courseById(page, demo.id);
     const sectionIdsAfter = new Set(demoAfterFill.chapters.flatMap((ch) => ch.sections.map((s) => s.id)));
     const preserved = [...sectionIdsBefore].every((id) => sectionIdsAfter.has(id));
     report.check(flow, '5d: bestaande secties bleven behouden na "Vul de hiaten"', preserved, `${sectionIdsBefore.size} secties voordien`);
+    const sectionsChangedByFill = changedSections(demo, demoAfterFill);
 
     await page.getByRole('button', { name: '🎯 Doelendekking' }).click();
     dCov = page.getByRole('dialog', { name: '🎯 Doelendekking' });
@@ -709,6 +893,7 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
     // bestaan op het moment dat de allereerste keer de app opstart).
     const anyWidget = (await readLS(page, 'wf.widgets.v1', []))[0];
     let fixtureBlockId = null;
+    let demoBeforeRework = demoAfterFill;
     if (anyWidget) {
       const coursesNow = await readLS(page, 'wf.courses.v1', []);
       const demoNow = coursesNow.find((c) => c.id === demo.id);
@@ -717,24 +902,37 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
       await writeLS(page, 'wf.courses.v1', coursesNow);
       await page.reload({ waitUntil: 'networkidle' });
       await sleep(400);
+      demoBeforeRework = demoNow; // met fixture-blok erbij, telt straks niet mee als "door AI gewijzigd"
     }
 
     // Herwerk met AI
+    const reworkWish = 'verdeel in kleinere secties';
     await page.getByRole('button', { name: '✨ Herwerk met AI' }).click();
     const dRework = page.getByRole('dialog', { name: '✨ Cursus herwerken met AI' });
-    await dRework.getByLabel('Wat moet er anders?').fill('verdeel in kleinere secties');
+    await dRework.getByLabel('Wat moet er anders?').fill(reworkWish);
     await runAIStep(page, aiCalls, flow, 'cursus herwerken', () => dRework.getByRole('button', { name: '✨ Genereren' }).click());
-    const reworkApplied = await applyOrRetryOnce(page, dRework, '✔ Herwerking toepassen', { aiCalls, flow, task: 'cursus herwerken' });
+    const reworkResult = await applyOrRetryOnce(page, dRework, '✔ Herwerking toepassen', { aiCalls, flow, task: 'cursus herwerken' });
+    const reworkApplied = reworkResult.applied;
     if (reworkApplied) await page.locator('text=✓ Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
-    report.check(flow, '5d: "Herwerk met AI" leverde een toepasbaar voorstel op', reworkApplied);
+    else await shot(page, `${flow}-5d-herwerken-mislukt`);
+    report.check(flow, '5d: "Herwerk met AI" leverde een toepasbaar voorstel op', reworkApplied, reworkApplied ? '' : reworkResult.detail);
+
+    const demoAfterRework = await courseById(page, demo.id);
+    const sectionsChangedByRework = changedSections(demoBeforeRework, demoAfterRework);
 
     if (fixtureBlockId) {
-      const demoReworked = (await readLS(page, 'wf.courses.v1', [])).find((c) => c.id === demo.id);
-      const allBlockIds = demoReworked.chapters.flatMap((ch) => ch.sections.flatMap((s) => s.blocks.map((b) => b.id)));
+      const allBlockIds = demoAfterRework.chapters.flatMap((ch) => ch.sections.flatMap((s) => s.blocks.map((b) => b.id)));
       report.check(flow, '5d: widget-/mediablok (keep-blok) bleef behouden na herwerken', allBlockIds.includes(fixtureBlockId), `blok ${fixtureBlockId} ${allBlockIds.includes(fixtureBlockId) ? 'gevonden' : 'NIET gevonden'}`);
     }
 
-    out.d = { coveredBefore, coveredAfter, summaryBefore, summaryAfter, preserved, fixtureBlockId, reworkApplied };
+    // Volledig cursus-object (na hiaten vullen + herwerken) + ingebedde widgets,
+    // en het "voor"/"na" van precies de sectie(s) die elke stap wijzigde.
+    out.d = {
+      coveredBefore, coveredAfter, summaryBefore, summaryAfter, preserved, fixtureBlockId, reworkApplied, fillApplied,
+      opdracht: { reworkWish },
+      course: demoAfterRework, embeddedWidgets: await embeddedWidgetsOf(page, demoAfterRework),
+      sectionsChangedByFill, sectionsChangedByRework,
+    };
   } catch (e) {
     report.check(flow, '5d: democursus doelendekking/herwerken zonder fout', false, String(e).slice(0, 300));
     await shot(page, `${flow}-5d-fout`);
