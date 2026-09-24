@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Boosterz is verhuisd</title>
+<script>
+  // Oude adressen (…/Bookwidgetzzz/…) naar het nieuwe (…/Boosterz/…), met pad,
+  // zoekparameters en #-route erbij: klaslinks, QR-codes en deellinks van
+  // leerlingen blijven zo werken. Dezelfde pagina dient als index.html en 404.html.
+  (function () {
+    var pad = location.pathname.replace(/^\/bookwidgetzzz(?=\/|$)/i, '/Boosterz');
+    if (pad === '/Boosterz') pad += '/';
+    if (pad.indexOf('/Boosterz/') !== 0) pad = '/Boosterz/';
+    location.replace(pad + location.search + location.hash);
+  })();
+</script>
+<noscript><meta http-equiv="refresh" content="0; url=https://thomasteamict.github.io/Boosterz/"></noscript>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f7f6ff; color: #1d1b33; }
+  main { max-width: 32rem; padding: 1.5rem; text-align: center; }
+  a { color: #4a2fd8; font-weight: 600; }
+  @media (prefers-color-scheme: dark) { body { background: #16152a; color: #eeeefa; } a { color: #b3a6ff; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Boosterz is verhuisd</h1>
+  <p>Je wordt doorgestuurd. Lukt dat niet, ga dan naar <a href="https://thomasteamict.github.io/Boosterz/">thomasteamict.github.io/Boosterz</a>.</p>
+</main>
+</body>
+</html>

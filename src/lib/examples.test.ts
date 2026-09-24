@@ -10,9 +10,9 @@ describe('absolutizeExampleUrls', () => {
       { id: '2', type: 'image', url: 'https://example.org/a.png', size: 'normal' },
       { id: '3', type: 'text', markdown: 'voorbeelden/nw/niet-aanraken' },
     ] }] }];
-    absolutizeExampleUrls(c, '/Bookwidgetzzz/');
+    absolutizeExampleUrls(c, '/Boosterz/');
     const blocks = c.chapters[0].sections[0].blocks;
-    expect(blocks[0].type === 'image' && blocks[0].url).toBe('/Bookwidgetzzz/voorbeelden/nw/h01-01.jpg');
+    expect(blocks[0].type === 'image' && blocks[0].url).toBe('/Boosterz/voorbeelden/nw/h01-01.jpg');
     expect(blocks[1].type === 'image' && blocks[1].url).toBe('https://example.org/a.png');
     expect(blocks[2].type === 'text' && blocks[2].markdown).toBe('voorbeelden/nw/niet-aanraken');
   });

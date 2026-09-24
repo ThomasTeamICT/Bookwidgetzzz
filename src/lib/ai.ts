@@ -58,7 +58,7 @@ export const PROVIDER_INFO: Record<AIProviderId, { name: string; models: { id: s
     models: [
       { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash — beste prijs-kwaliteit (aanbevolen)' },
       { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite — zuinigst' },
-      { id: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro — hoogste kwaliteit, duurder' },
+      { id: 'gemini-pro-latest', label: 'Gemini Pro (nieuwste) — hoogste kwaliteit, duurder' },
     ],
   },
   custom: {
@@ -69,6 +69,16 @@ export const PROVIDER_INFO: Record<AIProviderId, { name: string; models: { id: s
 
 const DEFAULT_SETTINGS: AISettings = { provider: 'anthropic', apiKey: '', model: 'claude-sonnet-5' };
 
+/**
+ * Modelnamen die een aanbieder niet (meer) kent, met hun opvolger. Wie zo'n
+ * model ooit koos, krijgt anders bij elke AI-stap een 404.
+ * - gemini-3.1-pro bestond alleen als gemini-3.1-pro-preview; de alias
+ *   gemini-pro-latest volgt voortaan het nieuwste Pro-model.
+ */
+const RETIRED_MODELS: Record<string, string> = {
+  'gemini-3.1-pro': 'gemini-pro-latest',
+};
+
 export function getAISettings(): AISettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
@@ -77,7 +87,7 @@ export function getAISettings(): AISettings {
     return {
       provider: s.provider === 'openai' || s.provider === 'gemini' || s.provider === 'custom' ? s.provider : 'anthropic',
       apiKey: typeof s.apiKey === 'string' ? s.apiKey : '',
-      model: typeof s.model === 'string' && s.model ? s.model : DEFAULT_SETTINGS.model,
+      model: typeof s.model === 'string' && s.model ? (RETIRED_MODELS[s.model] ?? s.model) : DEFAULT_SETTINGS.model,
       baseUrl: typeof s.baseUrl === 'string' ? s.baseUrl : undefined,
     };
   } catch {
@@ -276,7 +286,10 @@ async function askOpenAICompatible(s: AISettings, opts: AskAIOptions): Promise<s
           { role: 'user', content: opts.prompt },
         ],
         stream: true,
-        ...(s.provider === 'openai' ? { stream_options: { include_usage: true } } : {}),
+        // Zonder deze optie melden OpenAI én Gemini geen tokenverbruik in de
+        // stream, en toont het kostenlogboek nul invoertokens. Eigen aanbieders
+        // krijgen ze niet: niet elke OpenAI-kloon aanvaardt het veld.
+        ...(s.provider === 'openai' || s.provider === 'gemini' ? { stream_options: { include_usage: true } } : {}),
       }),
     });
   } catch (e) {
