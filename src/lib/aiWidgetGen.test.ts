@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWidgetGenPrompt, sanitizeGeneratedWidgets, sanitizeQuestion, sanitizeQuestions } from './aiWidgetGen';
+import { buildWidgetGenPrompt, resolveNumber, sanitizeGeneratedWidgets, sanitizeQuestion, sanitizeQuestions } from './aiWidgetGen';
 import type { QuizConfig } from './types';
 
 const mc = (extra: Record<string, unknown> = {}) => ({
@@ -107,5 +107,51 @@ describe('sanitizeQuestion: varianten van het antwoordveld (gezien bij Gemini)',
     expect(t2 && t2.type === 'tf' && t2.answer).toBe(true);
     expect(t3 && t3.type === 'tf' && t3.answer).toBe(false);
     expect(sanitizeQuestion({ type: 'tf', prompt: 'p' })).toBeNull();
+  });
+});
+
+describe('getalvragen: nooit stil een sleutel 0', () => {
+  const nr = (extra: Record<string, unknown>) => ({ type: 'number', prompt: 'Bereken de snelheid in m/s.', ...extra });
+
+  it('leest getallen in de vormen die modellen schrijven', () => {
+    expect(resolveNumber(2)).toBe(2);
+    expect(resolveNumber('2')).toBe(2);
+    expect(resolveNumber('2,5')).toBe(2.5);
+    expect(resolveNumber(' 2.5 ')).toBe(2.5);
+    expect(resolveNumber('2 m/s')).toBe(2);
+    expect(resolveNumber('−3 °C')).toBe(-3);
+    expect(resolveNumber('13,6 g/cm³')).toBe(13.6);
+    expect(resolveNumber('50%')).toBe(50);
+  });
+
+  it('weigert wat geen eenduidig getal is', () => {
+    expect(resolveNumber('')).toBeUndefined();
+    expect(resolveNumber('twee')).toBeUndefined();
+    expect(resolveNumber('2 of 3')).toBeUndefined();
+    expect(resolveNumber('100 m / 50 s')).toBeUndefined();
+    expect(resolveNumber(null)).toBeUndefined();
+    expect(resolveNumber(NaN)).toBeUndefined();
+  });
+
+  it('neemt het antwoord ook uit andere veldnamen en uit tekst', () => {
+    expect(sanitizeQuestion(nr({ answer: '2 m/s' }))).toMatchObject({ type: 'number', answer: 2 });
+    expect(sanitizeQuestion(nr({ correctAnswer: 2 }))).toMatchObject({ answer: 2 });
+    expect(sanitizeQuestion(nr({ answer: '0,5', tolerance: '0,05' }))).toMatchObject({ answer: 0.5, tolerance: 0.05 });
+  });
+
+  it('laat een getalvraag zonder bruikbare sleutel vallen in plaats van 0 te zetten', () => {
+    expect(sanitizeQuestion(nr({}))).toBeNull();
+    expect(sanitizeQuestion(nr({ answer: 'ongeveer twee' }))).toBeNull();
+  });
+
+  it('een echte sleutel 0 blijft 0', () => {
+    expect(sanitizeQuestion(nr({ answer: 0 }))).toMatchObject({ answer: 0 });
+  });
+
+  it('schuifvraag: antwoord buiten het bereik valt weg', () => {
+    const sl = (extra: Record<string, unknown>) => ({ type: 'slider', prompt: 'Temperatuur?', min: 0, max: 100, ...extra });
+    expect(sanitizeQuestion(sl({ answer: '37' }))).toMatchObject({ answer: 37 });
+    expect(sanitizeQuestion(sl({ answer: 140 }))).toBeNull();
+    expect(sanitizeQuestion(sl({}))).toBeNull();
   });
 });

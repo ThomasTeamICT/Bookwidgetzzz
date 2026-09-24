@@ -200,6 +200,23 @@ function firstDefined(q: Record<string, unknown>, keys: string[]): unknown {
   return undefined;
 }
 
+/**
+ * Een getal uit wat een model als antwoord schrijft: 2, "2", "2,5", "2 m/s",
+ * "−3 °C". Alles wat geen eenduidig getal is (tekst, twee getallen, leeg),
+ * geeft undefined. Nooit stil 0: een getalvraag met sleutel 0 keurt het juiste
+ * antwoord van een leerling af.
+ */
+export function resolveNumber(raw: unknown): number | undefined {
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : undefined;
+  if (typeof raw !== 'string') return undefined;
+  const m = /^\s*([-−–]?)\s*(\d+(?:[.,]\d+)?)\s*([^\d]*)$/.exec(raw);
+  if (!m) return undefined;
+  // Na het getal mag enkel een eenheid staan (m/s, °C, %, km/h, g/cm³ …).
+  if (m[3] && !/^[\p{L}/%°²³µ·.\s]*$/u.test(m[3])) return undefined;
+  const n = Number(`${m[1] ? '-' : ''}${m[2].replace(',', '.')}`);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 /** Juist/onjuist uit de gangbare vormen; undefined als het niet eenduidig is. */
 function resolveBoolean(raw: unknown): boolean | undefined {
   if (typeof raw === 'boolean') return raw;
@@ -338,16 +355,23 @@ export function sanitizeQuestion(raw: unknown, opts?: SanitizeOptions): Question
       if (items.length < 2) return null;
       return { ...base, type, items };
     }
-    case 'number':
-      return { ...base, type, answer: num(q.answer, 0), tolerance: Math.abs(num(q.tolerance, 0)) };
+    case 'number': {
+      // Zonder eenduidige sleutel valt de vraag weg: beter een vraag minder
+      // dan een vraag die het juiste antwoord fout rekent.
+      const answer = resolveNumber(firstDefined(q, ['answer', 'correctAnswer', 'correct', 'value', 'solution']));
+      if (answer === undefined) return null;
+      return { ...base, type, answer, tolerance: Math.abs(resolveNumber(q.tolerance) ?? 0) };
+    }
     case 'slider': {
-      const min = num(q.min, 0);
-      const max = Math.max(min + 1, num(q.max, 10));
+      const min = resolveNumber(q.min) ?? 0;
+      const max = Math.max(min + 1, resolveNumber(q.max) ?? 10);
+      const answer = resolveNumber(firstDefined(q, ['answer', 'correctAnswer', 'correct', 'value']));
+      if (answer === undefined || answer < min || answer > max) return null;
       return {
         ...base, type, min, max,
-        step: Math.max(0.001, num(q.step, 1)),
-        answer: Math.min(max, Math.max(min, num(q.answer, min))),
-        tolerance: Math.abs(num(q.tolerance, 0)),
+        step: Math.max(0.001, resolveNumber(q.step) ?? 1),
+        answer,
+        tolerance: Math.abs(resolveNumber(q.tolerance) ?? 0),
       };
     }
     case 'info':
