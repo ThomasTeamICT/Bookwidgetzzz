@@ -1,11 +1,15 @@
-// ── Service worker bouwen: pure hulpfuncties voor vite.config.ts ────────────
+// ── Service worker en buildcontrole: pure hulpfuncties voor vite.config.ts ──
 //
 // De Vite-plugin `offlineShell` (vite.config.ts) leest de bundel, laat deze
 // functies de voorcache en de lijst met bekende bestanden bepalen, en schrijft
 // daarmee dist/sw.js uit op basis van het sjabloon src/offline/serviceWorker.js.
 //
-// Geen Node- of browser-API's hier: de hash berekent vite.config.ts zelf.
-// Getest in src/lib/swBuild.test.ts, samen met het sjabloon.
+// De plugin `bundleBudget` gebruikt dezelfde statische sluiting van de
+// hoofdbundel als het kritieke leerlingpad, en `manualChunkFor` verdeelt
+// React en de Lucide-iconen over de chunks (zie onderaan).
+//
+// Geen Node- of browser-API's hier: bestanden lezen en hashen doet
+// vite.config.ts zelf. Getest in src/lib/swBuild.test.ts.
 
 /** Het deel van een Rollup-uitvoerbestand dat we nodig hebben. */
 export interface BundleFile {
@@ -45,6 +49,37 @@ export function assetRefs(html: string): string[] {
 }
 
 /**
+ * De enige js-chunk met `isEntry`: de hoofdbundel. Faalt luid bij nul of
+ * meer dan één: dan klopt geen enkele verdere aanname over de bundel.
+ */
+export function findEntry(files: readonly Pick<BundleFile, 'fileName' | 'type' | 'isEntry'>[], who: string): string {
+  const entries = files.filter((f) => f.type === 'chunk' && f.isEntry && f.fileName.endsWith('.js'));
+  if (entries.length !== 1) {
+    throw new Error(`${who}: verwachtte precies één hoofdbundel, vond er ${entries.length}`);
+  }
+  return entries[0].fileName;
+}
+
+/**
+ * De statische sluiting van een chunk: de chunk zelf plus, recursief, alles
+ * wat ze statisch importeert (`imports`). Dynamische imports tellen niet mee:
+ * die laden pas wanneer de code erom vraagt. Volgorde: de chunk eerst, daarna
+ * in de volgorde van ontdekking. Kringen zijn geen probleem.
+ */
+export function staticClosure(files: readonly Pick<BundleFile, 'fileName' | 'imports'>[], start: string): string[] {
+  const byName = new Map(files.map((f) => [f.fileName, f]));
+  const seen = new Set<string>();
+  const todo = [start];
+  while (todo.length > 0) {
+    const name = todo.shift()!;
+    if (seen.has(name)) continue;
+    seen.add(name);
+    for (const dep of byName.get(name)?.imports ?? []) todo.push(dep);
+  }
+  return [...seen];
+}
+
+/**
  * De app-schil: de hoofdbundel, haar statische imports en hun css, plus alles
  * waarnaar index.html verwijst. Faalt luid (throw) wanneer de bundel er anders
  * uitziet dan verwacht: liever een mislukte build dan een service worker die
@@ -52,24 +87,16 @@ export function assetRefs(html: string): string[] {
  */
 export function collectShell(files: readonly BundleFile[], indexHtml: string): { entry: string; files: string[] } {
   const byName = new Map(files.map((f) => [f.fileName, f]));
-  const entries = files.filter((f) => f.type === 'chunk' && f.isEntry && f.fileName.endsWith('.js'));
-  if (entries.length !== 1) {
-    throw new Error(`offlineShell: verwachtte precies één hoofdbundel, vond er ${entries.length}`);
-  }
-  const entry = entries[0].fileName;
+  const entry = findEntry(files, 'offlineShell');
   if (!entry.startsWith('assets/')) {
     throw new Error(`offlineShell: de hoofdbundel staat niet in assets/ (${entry})`);
   }
 
+  // Dezelfde sluiting als het budget op het kritieke leerlingpad (bundleBudget).
   const shell = new Set<string>();
-  const todo = [entry];
-  while (todo.length > 0) {
-    const name = todo.pop()!;
-    if (shell.has(name)) continue;
+  for (const name of staticClosure(files, entry)) {
     shell.add(name);
-    const chunk = byName.get(name);
-    for (const css of chunk?.importedCss ?? []) shell.add(css);
-    for (const dep of chunk?.imports ?? []) todo.push(dep);
+    for (const css of byName.get(name)?.importedCss ?? []) shell.add(css);
   }
 
   const refs = assetRefs(indexHtml);
@@ -107,4 +134,180 @@ export function renderServiceWorker(template: string, config: ServiceWorkerConfi
     '// (plugin offlineShell) uit src/offline/serviceWorker.js. Niet met de hand aanpassen.\n' +
     `// Versie ${config.version}\n`;
   return `${header}const BOOSTERZ = ${JSON.stringify(config)};\n\n${template}`;
+}
+
+// ── Buildcontrole: het kritieke leerlingpad ─────────────────────────────────
+//
+// Een leerling met een code moet de hoofdbundel én alles wat die statisch
+// importeert, downloaden voor er iets op het scherm staat. De plugin
+// `bundleBudget` (vite.config.ts) telt daarom de hele statische sluiting, niet
+// één bestand, en laat de build falen als er een chunk in belandt die er niet
+// hoort (bv. 'widget-icons' omdat een icoon van het leerlingpad in de lijst
+// ontbreekt).
+
+/** Het deel van een Rollup-chunk dat de buildcontrole nodig heeft. */
+export interface BudgetChunk {
+  fileName: string;
+  /** Rollups chunknaam: 'index', 'vendor', 'widget-icons', 'quiz', … */
+  name: string;
+  isEntry: boolean;
+  /** statische imports */
+  imports: readonly string[];
+  /** ongecomprimeerde grootte in bytes */
+  bytes: number;
+}
+
+export interface CriticalPathRules {
+  /** chunknamen die naast de hoofdbundel in de sluiting mogen zitten */
+  allowed: readonly string[];
+  /** chunknamen die zelf niets mogen importeren (stabiele hash, geen kring met de hoofdbundel) */
+  leaves: readonly string[];
+  /** budget voor de hele sluiting, in kB van 1000 bytes */
+  maxKb: number;
+  /** boven maxKb × hardFactor faalt de build; tussen maxKb en die grens volgt enkel een waarschuwing */
+  hardFactor: number;
+}
+
+export interface CriticalPathReport {
+  entry: string;
+  /** de sluiting, hoofdbundel eerst */
+  closure: string[];
+  /** grootte van de hele sluiting, in kB */
+  kb: number;
+  /** chunks in de sluiting die er niet horen */
+  intruders: BudgetChunk[];
+  /** deze laten de build falen */
+  errors: string[];
+  /** budget overschreden, maar binnen hardFactor: enkel melden */
+  warnings: string[];
+}
+
+export function checkCriticalPath(chunks: readonly BudgetChunk[], rules: CriticalPathRules): CriticalPathReport {
+  if (!(rules.maxKb > 0) || !(rules.hardFactor >= 1)) {
+    throw new Error('bundleBudget: ongeldig budget voor het kritieke leerlingpad');
+  }
+  const byName = new Map(chunks.map((c) => [c.fileName, c]));
+  const entry = findEntry(
+    chunks.map((c) => ({ fileName: c.fileName, type: 'chunk' as const, isEntry: c.isEntry })),
+    'bundleBudget'
+  );
+  const closure = staticClosure(chunks, entry);
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const intruders: BudgetChunk[] = [];
+  let bytes = 0;
+  for (const file of closure) {
+    const chunk = byName.get(file);
+    if (!chunk) {
+      errors.push(`het kritieke leerlingpad importeert ${file}, maar die chunk zit niet in de bundel`);
+      continue;
+    }
+    bytes += chunk.bytes;
+    if (file !== entry && !rules.allowed.includes(chunk.name)) intruders.push(chunk);
+  }
+  const toegelaten = ['de hoofdbundel', ...rules.allowed.map((n) => `'${n}'`)].join(' en ');
+  for (const c of intruders) {
+    errors.push(
+      `${c.fileName} (chunk '${c.name}') zit op het kritieke leerlingpad: de hoofdbundel laadt die statisch mee. ` +
+        `Daar horen enkel ${toegelaten}.`
+    );
+  }
+  for (const c of chunks) {
+    if (rules.leaves.includes(c.name) && c.imports.length > 0) {
+      errors.push(
+        `${c.fileName} (chunk '${c.name}') importeert ${c.imports.join(', ')}. Die chunk mag niets importeren: ` +
+          'anders verandert haar hash bij elke codewijziging en ontstaat er een kring met de hoofdbundel.'
+      );
+    }
+  }
+  const kb = bytes / 1000;
+  const delen = closure.map((f) => byName.get(f)?.name ?? f).join(' + ');
+  const melding = `kritieke leerlingpad (${delen}): ${kb.toFixed(1)} kB > budget ${rules.maxKb} kB`;
+  if (kb > rules.maxKb * rules.hardFactor) {
+    errors.push(`${melding}, meer dan ${Math.round((rules.hardFactor - 1) * 100)} % te veel`);
+  } else if (kb > rules.maxKb) {
+    warnings.push(melding);
+  }
+  return { entry, closure, kb, intruders, errors, warnings };
+}
+
+// ── Chunkverdeling: React en Lucide ─────────────────────────────────────────
+//
+// Zonder hulp maakt Rollup van elk Lucide-icoon dat alleen lui geladen code
+// gebruikt een eigen minichunk (0,3 à 0,6 kB): een quiz starten kostte zo 32
+// verzoeken. En React zat in de hoofdbundel, waardoor elke chunk met
+// CommonJS-code (mammoth, jsQR) die importeerde en bij elke uitrol een nieuwe
+// hash kreeg. Daarom:
+//  - 'vendor': React, React DOM, scheduler, Rollups CommonJS-hulpjes, de basis
+//    van lucide-react (dist/esm/ buiten icons/) en de iconen van het
+//    leerlingpad. Verandert alleen bij een nieuwe versie van die pakketten of
+//    een gewijzigde lijst iconen, en importeert zelf niets;
+//  - 'widget-icons': alle andere Lucide-iconen, in één lui geladen chunk.
+
+export const VENDOR_CHUNK = 'vendor';
+export const WIDGET_ICONS_CHUNK = 'widget-icons';
+
+/**
+ * Leest de barrel van lucide-react (dist/esm/lucide-react.mjs): elke
+ * exportnaam, ook de aliassen (Grid2X2Check, Grid2x2CheckIcon, LucideX…),
+ * met het bestand in icons/ waar hij vandaan komt.
+ */
+export function parseLucideExports(src: string): Map<string, string> {
+  const out = new Map<string, string>();
+  const re = /export\s*\{([^}]*)\}\s*from\s*['"]\.\/icons\/([\w.-]+\.mjs)['"]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(src))) {
+    if (m[2] === 'index.mjs') continue;
+    for (const spec of m[1].matchAll(/\bdefault\s+as\s+(\w+)/g)) out.set(spec[1], m[2]);
+  }
+  return out;
+}
+
+/** De bestanden in icons/ voor een lijst icoonnamen. Faalt luid bij een onbekende naam. */
+export function iconFiles(names: readonly string[], exports: ReadonlyMap<string, string>): Set<string> {
+  const unknown = names.filter((n) => !exports.has(n));
+  if (unknown.length > 0) {
+    throw new Error(`vite.config: onbekend Lucide-icoon: ${unknown.join(', ')}. Bestaat het nog in deze versie van lucide-react?`);
+  }
+  return new Set(names.map((n) => exports.get(n)!));
+}
+
+/**
+ * Voor `build.rollupOptions.output.manualChunks`. `id` is een modulepad zoals
+ * Rollup het doorgeeft (absoluut, soms met een \0-voorvoegsel of een ?query).
+ * `eagerIconFiles`: bestandsnamen in icons/ van de iconen op het leerlingpad.
+ * `undefined`: Rollup beslist zelf.
+ */
+export function manualChunkFor(id: string, eagerIconFiles: ReadonlySet<string>): string | undefined {
+  const p = id.replace(/\\/g, '/');
+  if (p.includes('commonjsHelpers')) return VENDOR_CHUNK;
+  if (/\/node_modules\/(?:react|react-dom|scheduler)\//.test(p)) return VENDOR_CHUNK;
+  const lucide = /\/node_modules\/lucide-react\/dist\/esm\/([^?]+)/.exec(p);
+  if (!lucide) return undefined;
+  const rest = lucide[1];
+  // De barrel icons/index.mjs heeft zelf geen code; in 'vendor' trekt ze niets
+  // mee, want elk icoonbestand krijgt hieronder zelf een chunk.
+  if (!rest.startsWith('icons/') || rest === 'icons/index.mjs') return VENDOR_CHUNK;
+  return eagerIconFiles.has(rest.slice('icons/'.length)) ? VENDOR_CHUNK : WIDGET_ICONS_CHUNK;
+}
+
+/**
+ * De namen die een (getranspileerde) module uit 'lucide-react' importeert of
+ * doorgeeft, zonder type-imports. Alleen voor de diagnose in bundleBudget:
+ * welk icoon ontbreekt in de lijst, of staat er onnodig in.
+ */
+export function lucideImportNames(code: string): string[] {
+  const names = new Set<string>();
+  const re = /\b(?:import|export)\s*(type\s+)?\{([^}]*)\}\s*from\s*['"]lucide-react['"]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(code))) {
+    if (m[1]) continue;
+    for (const raw of m[2].split(',')) {
+      const spec = raw.trim();
+      if (!spec || /^type\s/.test(spec)) continue;
+      const name = spec.split(/\s+as\s+/)[0].trim();
+      if (/^\w+$/.test(name)) names.add(name);
+    }
+  }
+  return [...names];
 }

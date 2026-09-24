@@ -1,10 +1,25 @@
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, type Logger, type Plugin, type Rollup } from 'vite';
 import react from '@vitejs/plugin-react';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { NEVER_PRECACHE, PRECACHE_PUBLIC, collectShell, knownFiles, renderServiceWorker } from './src/lib/swBuild';
+import { gzipSync } from 'node:zlib';
+import {
+  NEVER_PRECACHE,
+  PRECACHE_PUBLIC,
+  VENDOR_CHUNK,
+  WIDGET_ICONS_CHUNK,
+  checkCriticalPath,
+  collectShell,
+  iconFiles,
+  knownFiles,
+  lucideImportNames,
+  manualChunkFor,
+  parseLucideExports,
+  renderServiceWorker,
+} from './src/lib/swBuild';
 
 /**
  * Bundelbudget — bewaken i.p.v. onderdrukken.
@@ -15,20 +30,55 @@ import { NEVER_PRECACHE, PRECACHE_PUBLIC, collectShell, knownFiles, renderServic
  * het bouwen. Een budget verhogen mag — maar dan bewust, in deze lijst, niet per
  * ongeluk.
  *
- * Waarom deze getallen (gemeten, ongecomprimeerd):
- *  - hoofdbundel: react + react-dom + react-router + de leerlingroutes
- *    (/speel, /open, /meedoen). Dit is wat een leerling met een code MOET
- *    downloaden voor er iets op het scherm staat — het kritieke pad.
- *    September 2026: van 320 naar 330 kB voor de Lucide-iconen van de 38
- *    widgetsoorten (±28 kB; de speler toont het icoon van de soort). De
- *    leerkrachtschil en de startpagina gingen tegelijk uit de hoofdbundel.
- *    Netto: 306 → 327 kB, of 97,8 → 102,5 kB gzip.
+ * Het kritieke leerlingpad (CRITICAL_PATH) is geen bestand maar een som: de
+ * hoofdbundel (index-*.js) plus alles wat ze statisch importeert, recursief.
+ * Dat is wat een leerling met een code MOET downloaden voor er iets op het
+ * scherm staat. Sinds de chunk 'vendor' bestaat, zijn dat twee bestanden;
+ * één bestand meten zou de helft missen. Daarom:
+ *  - het budget telt de hele statische sluiting van de hoofdbundel;
+ *  - daarin mogen alleen de hoofdbundel en 'vendor' zitten. Belandt er iets
+ *    anders in (bv. 'widget-icons', omdat een icoon van het leerlingpad in
+ *    EAGER_ICON_NAMES ontbreekt), dan faalt de build;
+ *  - 'vendor' mag zelf niets importeren (zie manualChunkFor in swBuild.ts);
+ *  - meer dan 5 % over het budget laat de build falen; minder is een
+ *    waarschuwing, zoals bij de andere budgetten. De uitrol faalt alleen op
+ *    fouten.
+ *
+ * Waarom deze getallen (gemeten, ongecomprimeerd, kB = 1000 bytes):
+ *  - kritieke leerlingpad: react + react-dom + react-router + lucide-basis en
+ *    de iconen van het leerlingpad + de leerlingroutes (/speel, /open,
+ *    /meedoen). Geschiedenis: 306 kB → 327 kB (sep. 2026, iconen van de 38
+ *    widgetsoorten; leerkrachtschil en startpagina eruit) → 329,1 kB (104,1 kB
+ *    gzip), alles in één index-*.js. Met 'vendor' en 'widget-icons' (sep.
+ *    2026): 155,3 + 169,2 = 324,5 kB (102,5 kB gzip). Na de reviewronde
+ *    (voorbeeldmateriaal uit het leerlingpad, focus in het leespaneel):
+ *    155,7 + 169,2 = 325,0 kB (102,6 kB gzip). Het budget ligt 1 kB
+ *    boven die meting, zodat elke groei meteen opvalt; wie meer nodig heeft,
+ *    verhoogt het bewust, hier. Let op: vóór sep. 2026 mat dit budget vóór
+ *    Vite de preloadlijst invulde, dus ±9 kB te licht (zie order: 'post').
+ *  - vendor: React, React DOM, scheduler, de lucide-basis en de iconen van het
+ *    leerlingpad, 169,2 kB. Groeit alleen bij een nieuwe versie van die
+ *    pakketten of een langere EAGER_ICON_NAMES.
+ *  - widget-icons: alle iconen van de lui geladen editors en pagina's samen
+ *    (64,3 kB); elk nieuw icoon kost er ±0,4 kB bij.
  *  - pdf.js: wordt pas opgehaald wanneer iemand echt een pdf opent; groot,
  *    maar nooit onderdeel van het leerlingpad.
  *  - de rest: paginachunks en widgetmodules; die horen klein te blijven.
  */
+const CRITICAL_PATH = {
+  label: 'hoofdbundel (kritieke leerlingpad)',
+  maxKb: 326,
+  /** boven 5 % te veel faalt de build */
+  hardFactor: 1.05,
+  /** wat naast de hoofdbundel in de statische sluiting mag zitten */
+  allowed: [VENDOR_CHUNK],
+  /** wat zelf niets mag importeren */
+  leaves: [VENDOR_CHUNK],
+};
+/** Per chunk; de hoofdbundel zelf telt in CRITICAL_PATH. */
 const BUDGETS: { test: RegExp; label: string; maxKb: number }[] = [
-  { test: /^assets\/index-[\w-]+\.js$/, label: 'hoofdbundel (kritieke leerlingpad)', maxKb: 330 },
+  { test: /^assets\/vendor-[\w-]+\.js$/, label: 'vendor (React, Lucide-basis, iconen van het leerlingpad)', maxKb: 170.2 },
+  { test: /^assets\/widget-icons-[\w-]+\.js$/, label: 'widget-icons (lui geladen)', maxKb: 80 },
   { test: /^assets\/pdf-[\w-]+\.js$/, label: 'pdf.js (lui geladen)', maxKb: 560 },
   { test: /mammoth/i, label: 'mammoth (.docx-import, lui geladen)', maxKb: 720 },
   { test: /jsqr/i, label: 'jsQR (QR-scanner, lui geladen)', maxKb: 140 },
@@ -37,41 +87,167 @@ const BUDGETS: { test: RegExp; label: string; maxKb: number }[] = [
 const DEFAULT_MAX_KB = 80;
 
 function bundleBudget(): Plugin {
+  let logger: Logger | undefined;
+  let root = '';
   return {
     name: 'wf-bundle-budget',
     apply: 'build',
-    generateBundle(_options, bundle) {
-      const overschrijdingen: string[] = [];
-      for (const [naam, output] of Object.entries(bundle)) {
-        if (output.type !== 'chunk' || !naam.endsWith('.js')) continue;
-        // kB zoals Vite ze rapporteert (delen door 1000), zodat de getallen
-        // hierboven één op één met de buildtabel overeenkomen.
-        const kb = Buffer.byteLength(output.code) / 1000;
-        const budget = BUDGETS.find((b) => b.test.test(naam));
-        const max = budget?.maxKb ?? DEFAULT_MAX_KB;
-        if (kb > max) {
-          overschrijdingen.push(
-            `  ${naam} — ${kb.toFixed(1)} kB > budget ${max} kB${budget ? ` (${budget.label})` : ''}`
+    configResolved(config) {
+      logger = config.logger;
+      root = config.root;
+    },
+    // order 'post': pas NA Vite's eigen generateBundle (vite:build-import-analysis)
+    // staat de preloadlijst (__vite__mapDeps) in de code. Zonder 'post' mat dit
+    // budget de hoofdbundel ±9 kB te licht (320 i.p.v. 329 kB).
+    generateBundle: {
+      order: 'post',
+      handler(_options, bundle) {
+        const chunks = Object.values(bundle).filter(
+          (o): o is Rollup.OutputChunk => o.type === 'chunk' && o.fileName.endsWith('.js')
+        );
+        // kB = 1000 bytes, zoals Vite ze rapporteert, zodat de getallen
+        // hierboven met de buildtabel overeenkomen.
+        const bytes = (c: Rollup.OutputChunk) => Buffer.byteLength(c.code);
+
+        // 1. Het kritieke leerlingpad: de statische sluiting van de hoofdbundel.
+        let pad: ReturnType<typeof checkCriticalPath>;
+        try {
+          pad = checkCriticalPath(
+            chunks.map((c) => ({ fileName: c.fileName, name: c.name, isEntry: c.isEntry, imports: c.imports, bytes: bytes(c) })),
+            CRITICAL_PATH
+          );
+        } catch (err) {
+          this.error(err instanceof Error ? err.message : String(err));
+        }
+        const iconen = iconsOnCriticalPath(this, bundle, pad.closure, root);
+
+        // 2. De andere chunks, elk tegen hun eigen budget.
+        const overschrijdingen = pad.warnings.map((w) => `  ${w} (${CRITICAL_PATH.label})`);
+        for (const c of chunks) {
+          if (c.fileName === pad.entry) continue; // telt mee in het kritieke leerlingpad
+          const kb = bytes(c) / 1000;
+          const budget = BUDGETS.find((b) => b.test.test(c.fileName));
+          const max = budget?.maxKb ?? DEFAULT_MAX_KB;
+          if (kb > max) {
+            overschrijdingen.push(`  ${c.fileName} — ${kb.toFixed(1)} kB > budget ${max} kB${budget ? ` (${budget.label})` : ''}`);
+          }
+        }
+        if (overschrijdingen.length > 0) {
+          this.warn(
+            `\nBundelbudget overschreden:\n${overschrijdingen.join('\n')}\n` +
+              'Snoei de chunk, of verhoog het budget bewust in vite.config.ts (CRITICAL_PATH of BUDGETS).\n'
           );
         }
-      }
-      if (overschrijdingen.length > 0) {
-        this.warn(
-          `\nBundelbudget overschreden:\n${overschrijdingen.join('\n')}\n` +
-            'Snoei de chunk, of verhoog het budget bewust in vite.config.ts (BUDGETS).\n'
+        if (iconen.overbodig.length > 0) {
+          this.warn(
+            `EAGER_ICON_NAMES noemt iconen die geen module op het leerlingpad gebruikt: ${iconen.overbodig.join(', ')}. ` +
+              "Ze zitten zo onnodig in 'vendor', op het kritieke leerlingpad. Haal ze uit de lijst in vite.config.ts."
+          );
+        }
+
+        // 3. Fouten laten de build (en dus de uitrol) falen.
+        if (pad.errors.length > 0) {
+          const hint = pad.intruders.some((c) => c.name === WIDGET_ICONS_CHUNK)
+            ? `\nIconen op het leerlingpad die niet in EAGER_ICON_NAMES (vite.config.ts) staan: ${
+                iconen.ontbrekend.join(', ') || '(niet gevonden; zoek imports uit lucide-react in de hoofdbundel)'
+              }.\nZet ze in de lijst als ze echt op het leerlingpad horen; anders hoort de module die ze gebruikt daar niet.`
+            : '';
+          this.error(`\nBuildcontrole kritieke leerlingpad:\n${pad.errors.map((e) => `  ${e}`).join('\n')}${hint}\n`);
+        }
+
+        const gz = pad.closure.reduce((s, f) => {
+          const c = bundle[f];
+          return s + (c?.type === 'chunk' ? gzipSync(c.code).length : 0);
+        }, 0);
+        logger?.info(
+          `Kritieke leerlingpad: ${pad.closure.map((f) => f.replace(/^assets\//, '')).join(' + ')} = ` +
+            `${pad.kb.toFixed(1)} kB (gzip ${(gz / 1000).toFixed(1)} kB), budget ${CRITICAL_PATH.maxKb} kB`
         );
-      }
+      },
     },
   };
 }
+
+/**
+ * Welke Lucide-iconen importeert de eigen code op het leerlingpad? Alleen voor
+ * de meldingen: de beslissing zelf valt op de sluiting (checkCriticalPath).
+ *  - ontbrekend: gebruikt op het leerlingpad, maar niet in EAGER_ICON_NAMES
+ *    (dus in 'widget-icons'), met de module die het gebruikt;
+ *  - overbodig: in EAGER_ICON_NAMES, maar door geen module op het leerlingpad
+ *    geïmporteerd.
+ */
+function iconsOnCriticalPath(
+  ctx: Rollup.PluginContext,
+  bundle: Rollup.OutputBundle,
+  closure: readonly string[],
+  root: string
+): { ontbrekend: string[]; overbodig: string[] } {
+  const gebruikt = new Set<string>();
+  const ontbrekend: string[] = [];
+  for (const file of closure) {
+    const chunk = bundle[file];
+    if (chunk?.type !== 'chunk') continue;
+    for (const id of chunk.moduleIds) {
+      const p = id.replace(/\\/g, '/');
+      if (p.startsWith('\0') || p.includes('/node_modules/')) continue;
+      const code = ctx.getModuleInfo(id)?.code;
+      if (!code) continue;
+      for (const naam of lucideImportNames(code)) {
+        const icoon = LUCIDE_EXPORTS.get(naam);
+        if (!icoon) continue;
+        gebruikt.add(icoon);
+        if (!EAGER_ICON_FILES.has(icoon)) ontbrekend.push(`${naam} (${path.relative(root, id)})`);
+      }
+    }
+  }
+  const overbodig = EAGER_ICON_NAMES.filter((n) => !gebruikt.has(LUCIDE_EXPORTS.get(n)!));
+  return { ontbrekend, overbodig };
+}
+
+// ── Lucide-iconen: welke op het leerlingpad, welke in 'widget-icons' ────────
+//
+// De verdeling zelf staat in manualChunkFor (src/lib/swBuild.ts). Deze lijst
+// noemt de iconen die de eigen code op het leerlingpad (hoofdbundel) gebruikt:
+// die gaan mee in 'vendor'. Alle andere iconen gaan samen in 'widget-icons',
+// in plaats van ±74 minichunks van 0,3 à 0,6 kB.
+//
+// De buildcontrole bewaakt de lijst in twee richtingen:
+//  - ontbreekt een icoon, dan importeert de hoofdbundel 'widget-icons' en
+//    faalt de build, met de naam van het icoon en de module die het gebruikt;
+//  - staat er een icoon te veel in, dan volgt een waarschuwing: het kost
+//    bytes op het kritieke pad.
+// Namen zoals lucide-react ze exporteert; aliassen (Grid2X2Check) mogen ook.
+const EAGER_ICON_NAMES = [
+  // src/widgets/registry.tsx: icoon per widgetsoort, getoond aan de speler
+  'ArrowLeftRight', 'Brain', 'Brush', 'Calculator', 'CalendarCheck', 'ChartPie', 'ChartSpline',
+  'CircleQuestionMark', 'Clapperboard', 'Columns2', 'Compass', 'Dices', 'FerrisWheel', 'FileText',
+  'Film', 'GalleryHorizontal', 'Grid2x2Check', 'Grid3x3', 'Headphones', 'Keyboard', 'LayoutGrid',
+  'Link2', 'ListChecks', 'MapPin', 'MonitorPlay', 'Network', 'PencilRuler', 'Piano', 'Puzzle',
+  'ScanEye', 'Shuffle', 'SquareStack', 'TextSearch', 'Ticket', 'Timeline', 'Timer', 'Vote', 'ZoomIn',
+  // src/components/ui.tsx (meldingen) en src/pages/OpenSharedPage.tsx
+  'Check', 'Copy', 'ImagePlus', 'TriangleAlert', 'X',
+];
+
+/** dist/esm/lucide-react.mjs van de geïnstalleerde lucide-react: de barrel met alle namen. */
+function lucideBarrel(): string {
+  const pkgPath = createRequire(import.meta.url).resolve('lucide-react/package.json');
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as { module?: string };
+  if (!pkg.module) throw new Error('vite.config: lucide-react heeft geen "module"-veld meer; kijk de iconenverdeling na');
+  return path.join(path.dirname(pkgPath), pkg.module);
+}
+const LUCIDE_EXPORTS = parseLucideExports(readFileSync(lucideBarrel(), 'utf8'));
+/** Faalt luid bij een naam die lucide-react niet (meer) kent. */
+const EAGER_ICON_FILES = iconFiles(EAGER_ICON_NAMES, LUCIDE_EXPORTS);
 
 /**
  * Offline-schil: schrijft bij elke build dist/sw.js uit.
  *
  * Het sjabloon staat in src/offline/serviceWorker.js (strategie en uitleg
  * daar). Deze plugin vult het aan met wat pas na het bundelen vastligt:
- *  - de voorcache: index.html, de hoofdbundel (js + css), het manifest en het
- *    icoon. Lazy chunks (pagina's, widgets, pdf.js, mammoth, jsQR) en de
+ *  - de voorcache: index.html, het kritieke leerlingpad (de hoofdbundel en
+ *    'vendor', met hun css), het manifest en het icoon: dezelfde statische
+ *    sluiting als in bundleBudget. Lazy chunks (pagina's, widgets,
+ *    'widget-icons', pdf.js, mammoth, jsQR) en de
  *    voorbeeldcursus komen er niet in; die bewaart de service worker pas
  *    wanneer ze voor het eerst gebruikt worden;
  *  - de lijst van alle bestanden van deze build, om bij een update op te ruimen;
@@ -158,5 +334,13 @@ export default defineConfig({
     // Nu ligt ze net boven de pdf.js-chunk (de enige legitiem grote chunk), en
     // bewaakt het budget hierboven de rest — inclusief het leerlingpad.
     chunkSizeWarningLimit: 560,
+    rollupOptions: {
+      output: {
+        // 'vendor' en 'widget-icons': zie manualChunkFor in src/lib/swBuild.ts
+        // en EAGER_ICON_NAMES hierboven. De buildcontrole (bundleBudget)
+        // bewaakt dat alleen 'vendor' mee op het kritieke leerlingpad komt.
+        manualChunks: (id) => manualChunkFor(id, EAGER_ICON_FILES),
+      },
+    },
   },
 });
