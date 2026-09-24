@@ -1,5 +1,10 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { NEVER_PRECACHE, PRECACHE_PUBLIC, collectShell, knownFiles, renderServiceWorker } from './src/lib/swBuild';
 
 /**
  * Bundelbudget — bewaken i.p.v. onderdrukken.
@@ -60,10 +65,94 @@ function bundleBudget(): Plugin {
   };
 }
 
+/**
+ * Offline-schil: schrijft bij elke build dist/sw.js uit.
+ *
+ * Het sjabloon staat in src/offline/serviceWorker.js (strategie en uitleg
+ * daar). Deze plugin vult het aan met wat pas na het bundelen vastligt:
+ *  - de voorcache: index.html, de hoofdbundel (js + css), het manifest en het
+ *    icoon. Lazy chunks (pagina's, widgets, pdf.js, mammoth, jsQR) en de
+ *    voorbeeldcursus komen er niet in; die bewaart de service worker pas
+ *    wanneer ze voor het eerst gebruikt worden;
+ *  - de lijst van alle bestanden van deze build, om bij een update op te ruimen;
+ *  - een versie: een hash over het sjabloon, de bestandsnamen (die zelf al
+ *    een inhoudshash dragen), index.html en de openbare bestanden in de
+ *    voorcache. Zelfde build = zelfde sw.js, dus geen onnodige update.
+ *
+ * `enforce: 'post'`: dan heeft Vite index.html al in de bundel gezet. sw.js is
+ * een 'asset', geen chunk: het bundelbudget telt het niet mee.
+ */
+function offlineShell(): Plugin {
+  const template = fileURLToPath(new URL('./src/offline/serviceWorker.js', import.meta.url));
+  let publicDir = '';
+  return {
+    name: 'boosterz-offline-shell',
+    apply: 'build',
+    enforce: 'post',
+    configResolved(config) {
+      publicDir = config.publicDir;
+    },
+    buildStart() {
+      this.addWatchFile(template); // `vite build --watch`: ook bij een gewijzigd sjabloon opnieuw bouwen
+    },
+    generateBundle(_options, bundle) {
+      const html = bundle['index.html'];
+      if (!html || html.type !== 'asset') this.error('offlineShell: index.html ontbreekt in de bundel');
+      if (bundle['sw.js']) this.error('offlineShell: er bestaat al een sw.js in de bundel');
+      const indexHtml = typeof html.source === 'string' ? html.source : Buffer.from(html.source).toString('utf8');
+
+      const shell = collectShell(
+        Object.values(bundle).map((o) =>
+          o.type === 'chunk'
+            ? { fileName: o.fileName, type: o.type, isEntry: o.isEntry, imports: o.imports, importedCss: [...(o.viteMetadata?.importedCss ?? [])] }
+            : { fileName: o.fileName, type: o.type }
+        ),
+        indexHtml
+      );
+      const publicFiles = listFiles(publicDir);
+      const precachePublic = PRECACHE_PUBLIC.filter((f) => publicFiles.includes(f));
+      const precache = [...shell.files, ...precachePublic];
+      const zwaar = precache.filter((f) => NEVER_PRECACHE.test(f));
+      if (zwaar.length > 0) {
+        this.warn(`offlineShell: zware bibliotheek in de voorcache (statisch geïmporteerd?): ${zwaar.join(', ')}`);
+      }
+      const known = knownFiles(Object.keys(bundle), publicFiles);
+      const source = readFileSync(template, 'utf8');
+
+      const hash = createHash('sha256');
+      hash.update(source).update('\0').update(JSON.stringify({ entry: shell.entry, precache, known }));
+      hash.update('\0').update(indexHtml);
+      for (const f of precachePublic) hash.update('\0').update(readFileSync(path.join(publicDir, f)));
+      const version = hash.digest('hex').slice(0, 12);
+
+      this.emitFile({
+        type: 'asset',
+        fileName: 'sw.js',
+        source: renderServiceWorker(source, { version, entry: shell.entry, precache, known }),
+      });
+    },
+  };
+}
+
+/** Alle bestanden onder een map, relatief en met '/' als scheiding. */
+function listFiles(dir: string): string[] {
+  if (!dir || !existsSync(dir)) return [];
+  const out: string[] = [];
+  const walk = (sub: string) => {
+    for (const d of readdirSync(path.join(dir, sub), { withFileTypes: true })) {
+      const rel = sub ? `${sub}/${d.name}` : d.name;
+      if (d.isDirectory()) walk(rel);
+      else if (d.isFile()) out.push(rel);
+    }
+  };
+  walk('');
+  return out.sort();
+}
+
 // Relative base zodat de build ook werkt op GitHub Pages of een subpad.
 export default defineConfig({
   base: './',
-  plugins: [react(), bundleBudget()],
+  plugins: [react(), bundleBudget(), offlineShell()],
   build: {
     // Vite's eigen grens stond op 1200 kB: dat onderdrukte élke waarschuwing.
     // Nu ligt ze net boven de pdf.js-chunk (de enige legitiem grote chunk), en

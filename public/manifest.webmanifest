@@ -1,0 +1,14 @@
+{
+  "name": "Boosterz",
+  "short_name": "Boosterz",
+  "description": "Geef je les een boost: interactieve oefeningen, spelletjes en digitale cursussen voor je klas.",
+  "lang": "nl-BE",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f5fc",
+  "theme_color": "#5b3df5",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

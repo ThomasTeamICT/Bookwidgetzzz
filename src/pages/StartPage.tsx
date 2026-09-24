@@ -15,6 +15,7 @@ import { CATEGORIES, getTypeDef, WIDGET_TYPES } from '../widgets/registry';
 import { TypeTile } from '../components/TypeTile';
 import { AIIcon, AssignIcon, CourseIcon, ResultsIcon, ShareIcon, StudentIcon } from '../components/icons';
 import '../styles/start.css';
+import { CategoryIcon } from '../components/CategoryIcon';
 
 function plural(n: number, singular: string, meervoud: string): string {
   return n === 1 ? singular : meervoud;
@@ -261,7 +262,7 @@ function FirstVisit() {
         <h2 id="start-types-title">{WIDGET_TYPES.length} soorten oefeningen en spelletjes</h2>
         {CATEGORIES.map((cat) => (
           <div key={cat.id} className="start-cat">
-            <h3><cat.Icon size={17} aria-hidden="true" /> {cat.name}</h3>
+            <h3><CategoryIcon id={cat.id} size={17} /> {cat.name}</h3>
             <div className="start-type-row">
               {WIDGET_TYPES.filter((t) => t.category === cat.id).map((t) => (
                 <Link key={t.id} to={`/nieuw?type=${t.id}`} className="start-type-chip">

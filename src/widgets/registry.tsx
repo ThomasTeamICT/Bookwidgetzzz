@@ -9,7 +9,6 @@ import {
   ChartSpline,
   CircleQuestionMark,
   Clapperboard,
-  ClipboardCheck,
   Columns2,
   Compass,
   Dices,
@@ -17,11 +16,9 @@ import {
   FileText,
   Film,
   GalleryHorizontal,
-  Gamepad2,
   Grid2x2Check,
   Grid3x3,
   Headphones,
-  Image as ImageIcon,
   Keyboard,
   LayoutGrid,
   Link2,
@@ -33,9 +30,7 @@ import {
   Piano,
   Puzzle,
   ScanEye,
-  School,
   Shuffle,
-  SquareFunction,
   SquareStack,
   TextSearch,
   Ticket,
@@ -86,12 +81,13 @@ export interface WidgetTypeDef {
   Player: React.ComponentType<PlayerProps<any>>;
 }
 
-export const CATEGORIES: { id: WidgetCategory; name: string; Icon: LucideIcon }[] = [
-  { id: 'test', name: 'Toetsen & opdrachten', Icon: ClipboardCheck },
-  { id: 'game', name: 'Spelletjes', Icon: Gamepad2 },
-  { id: 'picture', name: 'Beeld & verkennen', Icon: ImageIcon },
-  { id: 'math', name: 'Rekenen', Icon: SquareFunction },
-  { id: 'classroom', name: 'Klashulpjes', Icon: School },
+/** Categorieën van widgetsoorten. Het icoon per categorie staat in components/CategoryIcon. */
+export const CATEGORIES: { id: WidgetCategory; name: string }[] = [
+  { id: 'test', name: 'Toetsen & opdrachten' },
+  { id: 'game', name: 'Spelletjes' },
+  { id: 'picture', name: 'Beeld & verkennen' },
+  { id: 'math', name: 'Rekenen' },
+  { id: 'classroom', name: 'Klashulpjes' },
 ];
 
 const TYPE_DEFS: Omit<WidgetTypeDef, 'color'>[] = [

@@ -15,6 +15,7 @@ import type { Widget, WidgetTypeId } from '../lib/types';
 import { TypeTile } from '../components/TypeTile';
 import { AIIcon, DeleteIcon, SearchIcon } from '../components/icons';
 import '../styles/materiaal.css';
+import { CategoryIcon } from '../components/CategoryIcon';
 
 /** "HERHAALVRAAG 1" → "Herhaalvraag 1": leesbaar label voor een invulveld. */
 function readableLabel(placeholder: string): string {
@@ -258,7 +259,7 @@ export function NewWidgetPage() {
         if (inCat.length === 0) return null;
         return (
           <section key={cat.id} style={{ marginBottom: 26 }} aria-labelledby={`cat-${cat.id}`}>
-            <h2 id={`cat-${cat.id}`} className="mat-section-title" style={{ marginBottom: 12 }}><cat.Icon size={20} /> {cat.name}</h2>
+            <h2 id={`cat-${cat.id}`} className="mat-section-title" style={{ marginBottom: 12 }}><CategoryIcon id={cat.id} size={20} /> {cat.name}</h2>
             <div className="type-grid">
               {inCat.map((t) => (
                 <button key={t.id} type="button" className="card type-card" onClick={() => create(t.id)}>

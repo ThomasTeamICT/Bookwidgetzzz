@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect } from 'react';
-import { createHashRouter, RouterProvider } from 'react-router-dom';
+import { createHashRouter, RouterProvider, useRouteError } from 'react-router-dom';
 import { ToastProvider } from './components/ui';
 import { PlayerPage } from './pages/PlayerPage';
 import { OpenSharedPage } from './pages/OpenSharedPage';
@@ -7,25 +7,36 @@ import { JoinPage } from './pages/JoinPage';
 import { BrandMark } from './components/Brand';
 import { migrateDataUrls, pruneOrphanMedia } from './lib/mediaStore';
 import { onStorageChange } from './lib/storage';
+import { chunkFailureAction, offlineError, reloadFlag } from './lib/offline';
+import { LoadFailure, isOnlineNow, sessionStore } from './offline/LoadFailure';
 
 // ── Code-splitting: zwaardere pagina's laden pas wanneer ze nodig zijn ──────
 // (De leerlingroutes /speel, /open en /meedoen blijven in de hoofdbundel:
 // die moeten meteen openen, ook op tragere schoolnetwerken.)
 
-// Na een nieuwe deploy bestaan de oude (gehashte) chunk-URL's niet meer; in een
-// tab die nog openstond zou elke klik op een lazy route dan stranden. Bij een
-// mislukte import herladen we daarom éénmalig automatisch. Een sessionStorage-
-// vlag per chunk voorkomt een reload-lus; na een geslaagde import wissen we ze.
+// Een lazy chunk kan om twee redenen niet laden:
+//  - er is geen netwerk en dit deel werd op dit toestel nog nooit geopend (de
+//    service worker heeft het dus niet bewaard). Herladen helpt dan niet: dat
+//    eindigt in een lus of op de foutpagina van de browser. We tonen de
+//    offline-melding (LoadError hieronder);
+//  - na een nieuwe deploy bestaan de oude (gehashte) chunk-URL's niet meer; in
+//    een tab die nog openstond zou elke klik op een lazy route stranden. Dan
+//    herladen we éénmalig automatisch. Een sessionStorage-vlag per chunk
+//    voorkomt een lus; na een geslaagde import wissen we ze. Kan de vlag niet
+//    bewaard worden, dan herladen we niet (geen lus mogelijk).
+// Welk geval het is, beslist een echte netwerkcheck (zie lib/offline.ts).
 function lazyRetry<T extends React.ComponentType<any>>(load: () => Promise<{ default: T }>, chunk: string) {
   return lazy(async () => {
     const flag = `wf.chunkreload.${chunk}`;
+    const store = sessionStore();
     try {
       const mod = await load();
-      sessionStorage.removeItem(flag);
+      reloadFlag(store, flag, 'clear');
       return mod;
     } catch (err) {
-      if (sessionStorage.getItem(flag) !== '1') {
-        sessionStorage.setItem(flag, '1');
+      const action = chunkFailureAction(await isOnlineNow(), reloadFlag(store, flag, 'read'));
+      if (action === 'offline') throw offlineError(`Offline: ${chunk}`, err);
+      if (action === 'reload' && reloadFlag(store, flag, 'set') === 'set') {
         window.location.reload();
         // reload is onderweg: laat de Suspense-fallback staan
         return new Promise<{ default: T }>(() => {});
@@ -72,24 +83,13 @@ function PageLoader() {
   );
 }
 
-// Nederlandstalige foutgrens i.p.v. react-routers Engelse standaardpagina
-// (bv. wanneer een chunk na een nieuwe deploy definitief niet meer laadt).
+// Nederlandstalige foutgrens i.p.v. react-routers Engelse standaardpagina.
+// Offline (een chunk die op dit toestel nog niet bewaard is): een rustige
+// offline-melding. Online (bv. een chunk die na een nieuwe deploy definitief
+// niet meer laadt): de vraag om opnieuw te laden. Zie offline/LoadFailure.tsx.
 function LoadError() {
-  return (
-    <div style={{ display: 'grid', placeItems: 'center', minHeight: '60vh', padding: 20 }}>
-      <div className="card card-pad" style={{ maxWidth: 440, width: '100%', textAlign: 'center' }}>
-        <div style={{ display: 'grid', placeItems: 'center', marginBottom: 10 }}><BrandMark size={48} /></div>
-        <h1 style={{ fontSize: '1.3rem' }}>Er ging iets mis bij het laden</h1>
-        <p style={{ color: 'var(--text-soft)' }}>
-          Waarschijnlijk is er net een nieuwe versie van de app verschenen. Opnieuw laden lost dit meestal op.
-        </p>
-        <button className="btn btn-primary" onClick={() => window.location.reload()}>Opnieuw laden</button>
-        <p style={{ marginTop: 12, marginBottom: 0 }}>
-          <a href="#/" style={{ color: 'var(--text-soft)', fontSize: '0.9rem' }}>← Naar de startpagina</a>
-        </p>
-      </div>
-    </div>
-  );
+  const error = useRouteError();
+  return <LoadFailure error={error} />;
 }
 
 const lz = (el: React.ReactNode) => <Suspense fallback={<PageLoader />}>{el}</Suspense>;
