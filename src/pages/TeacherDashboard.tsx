@@ -1,52 +1,139 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { deleteFolder, deleteWidget, getFolders, getPrefs, getSubmissions, getWidgets, onStorageChange, saveFolder, saveWidget } from '../lib/storage';
-import { exportFolderPack, importFolderPack, importWidgetJson } from '../lib/share';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  ChevronDown, ChevronRight, CircleHelp, FileBraces, FolderInput, FolderMinus, FolderPen, FolderPlus,
+  ListFilter, Package, RefreshCw, Shapes, Star, type LucideIcon,
+} from 'lucide-react';
+import {
+  deleteFolder, deleteWidget, getFolders, getPrefs, getSubmissions, getWidgets, onStorageChange, saveFolder, saveWidget,
+} from '../lib/storage';
+import { getCourses } from '../lib/courses';
+import { exportFolderPack, exportWidgetJsonWithMedia, importFolderPack, importWidgetJson } from '../lib/share';
 import type { FolderPack } from '../lib/share';
 import { downloadFile, formatDateShort, makeCode, uid } from '../lib/utils';
 import { getTypeDef, WIDGET_TYPES } from '../widgets/registry';
 import { CheckRow, ConfirmModal, EmptyState, Field, Modal, useToast } from '../components/ui';
-import type { Folder, Widget } from '../lib/types';
+import type { Course } from '../lib/courseTypes';
+import type { Folder, Widget, WidgetCategory, WidgetTypeId } from '../lib/types';
 import { ShareModal } from '../components/ShareModal';
 import { TypeTile } from '../components/TypeTile';
+import { MenuButton, type MenuItem } from '../components/Menu';
+import {
+  AddIcon, AIIcon, BackIcon, CourseIcon, DeleteIcon, DuplicateIcon, EditIcon, ExportIcon, FolderIcon, ImportIcon,
+  MoreIcon, ResultsIcon, SearchIcon, ShareIcon, WarningIcon,
+} from '../components/icons';
+import {
+  buildLibraryIndex, buildLibraryView, CATEGORY_CHIPS, deleteWarning, EXAMPLE_FOLDER_ID, libraryCounts, parseScope,
+  sameScope, scopeSearch, typeDefOf, type GroupRow, type LibraryIndex, type LibraryScope,
+} from '../lib/library';
+import '../styles/materiaal.css';
 
-const FOLDER_COLORS = ['#4f46e5', '#0ea5e9', '#16a34a', '#d97706', '#dc2626', '#9333ea'];
+const FOLDER_COLORS: { color: string; name: string }[] = [
+  { color: '#4f46e5', name: 'Indigo' },
+  { color: '#0ea5e9', name: 'Hemelsblauw' },
+  { color: '#16a34a', name: 'Groen' },
+  { color: '#d97706', name: 'Oker' },
+  { color: '#dc2626', name: 'Rood' },
+  { color: '#9333ea', name: 'Paars' },
+];
+
+/** Soorten die je in elkaar kan omzetten: dezelfde vragen, andere weergave. */
+const CONVERTIBLE: WidgetTypeId[] = ['quiz', 'worksheet', 'exitticket'];
+
+interface LibraryData {
+  widgets: Widget[];
+  folders: Folder[];
+  courses: Course[];
+  subCounts: Map<string, number>;
+}
+
+function loadData(): LibraryData {
+  // Aantal inzendingen per widget in één keer tellen i.p.v. per kaart te filteren.
+  const subCounts = new Map<string, number>();
+  for (const s of getSubmissions()) subCounts.set(s.widgetId, (subCounts.get(s.widgetId) ?? 0) + 1);
+  return { widgets: getWidgets(), folders: getFolders(), courses: getCourses(), subCounts };
+}
+
+function n(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+function scopeName(scope: LibraryScope, index: LibraryIndex): string {
+  switch (scope.kind) {
+    case 'all': return 'Alle widgets';
+    case 'examples': return 'Voorbeelden';
+    case 'courses': return 'In cursussen';
+    case 'folders': return 'Mijn mappen';
+    case 'nofolder': return 'Zonder map';
+    case 'course': return index.groups.find((g) => g.courseId === scope.id)?.title ?? 'Cursus';
+    case 'folder': return index.folders.find((f) => f.id === scope.id)?.name ?? 'Map';
+  }
+}
+
+function parseCategory(v: string | null): WidgetCategory | null {
+  return CATEGORY_CHIPS.some((c) => c.id === v) ? (v as WidgetCategory) : null;
+}
 
 export function TeacherDashboard() {
-  // 'tick' bumpt bij elke opslagwijziging (onStorageChange) en drijft de memo's hieronder aan,
-  // zodat localStorage niet bij elke zoekletter opnieuw geparset wordt.
-  const [tick, force] = useState(0);
-  React.useEffect(() => onStorageChange(() => force((x) => x + 1)), []);
+  const [data, setData] = useState<LibraryData>(loadData);
+  useEffect(() => {
+    const reload = () => setData(loadData());
+    reload();
+    return onStorageChange(reload);
+  }, []);
 
-  const widgets = useMemo(() => getWidgets(), [tick]);
-  const folders = useMemo(() => getFolders(), [tick]);
-  // Aantal inzendingen per widget in één keer tellen i.p.v. per kaart te filteren.
-  const submissionCounts = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const s of getSubmissions()) m.set(s.widgetId, (m.get(s.widgetId) ?? 0) + 1);
-    return m;
-  }, [tick]);
-  const [search, setSearch] = useState('');
-  const [activeFolder, setActiveFolder] = useState<string | null | 'all'>('all');
+  const index = useMemo(() => buildLibraryIndex(data.widgets, data.courses, data.folders), [data]);
+  const counts = useMemo(() => libraryCounts(index), [index]);
+
+  // Filter, zoekterm en soort staan in de URL: terugkeren uit de editor
+  // brengt je terug waar je was.
+  const [params, setParams] = useSearchParams();
+  const scope = parseScope(params, index);
+  const scopeKey = scopeSearch(scope);
+  const query = params.get('q') ?? '';
+  const category = parseCategory(params.get('soort'));
+  const view = useMemo(
+    () => buildLibraryView(index, parseScope(new URLSearchParams(scopeKey), index), { query, category }),
+    [index, scopeKey, query, category]
+  );
+  // Zoekt iemand binnen een map of cursus zonder treffers, dan tonen we of er elders wél iets is.
+  const elsewhere = useMemo(
+    () => (query.trim() && scope.kind !== 'all' ? buildLibraryView(index, { kind: 'all' }, { query, category }).matched : 0),
+    [index, scope.kind, query, category]
+  );
+
+  const setParam = (key: string, value: string | null) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      return next;
+    }, { replace: true });
+  };
+
+  /** Link naar een filter; zoekterm en soort blijven staan. */
+  const hrefFor = (s: LibraryScope): string => {
+    const next = new URLSearchParams(scopeSearch(s));
+    if (query) next.set('q', query);
+    if (category) next.set('soort', category);
+    const qs = next.toString();
+    return `/widgets${qs ? `?${qs}` : ''}`;
+  };
+
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  useEffect(() => { setFiltersOpen(false); }, [scopeKey]);
+
   const [folderModal, setFolderModal] = useState<Folder | 'new' | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Widget | null>(null);
   const [deleteFolderTarget, setDeleteFolderTarget] = useState<Folder | null>(null);
   const [shareTarget, setShareTarget] = useState<Widget | null>(null);
+  const [convertTarget, setConvertTarget] = useState<Widget | null>(null);
+  const [moveTarget, setMoveTarget] = useState<Widget | null>(null);
   const [packImport, setPackImport] = useState<FolderPack | null>(null);
-  const [menuFor, setMenuFor] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
   const navigate = useNavigate();
-
-  const visible = useMemo(() => {
-    let list = widgets;
-    if (activeFolder !== 'all') list = list.filter((w) => w.folderId === activeFolder);
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter((w) => w.title.toLowerCase().includes(q) || getTypeDef(w.type).name.toLowerCase().includes(q) || w.code.toLowerCase() === q);
-    }
-    return list;
-  }, [widgets, activeFolder, search]);
 
   const duplicate = (w: Widget) => {
     const copy: Widget = {
@@ -59,6 +146,16 @@ export function TeacherDashboard() {
     };
     saveWidget(copy);
     toast('Widget gedupliceerd', 'ok');
+  };
+
+  const exportOne = async (w: Widget) => {
+    try {
+      // Met media als data-URL, zodat het bestand op een ander toestel werkt.
+      const json = await exportWidgetJsonWithMedia(w);
+      downloadFile(`${w.title.replace(/[^\w\dà-ÿ -]/gi, '').trim() || 'widget'}.widget.json`, json);
+    } catch {
+      toast('Exporteren mislukt', 'err');
+    }
   };
 
   const importFile = async (file: File) => {
@@ -81,7 +178,7 @@ export function TeacherDashboard() {
     // onbekend widgettype zou het dashboard blijvend laten crashen
     const def = WIDGET_TYPES.find((t) => t.id === w.type);
     if (!def) {
-      toast(`Onbekend widgettype “${w.type}” — bestand niet geïmporteerd`, 'err');
+      toast(`Onbekend widgettype “${w.type}”: bestand niet geïmporteerd`, 'err');
       return;
     }
     w.id = uid();
@@ -93,11 +190,8 @@ export function TeacherDashboard() {
     toast(`“${w.title}” geïmporteerd`, 'ok');
   };
 
-  const exportActiveFolderPack = async () => {
-    if (activeFolder === 'all' || activeFolder === null) return;
-    const folder = folders.find((f) => f.id === activeFolder);
-    if (!folder) return;
-    const inFolder = widgets.filter((w) => w.folderId === folder.id);
+  const exportFolder = async (folder: Folder) => {
+    const inFolder = data.widgets.filter((w) => w.folderId === folder.id);
     if (inFolder.length === 0) {
       toast('Deze map bevat geen widgets om te delen', 'err');
       return;
@@ -106,163 +200,279 @@ export function TeacherDashboard() {
     const json = await exportFolderPack(folder.name, inFolder, getPrefs().teacherName);
     const safeName = folder.name.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '-') || 'map';
     downloadFile(`${safeName}.widgetpak.json`, json);
-    toast(`Map “${folder.name}” gedownload als pakket (${inFolder.length} widget${inFolder.length === 1 ? '' : 's'})`, 'ok');
+    toast(`Map “${folder.name}” gedownload als pakket (${n(inFolder.length, 'widget', 'widgets')})`, 'ok');
   };
 
+  const widgetMenu = (w: Widget): MenuItem[] => {
+    const def = typeDefOf(w.type);
+    const subs = data.subCounts.get(w.id) ?? 0;
+    const items: MenuItem[] = [
+      { label: 'Delen', hint: 'Code, link of QR voor je leerlingen', Icon: ShareIcon, onSelect: () => setShareTarget(w) },
+      {
+        label: 'Resultaten', Icon: ResultsIcon, to: `/resultaten/${w.id}`,
+        hint: def && !def.hasSubmissions ? 'Deze soort levert geen inzendingen op' : n(subs, 'inzending', 'inzendingen'),
+      },
+      { label: 'Dupliceren', Icon: DuplicateIcon, onSelect: () => duplicate(w) },
+    ];
+    if (CONVERTIBLE.includes(w.type)) {
+      items.push({ label: 'Omzetten naar ander type', hint: 'Quiz, werkblad of exit-ticket', Icon: RefreshCw, onSelect: () => setConvertTarget(w) });
+    }
+    items.push(
+      { label: 'Naar map', Icon: FolderInput, onSelect: () => setMoveTarget(w) },
+      { label: 'Exporteren', hint: 'Als bestand (.json)', Icon: ExportIcon, onSelect: () => { void exportOne(w); } },
+      { label: 'Verwijderen', Icon: DeleteIcon, danger: true, separator: true, onSelect: () => setDeleteTarget(w) },
+    );
+    return items;
+  };
+
+  const importItems: MenuItem[] = [
+    { label: 'JSON-bestand', hint: 'Een widget of een vakgroeppakket', Icon: FileBraces, onSelect: () => fileRef.current?.click() },
+    { label: 'Uit pdf, Word of tekst', hint: 'Bestaand materiaal omzetten', Icon: ImportIcon, to: '/importeren' },
+    { label: 'Met AI', hint: 'Widgets uit je leerstof', Icon: AIIcon, to: '/ai-studio' },
+  ];
+
+  const activeFolder = scope.kind === 'folder' ? index.folders.find((f) => f.id === scope.id) ?? null : null;
+  const activeCourse = scope.kind === 'course' ? index.groups.find((g) => g.courseId === scope.id) ?? null : null;
+  const currentName = scopeName(scope, index);
+  const currentCount = (() => {
+    switch (scope.kind) {
+      case 'all': return counts.all;
+      case 'examples': return counts.examples;
+      case 'courses': return counts.inCourses;
+      case 'folders': return counts.inFolders;
+      case 'nofolder': return counts.noFolder;
+      case 'course': return counts.perCourse.get(scope.id) ?? 0;
+      case 'folder': return counts.perFolder.get(scope.id) ?? 0;
+    }
+  })();
+
+  const hasCards = view.sections.some((s) => s.widgets.length > 0);
+  const isEmpty = !hasCards && view.rows.length === 0;
+  const filtering = Boolean(query.trim() || category);
+
+  // In een cursus spreken we van oefeningen, elders van widgets.
+  const count = (x: number) => (scope.kind === 'course' ? n(x, 'oefening', 'oefeningen') : n(x, 'widget', 'widgets'));
+  const resultText = query.trim()
+    ? view.matched === 0
+      ? `Niets gevonden voor “${query.trim()}”`
+      : `${count(view.matched)} gevonden voor “${query.trim()}”`
+    : category
+      ? `${count(view.matched)} in ${CATEGORY_CHIPS.find((c) => c.id === category)?.label.toLowerCase()}`
+      : count(view.matched);
+
   return (
-    <div className="page">
+    <div className="page mat-page">
       <div className="page-head">
         <div>
-          <h1>Mijn widgets</h1>
-          <p className="sub">{widgets.length} widget{widgets.length === 1 ? '' : 's'} · alles lokaal opgeslagen in deze browser</p>
+          <h1>Widgets</h1>
+          <p className="sub">{n(data.widgets.length, 'widget', 'widgets')} · alles lokaal bewaard in deze browser</p>
         </div>
         <div className="page-head-actions">
-          <button className="btn btn-ghost" onClick={() => fileRef.current?.click()} title="Een widget of vakgroeppakket uit een json-bestand">📥 Importeren</button>
+          <MenuButton label="Importeren" Icon={ImportIcon} items={importItems} className="btn btn-ghost" />
           <input ref={fileRef} type="file" accept="application/json,.json" hidden
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f); e.target.value = ''; }} />
-          <Link to="/importeren" className="btn btn-ghost" title="Tekst uit een Word-document, pdf of webpagina halen en er materiaal van maken">
-            📄 Uit docx/pdf/tekst
-          </Link>
-          <Link to="/ai-studio" className="btn btn-ai" title="Widgets laten maken vanuit je bronmateriaal">✨ Maak met AI</Link>
-          <Link to="/nieuw" className="btn btn-primary">+ Nieuwe widget</Link>
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) void importFile(f); e.target.value = ''; }} />
+          <Link to="/nieuw" className="btn btn-primary"><AddIcon size={18} /> Nieuwe widget</Link>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 20 }}>
-        <input
-          className="input" type="search" placeholder="🔍 Zoeken op titel, type of code…"
-          style={{ maxWidth: 320 }}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label="Widgets zoeken"
-        />
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }} role="tablist" aria-label="Mappen">
-          <button className={`btn btn-sm ${activeFolder === 'all' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveFolder('all')} role="tab" aria-selected={activeFolder === 'all'}>
-            Alles
+      <div className="lib">
+        <aside className="lib-side">
+          <button
+            type="button"
+            className="btn btn-ghost lib-side-toggle"
+            aria-expanded={filtersOpen}
+            aria-controls="lib-nav"
+            onClick={() => setFiltersOpen((o) => !o)}
+          >
+            <ListFilter size={18} />
+            <span className="lib-toggle-text">Toon: {currentName}</span>
+            <span className="lib-count">{currentCount}</span>
+            <ChevronDown size={18} className="lib-toggle-chevron" />
           </button>
-          <button className={`btn btn-sm ${activeFolder === null ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveFolder(null)} role="tab" aria-selected={activeFolder === null}>
-            📂 Zonder map
-          </button>
-          {folders.map((f) => (
-            <button
-              key={f.id}
-              className={`btn btn-sm ${activeFolder === f.id ? 'btn-primary' : 'btn-ghost'}`}
-              style={activeFolder === f.id ? { background: f.color } : { color: f.color, borderColor: f.color }}
-              onClick={() => setActiveFolder(f.id)}
-              onDoubleClick={() => setFolderModal(f)}
-              role="tab" aria-selected={activeFolder === f.id}
-              title="Dubbelklik om te bewerken"
-            >
-              📁 {f.name}
+          <nav id="lib-nav" className={`lib-nav${filtersOpen ? ' is-open' : ''}`} aria-label="Widgets filteren">
+            <ul>
+              <NavItem to={hrefFor({ kind: 'all' })} current={sameScope(scope, { kind: 'all' })} Icon={Shapes} label="Alle widgets" count={counts.all} />
+              {counts.examples > 0 && (
+                <NavItem to={hrefFor({ kind: 'examples' })} current={scope.kind === 'examples'} Icon={Star} label="Voorbeelden" count={counts.examples} />
+              )}
+              {index.groups.length > 0 && (
+                <NavItem to={hrefFor({ kind: 'courses' })} current={scope.kind === 'courses'} Icon={CourseIcon} label="In cursussen" count={counts.inCourses}>
+                  {index.groups.map((g) => (
+                    <NavItem
+                      key={g.courseId} sub
+                      to={hrefFor({ kind: 'course', id: g.courseId })}
+                      current={scope.kind === 'course' && scope.id === g.courseId}
+                      label={g.title} count={g.widgetIds.length}
+                    />
+                  ))}
+                </NavItem>
+              )}
+              <NavItem to={hrefFor({ kind: 'folders' })} current={scope.kind === 'folders'} Icon={FolderIcon} label="Mijn mappen" count={counts.inFolders}>
+                {index.folders.map((f) => (
+                  <NavItem
+                    key={f.id} sub
+                    to={hrefFor({ kind: 'folder', id: f.id })}
+                    current={scope.kind === 'folder' && scope.id === f.id}
+                    label={f.name} count={counts.perFolder.get(f.id) ?? 0}
+                    Icon={FolderIcon} iconColor={f.color}
+                  />
+                ))}
+                {index.folders.length > 0 && (
+                  <NavItem sub to={hrefFor({ kind: 'nofolder' })} current={scope.kind === 'nofolder'} Icon={FolderMinus} label="Zonder map" count={counts.noFolder} />
+                )}
+              </NavItem>
+            </ul>
+            <button type="button" className="btn btn-quiet btn-sm lib-newfolder" onClick={() => setFolderModal('new')}>
+              <FolderPlus size={16} /> Nieuwe map
             </button>
+          </nav>
+        </aside>
+
+        <div className="lib-main">
+          <div className="lib-tools">
+            <div className="lib-search">
+              <SearchIcon size={18} />
+              <label htmlFor="lib-zoek" className="sr-only">Zoek widgets op titel, soort of code</label>
+              <input
+                ref={searchRef}
+                id="lib-zoek"
+                className="input" type="search" placeholder="Zoek op titel, soort of code"
+                value={query}
+                onChange={(e) => setParam('q', e.target.value)}
+              />
+            </div>
+            <div className="lib-chips" role="group" aria-label="Soort">
+              <button type="button" className="lib-chip" aria-pressed={category === null} onClick={() => setParam('soort', null)}>
+                Alle soorten
+              </button>
+              {CATEGORY_CHIPS.map((c) => (
+                <button
+                  key={c.id} type="button" className="lib-chip"
+                  aria-pressed={category === c.id}
+                  onClick={() => setParam('soort', category === c.id ? null : c.id)}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="lib-head">
+            <div className="lib-head-text">
+              {activeCourse && (
+                <Link to={hrefFor({ kind: 'courses' })} className="btn btn-quiet btn-sm lib-back"><BackIcon size={16} /> In cursussen</Link>
+              )}
+              {activeFolder && (
+                <Link to={hrefFor({ kind: 'folders' })} className="btn btn-quiet btn-sm lib-back"><BackIcon size={16} /> Mijn mappen</Link>
+              )}
+              <h2>
+                {activeFolder && <FolderIcon size={20} style={{ color: activeFolder.color }} />}
+                {activeCourse && <CourseIcon size={20} />}
+                {currentName}
+              </h2>
+              <p className="lib-head-note" aria-live="polite">{resultText}</p>
+            </div>
+            <div className="lib-head-actions">
+              {activeCourse && (
+                <Link to={`/cursus/bewerk/${activeCourse.courseId}`} className="btn btn-ghost btn-sm">
+                  <EditIcon size={16} /> Cursus bewerken
+                </Link>
+              )}
+              {activeFolder && (
+                <MenuButton
+                  label="Map" Icon={FolderIcon} className="btn btn-ghost btn-sm"
+                  ariaLabel={`Acties voor map ${activeFolder.name}`}
+                  items={[
+                    { label: 'Map bewerken', hint: 'Naam en kleur', Icon: FolderPen, onSelect: () => setFolderModal(activeFolder) },
+                    { label: 'Delen als pakket', hint: 'Eén bestand voor je vakgroep', Icon: Package, onSelect: () => { void exportFolder(activeFolder); } },
+                    { label: 'Map verwijderen', hint: 'De widgets blijven bestaan', Icon: DeleteIcon, danger: true, separator: true, onSelect: () => setDeleteFolderTarget(activeFolder) },
+                  ]}
+                />
+              )}
+              {scope.kind === 'folders' && (
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFolderModal('new')}>
+                  <FolderPlus size={16} /> Nieuwe map
+                </button>
+              )}
+            </div>
+          </div>
+
+          {view.rows.length > 0 && (
+            <ul className="lib-rows">
+              {view.rows.map((r) => (
+                <li key={`${r.kind}:${r.id}`}>
+                  <GroupRowLink row={r} to={hrefFor(rowScope(r))} />
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {view.sections.map((s) => s.widgets.length > 0 && (
+            <section key={s.key} aria-label={s.title}>
+              {s.title && <h3 className="lib-section-title">{s.title}</h3>}
+              <ul className="lib-grid">
+                {s.widgets.map((w) => (
+                  <li key={w.id}>
+                    <WidgetCard
+                      widget={w}
+                      subCount={data.subCounts.get(w.id) ?? 0}
+                      items={widgetMenu(w)}
+                      level={s.title ? 4 : 3}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-          <button className="btn btn-sm btn-quiet" onClick={() => setFolderModal('new')}>+ Map</button>
-          {activeFolder !== 'all' && activeFolder !== null && (
-            <>
-              <button className="btn btn-sm btn-quiet" onClick={() => { void exportActiveFolderPack(); }}
-                title="Download deze map als pakket voor je vakgroep">
-                📦 Map delen
-              </button>
-              <button className="btn btn-sm btn-quiet" style={{ color: 'var(--err)' }}
-                onClick={() => setDeleteFolderTarget(folders.find((f) => f.id === activeFolder) ?? null)}>
-                Map verwijderen
-              </button>
-            </>
+
+          {isEmpty && (
+            data.widgets.length === 0 ? (
+              <EmptyState icon={<Shapes size={40} />} title="Nog geen widgets">
+                <p>Maak je eerste widget en deel hem met je klas.</p>
+                <Link to="/nieuw" className="btn btn-primary"><AddIcon size={18} /> Nieuwe widget</Link>
+              </EmptyState>
+            ) : filtering ? (
+              <EmptyState icon={<SearchIcon size={40} />} title="Geen widgets gevonden">
+                <p>Probeer een andere zoekterm of een andere soort.</p>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <button type="button" className="btn btn-ghost" onClick={() => {
+                    setParams((prev) => { const next = new URLSearchParams(prev); next.delete('q'); next.delete('soort'); return next; }, { replace: true });
+                    searchRef.current?.focus();
+                  }}>
+                    Filters wissen
+                  </button>
+                  {elsewhere > 0 && (
+                    <Link to={hrefFor({ kind: 'all' })} className="btn btn-ghost">
+                      Zoek in alle widgets ({elsewhere})
+                    </Link>
+                  )}
+                </div>
+              </EmptyState>
+            ) : scope.kind === 'folder' ? (
+              <EmptyState icon={<FolderIcon size={40} />} title="Deze map is leeg">
+                <p>Zet een widget in deze map via het menu van de widget: “Naar map”.</p>
+              </EmptyState>
+            ) : (
+              <EmptyState icon={<Shapes size={40} />} title="Nog niets hier">
+                <p>Kies links een andere selectie, of maak een nieuwe widget.</p>
+              </EmptyState>
+            )
           )}
         </div>
       </div>
-
-      {visible.length === 0 ? (
-        <EmptyState icon="🧩" title={search ? 'Geen widgets gevonden' : 'Nog geen widgets hier'}>
-          <p>{search ? 'Probeer een andere zoekterm.' : 'Maak je eerste widget en deel hem met je klas.'}</p>
-          {!search && <Link to="/nieuw" className="btn btn-primary">+ Nieuwe widget</Link>}
-        </EmptyState>
-      ) : (
-        <div className="widget-grid">
-          {visible.map((w) => {
-            const def = getTypeDef(w.type);
-            const subCount = submissionCounts.get(w.id) ?? 0;
-            return (
-              <div key={w.id} className="card widget-card" onClick={() => navigate(`/bewerk/${w.id}`)} role="button" tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/bewerk/${w.id}`); }}
-                aria-label={`${w.title} (${def.name}) bewerken`}>
-                <div className="widget-card-banner">
-                  <TypeTile type={def} size="md" />
-                  <div style={{ minWidth: 0 }}>
-                    <div className="widget-card-kind">{def.name}</div>
-                    <div className="widget-card-code">{w.code}</div>
-                  </div>
-                  <div style={{ marginLeft: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                    <button
-                      className="btn btn-icon btn-sm"
-                      aria-label={`Acties voor ${w.title}`}
-                      aria-expanded={menuFor === w.id}
-                      onClick={() => setMenuFor(menuFor === w.id ? null : w.id)}
-                    >⋯</button>
-                    {menuFor === w.id && (
-                      <div className="card" role="menu" style={{ position: 'absolute', right: 0, top: '110%', zIndex: 40, width: 190, padding: 6, display: 'grid', boxShadow: 'var(--shadow-2)' }}>
-                        <button className="btn btn-quiet btn-sm" style={{ justifyContent: 'flex-start' }} role="menuitem" onClick={() => { setMenuFor(null); setShareTarget(w); }}>📤 Delen</button>
-                        <button className="btn btn-quiet btn-sm" style={{ justifyContent: 'flex-start' }} role="menuitem" onClick={() => { setMenuFor(null); navigate(`/resultaten/${w.id}`); }}>📊 Resultaten ({subCount})</button>
-                        <button className="btn btn-quiet btn-sm" style={{ justifyContent: 'flex-start' }} role="menuitem" onClick={() => { setMenuFor(null); duplicate(w); }}>⧉ Dupliceren</button>
-                        {['quiz', 'worksheet', 'exitticket'].includes(w.type) && (
-                          <select
-                            className="select input-sm" aria-label="Omzetten naar ander type"
-                            value=""
-                            onChange={(e) => {
-                              const target = e.target.value as Widget['type'];
-                              if (!target) return;
-                              const targetDef = getTypeDef(target);
-                              saveWidget({ ...w, type: target });
-                              toast(`Omgezet naar ${targetDef.name.toLowerCase()}`, 'ok');
-                              setMenuFor(null);
-                            }}
-                            style={{ margin: '4px 6px' }}
-                          >
-                            <option value="">↻ Omzetten naar…</option>
-                            {(['quiz', 'worksheet', 'exitticket'] as const).filter((t) => t !== w.type).map((t) => (
-                              <option key={t} value={t}>{getTypeDef(t).name}</option>
-                            ))}
-                          </select>
-                        )}
-                        {folders.length > 0 && (
-                          <select
-                            className="select input-sm" aria-label="Verplaats naar map"
-                            value={w.folderId ?? ''}
-                            onChange={(e) => { saveWidget({ ...w, folderId: e.target.value || null }); setMenuFor(null); }}
-                            style={{ margin: '4px 6px' }}
-                          >
-                            <option value="">Zonder map</option>
-                            {folders.map((f) => <option key={f.id} value={f.id}>📁 {f.name}</option>)}
-                          </select>
-                        )}
-                        <button className="btn btn-quiet btn-sm" style={{ justifyContent: 'flex-start', color: 'var(--err)' }} role="menuitem" onClick={() => { setMenuFor(null); setDeleteTarget(w); }}>🗑 Verwijderen</button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="widget-card-body">
-                  <span className="widget-card-title">{w.title}</span>
-                  <div className="widget-card-meta">
-                    {subCount > 0 && <span className="badge badge-ok">📊 {subCount} inzending{subCount === 1 ? '' : 'en'}</span>}
-                    <span className="date">{formatDateShort(w.updatedAt)}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
 
       {folderModal && (
         <FolderModal
           folder={folderModal === 'new' ? null : folderModal}
           onClose={() => setFolderModal(null)}
+          onSaved={(f, isNew) => { if (isNew) navigate(`/widgets?map=${encodeURIComponent(f.id)}`); }}
         />
       )}
       {deleteTarget && (
-        <ConfirmModal
-          title="Widget verwijderen?"
-          message={`“${deleteTarget.title}” en alle bijbehorende resultaten worden definitief verwijderd.`}
+        <DeleteWidgetModal
+          widget={deleteTarget}
+          subCount={data.subCounts.get(deleteTarget.id) ?? 0}
+          warning={deleteWarning(index.usage.get(deleteTarget.id))}
           onConfirm={() => { deleteWidget(deleteTarget.id); toast('Widget verwijderd', 'ok'); }}
           onClose={() => setDeleteTarget(null)}
         />
@@ -270,9 +480,31 @@ export function TeacherDashboard() {
       {deleteFolderTarget && (
         <ConfirmModal
           title="Map verwijderen?"
-          message={`De map “${deleteFolderTarget.name}” wordt verwijderd. De widgets erin blijven bestaan en verhuizen naar “Zonder map”.`}
-          onConfirm={() => { deleteFolder(deleteFolderTarget.id); setActiveFolder('all'); toast('Map verwijderd', 'ok'); }}
+          message={`De map “${deleteFolderTarget.name}” wordt verwijderd. De widgets erin blijven bestaan en staan daarna bij “Zonder map”.`}
+          onConfirm={() => {
+            deleteFolder(deleteFolderTarget.id);
+            navigate('/widgets?toon=mappen', { replace: true });
+            toast('Map verwijderd', 'ok');
+          }}
           onClose={() => setDeleteFolderTarget(null)}
+        />
+      )}
+      {convertTarget && (
+        <ConvertModal
+          widget={convertTarget}
+          onClose={() => setConvertTarget(null)}
+          onConvert={(target) => {
+            saveWidget({ ...convertTarget, type: target });
+            toast(`Omgezet naar ${getTypeDef(target).name.toLowerCase()}`, 'ok');
+            setConvertTarget(null);
+          }}
+        />
+      )}
+      {moveTarget && (
+        <MoveModal
+          widget={moveTarget}
+          folders={index.folders}
+          onClose={() => setMoveTarget(null)}
         />
       )}
       {shareTarget && <ShareModal widget={shareTarget} onClose={() => setShareTarget(null)} />}
@@ -280,10 +512,231 @@ export function TeacherDashboard() {
         <PackImportModal
           pack={packImport}
           onClose={() => setPackImport(null)}
-          onImported={(folderId) => { if (folderId) setActiveFolder(folderId); }}
+          onImported={(folderId) => { if (folderId) navigate(`/widgets?map=${encodeURIComponent(folderId)}`); }}
         />
       )}
     </div>
+  );
+}
+
+function rowScope(r: GroupRow): LibraryScope {
+  if (r.kind === 'course') return { kind: 'course', id: r.id };
+  if (r.kind === 'folder') return { kind: 'folder', id: r.id };
+  return { kind: 'nofolder' };
+}
+
+// ── Zijkolom ────────────────────────────────────────────────────────────────
+
+function NavItem({
+  to, current, Icon, label, count, sub, iconColor, children,
+}: {
+  to: string;
+  current: boolean;
+  Icon?: LucideIcon;
+  label: string;
+  count: number;
+  sub?: boolean;
+  iconColor?: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <li>
+      <Link to={to} className={`lib-nav-link${sub ? ' lib-nav-sub' : ''}`} aria-current={current ? 'page' : undefined}>
+        {Icon && <Icon size={sub ? 16 : 18} style={iconColor ? { color: iconColor } : undefined} />}
+        <span className="lib-nav-label">{label}</span>
+        <span className="lib-count"><span className="sr-only">(</span>{count}<span className="sr-only">)</span></span>
+      </Link>
+      {React.Children.count(children) > 0 && <ul>{children}</ul>}
+    </li>
+  );
+}
+
+// ── Regel naar een cursus of map ────────────────────────────────────────────
+
+function GroupRowLink({ row, to }: { row: GroupRow; to: string }) {
+  const Icon = row.kind === 'course' ? CourseIcon : row.kind === 'folder' ? FolderIcon : FolderMinus;
+  const count = row.kind === 'course' ? n(row.count, 'oefening', 'oefeningen') : n(row.count, 'widget', 'widgets');
+  return (
+    <Link to={to} className="lib-row">
+      <span className="lib-row-icon"><Icon size={20} style={row.color ? { color: row.color } : undefined} /></span>
+      <span className="lib-row-text">
+        <span className="lib-row-title">{row.title}</span>
+        <span className="lib-row-count">{count}</span>
+      </span>
+      {row.types.length > 0 && (
+        <span className="lib-row-stack" aria-hidden="true">
+          {row.types.map((t) => <TypeTile key={t} type={t} size="xs" />)}
+        </span>
+      )}
+      <ChevronRight size={18} className="lib-chevron" />
+    </Link>
+  );
+}
+
+// ── Widgetkaart ─────────────────────────────────────────────────────────────
+
+function WidgetCard({ widget: w, subCount, items, level }: { widget: Widget; subCount: number; items: MenuItem[]; level: 3 | 4 }) {
+  const def = typeDefOf(w.type);
+  const Heading = level === 4 ? 'h4' : 'h3';
+  return (
+    <article className="card widget-card lib-card">
+      {def ? <TypeTile type={def} size="sm" className="lib-card-tile" /> : <span className="lib-card-tile lib-card-tile-unknown" aria-hidden="true" />}
+      <span className="lib-card-kind">{def?.name ?? 'Onbekende soort'}</span>
+      <Heading className="lib-card-title">
+        <Link to={`/bewerk/${w.id}`} className="lib-card-link">
+          {w.title}
+          <span className="sr-only"> ({def?.name.toLowerCase() ?? 'onbekende soort'})</span>
+        </Link>
+      </Heading>
+      <div className="lib-card-foot">
+        <span className="lib-code"><span className="sr-only">Code </span>{w.code}</span>
+        {subCount > 0 && (
+          <span className="lib-subs"><ResultsIcon size={14} /> {n(subCount, 'inzending', 'inzendingen')}</span>
+        )}
+        <span className="lib-date"><span className="sr-only">Bewerkt op </span>{formatDateShort(w.updatedAt)}</span>
+      </div>
+      <div className="lib-card-menu">
+        <MenuButton
+          items={items}
+          Icon={MoreIcon}
+          ariaLabel={`Acties voor ${w.title}`}
+          className="btn btn-quiet btn-icon"
+        />
+      </div>
+    </article>
+  );
+}
+
+// ── Verwijderen, met waarschuwing als een cursus de widget gebruikt ─────────
+
+function DeleteWidgetModal({ widget, subCount, warning, onConfirm, onClose }: {
+  widget: Widget;
+  subCount: number;
+  warning: string | null;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      title="Widget verwijderen?"
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn btn-ghost" onClick={onClose}>Annuleren</button>
+          <button className="btn btn-danger" onClick={() => { onConfirm(); onClose(); }}>Verwijderen</button>
+        </>
+      }
+    >
+      <p>
+        “{widget.title}” {subCount > 0 ? `en ${n(subCount, 'inzending', 'inzendingen')} ` : 'en alle bijbehorende resultaten '}
+        worden definitief verwijderd.
+      </p>
+      {warning && (
+        <div className="callout warn lib-warning" role="note">
+          <WarningIcon size={20} />
+          <p>{warning}</p>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+// ── Omzetten naar een ander type ────────────────────────────────────────────
+
+function ConvertModal({ widget, onClose, onConvert }: {
+  widget: Widget;
+  onClose: () => void;
+  onConvert: (target: WidgetTypeId) => void;
+}) {
+  const targets = CONVERTIBLE.filter((t) => t !== widget.type);
+  return (
+    <Modal title="Omzetten naar ander type" onClose={onClose}>
+      <p className="hint" style={{ marginTop: 0 }}>
+        “{widget.title}” houdt dezelfde vragen; alleen de weergave voor je leerlingen verandert.
+      </p>
+      <div className="lib-choices">
+        {targets.map((t) => {
+          const def = getTypeDef(t);
+          return (
+            <button key={t} type="button" className="lib-choice" onClick={() => onConvert(t)}>
+              <TypeTile type={def} size="md" />
+              <span>
+                <strong>{def.name}</strong>
+                <small>{def.tagline}</small>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </Modal>
+  );
+}
+
+// ── Naar een map verplaatsen ────────────────────────────────────────────────
+
+const NEW_FOLDER = '__nieuw__';
+
+function MoveModal({ widget, folders, onClose }: { widget: Widget; folders: Folder[]; onClose: () => void }) {
+  const toast = useToast();
+  const current = widget.folderId && folders.some((f) => f.id === widget.folderId) ? widget.folderId : '';
+  const [choice, setChoice] = useState<string>(current);
+  const [newName, setNewName] = useState('');
+  const groupName = useId();
+
+  const save = () => {
+    let folderId: string | null = choice || null;
+    let folderName = folders.find((f) => f.id === choice)?.name;
+    if (choice === NEW_FOLDER) {
+      const name = newName.trim();
+      if (!name) return;
+      folderId = uid();
+      folderName = name;
+      saveFolder({ id: folderId, name, color: FOLDER_COLORS[folders.length % FOLDER_COLORS.length].color, createdAt: Date.now() });
+    }
+    saveWidget({ ...widget, folderId });
+    toast(folderId ? `Verplaatst naar “${folderName}”` : 'Uit de map gehaald', 'ok');
+    onClose();
+  };
+
+  return (
+    <Modal
+      title="Naar map"
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn btn-ghost" onClick={onClose}>Annuleren</button>
+          <button className="btn btn-primary" disabled={choice === NEW_FOLDER && !newName.trim()} onClick={save}>Verplaatsen</button>
+        </>
+      }
+    >
+      <fieldset className="lib-fieldset">
+        <legend>Waar zet je “{widget.title}”?</legend>
+        <label className="lib-radio">
+          <input type="radio" name={groupName} checked={choice === ''} onChange={() => setChoice('')} />
+          <FolderMinus size={18} /> Zonder map
+        </label>
+        {folders.map((f) => (
+          <label key={f.id} className="lib-radio">
+            <input type="radio" name={groupName} checked={choice === f.id} onChange={() => setChoice(f.id)} />
+            <FolderIcon size={18} style={{ color: f.color }} /> {f.name}
+            {f.id === EXAMPLE_FOLDER_ID && <span className="badge">voorbeeld</span>}
+          </label>
+        ))}
+        <label className="lib-radio">
+          <input type="radio" name={groupName} checked={choice === NEW_FOLDER} onChange={() => setChoice(NEW_FOLDER)} />
+          <FolderPlus size={18} /> Nieuwe map…
+        </label>
+      </fieldset>
+      {choice === NEW_FOLDER && (
+        <Field label="Naam van de nieuwe map">
+          <input
+            className="input" value={newName} autoFocus placeholder="bv. 3de graad Frans"
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') save(); }}
+          />
+        </Field>
+      )}
+    </Modal>
   );
 }
 
@@ -331,7 +784,7 @@ function PackImportModal({ pack, onClose, onImported }: {
       saveFolder({
         id: folderId,
         name: pack.meta.naam,
-        color: FOLDER_COLORS[getFolders().length % FOLDER_COLORS.length],
+        color: FOLDER_COLORS[getFolders().length % FOLDER_COLORS.length].color,
         createdAt: Date.now(),
       });
     }
@@ -376,10 +829,13 @@ function PackImportModal({ pack, onClose, onImported }: {
       }
     >
       <div className="callout" style={{ marginBottom: 14 }}>
-        <strong>📦 {pack.meta.naam}</strong>
-        <div className="hint" style={{ marginTop: 4 }}>
-          {pack.meta.auteur ? `Gedeeld door ${pack.meta.auteur}` : 'Auteur onbekend'}
-          {dateTxt ? ` · ${dateTxt}` : ''} · {pack.widgets.length} widget{pack.widgets.length === 1 ? '' : 's'}
+        <Package size={20} style={{ flex: 'none', marginTop: 2 }} />
+        <div>
+          <strong>{pack.meta.naam}</strong>
+          <div className="hint" style={{ marginTop: 4 }}>
+            {pack.meta.auteur ? `Gedeeld door ${pack.meta.auteur}` : 'Auteur onbekend'}
+            {dateTxt ? ` · ${dateTxt}` : ''} · {pack.widgets.length} widget{pack.widgets.length === 1 ? '' : 's'}
+          </div>
         </div>
       </div>
 
@@ -403,7 +859,7 @@ function PackImportModal({ pack, onClose, onImported }: {
                 onChange={(e) => toggle(r.index, e.target.checked)}
               />
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
-                {r.def ? <TypeTile type={r.def} size="xs" /> : <span aria-hidden>❔</span>}
+                {r.def ? <TypeTile type={r.def} size="xs" /> : <CircleHelp size={18} aria-hidden="true" />}
                 <span>{r.widget.title}</span>
                 <span className="hint">({r.def ? r.def.name : 'onbekend type'})</span>
                 {r.duplicate && <span className="badge badge-warn">bestaat al</span>}
@@ -424,10 +880,24 @@ function PackImportModal({ pack, onClose, onImported }: {
   );
 }
 
-function FolderModal({ folder, onClose }: { folder: Folder | null; onClose: () => void }) {
+// ── Map aanmaken of bewerken ────────────────────────────────────────────────
+
+function FolderModal({ folder, onClose, onSaved }: {
+  folder: Folder | null;
+  onClose: () => void;
+  onSaved?: (folder: Folder, isNew: boolean) => void;
+}) {
   const [name, setName] = useState(folder?.name ?? '');
-  const [color, setColor] = useState(folder?.color ?? FOLDER_COLORS[0]);
+  const [color, setColor] = useState(folder?.color ?? FOLDER_COLORS[0].color);
   const toast = useToast();
+  const save = () => {
+    if (!name.trim()) return;
+    const saved: Folder = { id: folder?.id ?? uid(), name: name.trim(), color, createdAt: folder?.createdAt ?? Date.now() };
+    saveFolder(saved);
+    toast(folder ? 'Map bijgewerkt' : 'Map aangemaakt', 'ok');
+    onClose();
+    onSaved?.(saved, !folder);
+  };
   return (
     <Modal
       title={folder ? 'Map bewerken' : 'Nieuwe map'}
@@ -435,31 +905,26 @@ function FolderModal({ folder, onClose }: { folder: Folder | null; onClose: () =
       footer={
         <>
           <button className="btn btn-ghost" onClick={onClose}>Annuleren</button>
-          <button
-            className="btn btn-primary"
-            disabled={!name.trim()}
-            onClick={() => {
-              saveFolder({ id: folder?.id ?? uid(), name: name.trim(), color, createdAt: folder?.createdAt ?? Date.now() });
-              toast(folder ? 'Map bijgewerkt' : 'Map aangemaakt', 'ok');
-              onClose();
-            }}
-          >
-            Opslaan
-          </button>
+          <button className="btn btn-primary" disabled={!name.trim()} onClick={save}>Opslaan</button>
         </>
       }
     >
       <Field label="Naam van de map">
-        <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="bv. 3de graad — Frans" />
+        <input
+          className="input" value={name} placeholder="bv. 3de graad Frans"
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') save(); }}
+        />
       </Field>
-      <Field label="Kleur">
-        <div style={{ display: 'flex', gap: 8 }}>
+      <fieldset className="lib-fieldset">
+        <legend>Kleur</legend>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {FOLDER_COLORS.map((c) => (
-            <button key={c} className="wb-swatch" style={{ background: c, borderColor: color === c ? 'var(--text)' : 'transparent' }}
-              aria-label={`Kleur ${c}`} aria-pressed={color === c} onClick={() => setColor(c)} />
+            <button key={c.color} type="button" className="wb-swatch" style={{ background: c.color, borderColor: color === c.color ? 'var(--text)' : 'transparent' }}
+              aria-label={c.name} aria-pressed={color === c.color} onClick={() => setColor(c.color)} />
           ))}
         </div>
-      </Field>
+      </fieldset>
     </Modal>
   );
 }

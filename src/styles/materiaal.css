@@ -1,0 +1,303 @@
+/* ── Materiaal: widgets, cursussen, leerplannen en nieuwe widget ─────────── */
+/*
+ * Rustige lijsten: lichte kaarten, geen kleurbanners, één hoofdactie per
+ * kaart en de rest in een menu. Alleen tokens uit global.css; geen witte
+ * tekst op --brand.
+ */
+
+/* ── Kop van de pagina ─────────────────────────────────────────────────── */
+
+.mat-page .page-head-actions { align-items: center; }
+@media (max-width: 640px) {
+  .mat-page .page-head-actions { margin-left: 0; width: 100%; }
+  .mat-page .page-head-actions .btn { min-height: 44px; }
+}
+
+/* ── Bibliotheek (/widgets) ────────────────────────────────────────────── */
+
+.lib {
+  display: grid; gap: 28px; align-items: start;
+  grid-template-columns: 250px minmax(0, 1fr);
+}
+.lib-main { min-width: 0; }
+
+/* Zijkolom: filters als navigatie (links met aria-current). */
+.lib-side {
+  position: sticky; top: 12px; min-width: 0;
+  max-height: calc(100vh - 24px); overflow-y: auto;
+  padding: 6px; margin: -6px;
+}
+.lib-side-toggle { display: none; }
+/* minmax(0, 1fr) en min-width: 0: lange cursus- of mapnamen lopen af binnen
+   de kolom in plaats van de tellers rechts weg te duwen. */
+.lib-nav { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.lib-nav ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
+.lib-nav li { min-width: 0; }
+.lib-nav ul ul {
+  margin: 2px 0 6px 12px; padding-left: 8px;
+  border-left: 1px solid var(--line);
+}
+.lib-nav-link {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 40px; padding: 7px 10px; border-radius: var(--radius-s);
+  color: var(--text-soft); text-decoration: none;
+  font-family: var(--font-display); font-weight: 600; line-height: 1.3;
+}
+.lib-nav-link > svg { flex: none; }
+.lib-nav-link:hover { background: var(--bg-sunken); color: var(--text); }
+.lib-nav-link[aria-current='page'] { background: var(--brand-soft); color: var(--brand); }
+.lib-nav-sub { font-family: var(--font); font-weight: 400; font-size: 0.92rem; min-height: 36px; padding-block: 6px; }
+.lib-nav-sub[aria-current='page'] { font-weight: 600; }
+.lib-nav-label { flex: 1; min-width: 0; overflow-wrap: break-word; hyphens: auto; }
+.lib-count {
+  margin-left: auto; flex: none;
+  font-size: 0.8rem; font-weight: 700; color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+[aria-current='page'] > .lib-count { color: inherit; }
+.lib-nav-sep { height: 1px; background: var(--line); margin: 6px 4px; }
+.lib-newfolder { justify-self: start; margin: 2px 0 0 4px; }
+
+/* Zoeken en soortfilter */
+.lib-tools { display: grid; gap: 12px; margin-bottom: 18px; }
+.lib-search { position: relative; max-width: 480px; }
+.lib-search > svg {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--text-faint); pointer-events: none;
+}
+.lib-search .input { padding-left: 40px; }
+.lib-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.lib-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 36px; padding: 5px 13px; border-radius: 999px;
+  border: 1px solid var(--line-strong); background: var(--bg-raised); color: var(--text-soft);
+  font: inherit; font-family: var(--font-display); font-weight: 600; font-size: 0.9rem;
+  cursor: pointer;
+}
+.lib-chip > svg { flex: none; }
+.lib-chip:hover { border-color: var(--text-soft); color: var(--text); }
+.lib-chip[aria-pressed='true'] { background: var(--text); border-color: var(--text); color: var(--bg); }
+
+/* Kop van de huidige selectie */
+.lib-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 14px; }
+.lib-head-text { min-width: 0; flex: 1 1 240px; }
+.lib-head h2 {
+  margin: 0; font-size: 1.15rem; overflow-wrap: break-word; hyphens: auto;
+  display: flex; align-items: center; gap: 8px;
+}
+.lib-head h2 > svg { flex: none; color: var(--text-soft); }
+.lib-head-note { margin: 2px 0 0; color: var(--text-soft); font-size: 0.9rem; }
+.lib-head-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.lib-back { margin-bottom: 6px; }
+
+/* Regels die naar een cursus of map leiden */
+.lib-rows { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 8px; }
+.lib-row {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 56px; padding: 10px 14px;
+  border: 1px solid var(--line); border-radius: var(--radius-m);
+  background: var(--bg-raised); color: var(--text); text-decoration: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.lib-row:hover { border-color: var(--line-strong); box-shadow: var(--shadow-1); }
+.lib-row-icon { flex: none; display: grid; color: var(--text-soft); }
+.lib-row-text { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.lib-row-title { font-family: var(--font-display); font-weight: 700; overflow-wrap: break-word; hyphens: auto; }
+.lib-row-count { color: var(--text-soft); font-size: 0.9rem; }
+.lib-row-stack { display: flex; flex: none; }
+.lib-row-stack .type-tile { box-shadow: 0 0 0 2px var(--bg-raised); }
+.lib-row-stack .type-tile + .type-tile { margin-left: -5px; }
+.lib-chevron { flex: none; color: var(--text-faint); }
+
+/* Kaarten */
+.lib-section-title { font-size: 1rem; margin: 22px 0 10px; color: var(--text-soft); }
+.lib-section-title:first-child { margin-top: 4px; }
+.lib-grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+}
+.lib-grid > li { display: flex; min-width: 0; }
+
+/*
+ * De kaart: een echte link over titel en tegel (het ::after-vlak van de link
+ * bedekt de kaart), en de menuknop ernaast, niet erin. De menuknop staat na
+ * de link in de broncode, dus Tab gaat van link naar menu, en hij ligt boven
+ * het linkvlak. Geen transform bij hover: die zou het open menu onder de
+ * volgende kaart schuiven.
+ */
+.widget-card.lib-card {
+  position: relative; flex: 1; min-width: 0;
+  display: grid; align-items: center; gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas: 'tile kind menu' 'title title title' 'foot foot foot';
+  padding: 12px 10px 12px 14px;
+  overflow: visible; cursor: default; box-shadow: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.widget-card.lib-card:hover { transform: none; border-color: var(--line-strong); box-shadow: var(--shadow-1); }
+.lib-card:focus-within { z-index: 2; }
+.lib-card-tile { grid-area: tile; }
+.lib-card-tile-unknown { width: 30px; height: 30px; border-radius: 8px; background: var(--bg-sunken); }
+.lib-card-kind {
+  grid-area: kind; min-width: 0;
+  font-size: 0.82rem; font-weight: 700; color: var(--text-soft); overflow-wrap: break-word; hyphens: auto;
+}
+.lib-card-title {
+  grid-area: title; align-self: start; margin: 0;
+  font-size: 1rem; line-height: 1.35; overflow-wrap: break-word; hyphens: auto;
+}
+.lib-card-link { color: var(--text); text-decoration: none; }
+.lib-card-link::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.lib-card:hover .lib-card-link { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.lib-card-link:focus-visible { outline: none; }
+.lib-card-link:focus-visible::after { outline: 3px solid var(--brand); outline-offset: 2px; }
+.lib-card-foot {
+  grid-area: foot; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px;
+  font-size: 0.82rem; color: var(--text-faint); padding-right: 4px;
+}
+.lib-code {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-weight: 600; letter-spacing: 0.08em; color: var(--text-soft);
+}
+.lib-subs { display: inline-flex; align-items: center; gap: 4px; color: var(--ok-text); font-weight: 700; }
+.lib-date { margin-left: auto; }
+.lib-card-menu { grid-area: menu; margin: -6px 0; }
+
+/* Keuzes in de vensters (omzetten, naar map) */
+.lib-choices { display: grid; gap: 8px; }
+.lib-choice {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  min-height: 56px; padding: 10px 14px; text-align: left;
+  border: 1px solid var(--line-strong); border-radius: var(--radius-m);
+  background: var(--bg-raised); color: var(--text); font: inherit; cursor: pointer;
+}
+.lib-choice:hover { background: var(--bg-sunken); }
+.lib-choice small { display: block; color: var(--text-soft); font-size: 0.85rem; }
+.lib-radio {
+  display: flex; align-items: center; gap: 10px; min-height: 44px;
+  padding: 6px 10px; border-radius: var(--radius-s); cursor: pointer;
+}
+.lib-radio:hover { background: var(--bg-sunken); }
+.lib-radio input { width: 18px; height: 18px; accent-color: var(--brand); flex: none; }
+.lib-radio > svg { flex: none; }
+.lib-fieldset { border: 0; margin: 0 0 12px; padding: 0; display: grid; gap: 2px; }
+.lib-fieldset legend { font-weight: 600; font-size: 0.9rem; color: var(--text-soft); margin-bottom: 6px; padding: 0; }
+.lib-warning { align-items: flex-start; }
+.lib-warning > svg { flex: none; margin-top: 2px; color: var(--warn-text); }
+.lib-warning p { margin: 0; }
+
+/* Gsm: de zijkolom wordt een uitklapbare filter. */
+@media (max-width: 759px) {
+  .lib { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .lib-side { position: static; max-height: none; overflow: visible; padding: 0; margin: 0; }
+  .lib-side-toggle { display: flex; width: 100%; justify-content: flex-start; min-height: 44px; text-align: left; }
+  .lib-toggle-chevron { flex: none; transition: transform 0.15s; }
+  .lib-side-toggle[aria-expanded='true'] .lib-toggle-chevron { transform: rotate(180deg); }
+  .lib-side-toggle .lib-toggle-text { flex: 1; min-width: 0; overflow-wrap: break-word; hyphens: auto; font-weight: 600; }
+  .lib-nav {
+    display: none; margin-top: 8px; padding: 8px;
+    border: 1px solid var(--line); border-radius: var(--radius-m); background: var(--bg-raised);
+  }
+  .lib-nav.is-open { display: grid; }
+  .lib-nav-link, .lib-nav-sub { min-height: 44px; }
+  .lib-newfolder { min-height: 44px; }
+  .lib-chip { min-height: 44px; }
+  .lib-card-menu .btn-icon { min-width: 44px; min-height: 44px; }
+  .lib-search { max-width: none; }
+  .lib-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── Kaarten voor cursussen en leerplannen ─────────────────────────────── */
+
+.mat-grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+}
+.mat-grid > li { display: flex; min-width: 0; }
+.mat-card {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px;
+  padding: 16px 16px 14px; box-shadow: none;
+}
+.mat-card-head { display: flex; gap: 12px; align-items: flex-start; }
+.mat-card-icon {
+  flex: none; width: 38px; height: 38px; border-radius: 10px;
+  display: grid; place-items: center; background: var(--brand-soft); color: var(--brand);
+}
+.mat-card-titles { min-width: 0; flex: 1; }
+.mat-card-title { margin: 0; font-size: 1.05rem; line-height: 1.3; overflow-wrap: break-word; hyphens: auto; }
+.mat-card-sub { margin: 3px 0 0; color: var(--text-soft); font-size: 0.9rem; overflow-wrap: break-word; hyphens: auto; }
+.mat-facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 0.88rem; color: var(--text-soft); }
+.mat-facts li { display: flex; gap: 8px; align-items: flex-start; min-width: 0; }
+.mat-facts li > svg { flex: none; margin-top: 2px; color: var(--text-faint); }
+.mat-facts li > span { min-width: 0; overflow-wrap: break-word; hyphens: auto; }
+.mat-code {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-weight: 700; letter-spacing: 0.08em; color: var(--text);
+}
+.mat-cover { display: block; margin-top: 4px; }
+.mat-card-actions { margin-top: auto; padding-top: 4px; display: flex; gap: 8px; align-items: center; }
+.mat-card-actions .menu-wrap { margin-left: auto; }
+@media (max-width: 640px) {
+  .mat-grid { grid-template-columns: minmax(0, 1fr); }
+  .mat-card-actions .btn { min-height: 44px; }
+  .mat-card-actions .btn-icon { min-width: 44px; }
+}
+
+/* Drie startmanieren in de lege toestand van cursussen */
+.mat-starts {
+  display: grid; gap: 10px; margin-top: 8px; text-align: left;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.mat-starts .card { display: grid; gap: 6px; align-content: start; justify-items: start; }
+.mat-starts strong { display: flex; align-items: center; gap: 8px; color: var(--text); }
+.mat-starts .hint { margin: 0; }
+
+/* Inklapbaar infoblok (leerplannen) */
+details.mat-details { display: block; padding: 0; }
+.mat-details > summary {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 44px; padding: 10px 16px; cursor: pointer; list-style: none;
+  font-weight: 700; border-radius: var(--radius-m);
+}
+.mat-details > summary::-webkit-details-marker { display: none; }
+.mat-details > summary > svg { flex: none; }
+.mat-details > summary .mat-chevron { margin-left: auto; transition: transform 0.15s; }
+.mat-details[open] > summary .mat-chevron { transform: rotate(180deg); }
+.mat-details-body { padding: 0 16px 14px; }
+
+/* Leerplaneditor: grotere tikdoelen voor de doelknoppen op gsm */
+@media (max-width: 640px) {
+  .mat-goal-actions .btn-icon { min-width: 44px; min-height: 44px; }
+}
+
+/* ── Nieuwe widget (/nieuw) ────────────────────────────────────────────── */
+
+.mat-new-search { margin-bottom: 22px; }
+.mat-ai-card {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 16px 20px; margin-bottom: 30px; text-decoration: none; color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--brand) 45%, transparent); background: var(--brand-soft);
+}
+.mat-ai-card:hover { border-color: var(--brand); }
+.mat-ai-icon {
+  flex: none; width: 46px; height: 46px; border-radius: 12px;
+  display: grid; place-items: center; background: var(--bg-raised); color: var(--brand);
+}
+.mat-ai-text { flex: 1 1 240px; min-width: 0; }
+.mat-ai-text h2 { margin: 0; font-size: 1.08rem; }
+.mat-ai-text p { margin: 2px 0 0; color: var(--text-soft); }
+.mat-section-title { font-size: 1.1rem; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+.mat-section-title > svg { flex: none; color: var(--text-soft); }
+.mat-template { position: relative; display: flex; min-width: 0; }
+.mat-template > .type-card { width: 100%; padding-right: 52px; }
+.mat-template-delete { position: absolute; top: 8px; right: 8px; }
+@media (max-width: 640px) {
+  .mat-template-delete { min-width: 44px; min-height: 44px; top: 4px; right: 4px; }
+  .mat-ai-card .btn { width: 100%; }
+}
+
+/* Draaiend laadicoon (knop "Voorbeeldcursus laden") */
+.mat-spin { animation: matSpin 0.9s linear infinite; }
+@keyframes matSpin { to { transform: rotate(360deg); } }

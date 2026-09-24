@@ -25,12 +25,20 @@ import { ConfirmModal, EmptyState, Field, Modal, useToast } from '../components/
 import { downloadFile, formatDateShort, uid } from '../lib/utils';
 import { onStorageChange } from '../lib/storage';
 import { useNewParam } from '../lib/useNewParam';
+import { ChevronDown, FileBraces, ListTree } from 'lucide-react';
+import { MenuButton } from '../components/Menu';
+import {
+  AddIcon, AIIcon, BackIcon, CheckIcon, DeleteIcon, EditIcon, ExportIcon, GoalIcon, InfoIcon, MoreIcon, MoveDownIcon,
+  MoveUpIcon, RetryIcon, TipIcon, WarningIcon,
+} from '../components/icons';
+import '../styles/materiaal.css';
 
 type AITarget = { mode: 'new' } | { mode: 'add'; curriculum: Curriculum };
 
 export function CurriculaPage() {
   const toast = useToast();
-  const [curricula, setCurricula] = useState<Curriculum[]>([]);
+  // Meteen inlezen: het infoblok hieronder krijgt zo meteen de juiste begintoestand.
+  const [curricula, setCurricula] = useState<Curriculum[]>(getCurricula);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [aiTarget, setAiTarget] = useState<AITarget | null>(null);
   const [newOpen, setNewOpen] = useState(false);
@@ -45,6 +53,10 @@ export function CurriculaPage() {
   }, []);
 
   const editing = curricula.find((c) => c.id === editingId);
+
+  // Wisselen tussen lijst en editor is een nieuw scherm: bovenaan beginnen,
+  // anders opent de editor halverwege (vooral op gsm).
+  useEffect(() => { window.scrollTo(0, 0); }, [editingId]);
 
   const save = (cur: Curriculum) => {
     saveCurriculum(cur);
@@ -119,75 +131,85 @@ export function CurriculaPage() {
   }
 
   return (
-    <div className="page">
+    <div className="page mat-page">
       <div className="page-head">
         <div>
-          <h1>🎯 Leerplannen</h1>
+          <h1>Leerplannen</h1>
           <p className="sub">
             Je doelenlijsten met codes. Een code koppelt een cursussectie, een quizvraag en een
             resultaat aan hetzelfde doel — zo weet je meteen wat gedekt is en wat nog niet.
           </p>
         </div>
         <div className="page-head-actions">
-          <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>📥 JSON importeren</button>
+          <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}><FileBraces size={18} /> JSON importeren</button>
           <input
             ref={fileRef} type="file" accept="application/json,.json" hidden
             onChange={(e) => { const f = e.target.files?.[0]; if (f) void importFile(f); e.target.value = ''; }}
           />
           <button className="btn btn-ai" onClick={() => setAiTarget({ mode: 'new' })}>
-            ✨ Uit tekst of pdf
+            <AIIcon size={18} /> Uit tekst of pdf
           </button>
-          <button className="btn btn-primary" onClick={() => setNewOpen(true)}>➕ Blanco doelenlijst</button>
+          <button className="btn btn-primary" onClick={() => setNewOpen(true)}><AddIcon size={18} /> Blanco doelenlijst</button>
         </div>
       </div>
 
-      <SourcesCallout />
+      <SourcesCallout defaultOpen={!curricula.some((c) => !c.example)} />
 
       {curricula.length === 0 ? (
-        <EmptyState icon="🎯" title="Nog geen leerplannen">
+        <EmptyState icon={<ListTree size={40} />} title="Nog geen leerplannen">
           <p>
             Zet je leerplan- of minimumdoelen één keer om in een doelenlijst. Daarna kan je elke
             cursussectie en elke oefening eraan koppelen — en zie je in één oogopslag welke doelen
             nog niet aan bod komen.
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn btn-ai" onClick={() => setAiTarget({ mode: 'new' })}>✨ Uit tekst of pdf</button>
-            <button className="btn btn-primary" onClick={() => setNewOpen(true)}>➕ Blanco doelenlijst</button>
+            <button className="btn btn-ai" onClick={() => setAiTarget({ mode: 'new' })}><AIIcon size={18} /> Uit tekst of pdf</button>
+            <button className="btn btn-primary" onClick={() => setNewOpen(true)}><AddIcon size={18} /> Blanco doelenlijst</button>
           </div>
         </EmptyState>
       ) : (
-        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))' }}>
+        <ul className="mat-grid">
           {curricula.map((cur) => (
-            <div key={cur.id} className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                <h2 style={{ margin: 0, fontSize: '1.02rem', flex: 1 }}>{cur.title}</h2>
-                {cur.example && <span className="badge">voorbeeld</span>}
-              </div>
-              <p className="hint" style={{ margin: 0 }}>
-                {netLabel(cur.net)} · {curriculumLabel(cur)}
-              </p>
-              <p className="hint" style={{ margin: 0 }}>
-                🎯 {cur.goals.length} doel{cur.goals.length === 1 ? '' : 'en'} · bijgewerkt {formatDateShort(cur.updatedAt)}
-              </p>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 'auto' }}>
-                <button className="btn btn-sm btn-primary" onClick={() => setEditingId(cur.id)}>✏️ Bewerken</button>
-                <button
-                  className="btn btn-sm btn-quiet"
-                  onClick={() => downloadFile(`${cur.title || 'leerplan'}.json`, exportCurriculumJson(cur))}
-                >
-                  💾 Exporteren
-                </button>
-                <button
-                  className="btn btn-sm btn-quiet"
-                  aria-label={`Leerplan "${cur.title}" verwijderen`}
-                  onClick={() => setDeleteTarget(cur)}
-                >
-                  🗑
-                </button>
-              </div>
-            </div>
+            <li key={cur.id}>
+              <article className="card mat-card">
+                <div className="mat-card-head">
+                  <span className="mat-card-icon" aria-hidden="true"><ListTree size={20} /></span>
+                  <div className="mat-card-titles">
+                    <h2 className="mat-card-title">{cur.title}</h2>
+                    {cur.example && <span className="badge" style={{ marginTop: 6 }}>voorbeeld</span>}
+                  </div>
+                </div>
+                <ul className="mat-facts">
+                  <li>
+                    <InfoIcon size={16} />
+                    <span>{netLabel(cur.net)} · {curriculumLabel(cur)}</span>
+                  </li>
+                  <li>
+                    <GoalIcon size={16} />
+                    <span>{cur.goals.length} doel{cur.goals.length === 1 ? '' : 'en'} · bijgewerkt {formatDateShort(cur.updatedAt)}</span>
+                  </li>
+                </ul>
+                <div className="mat-card-actions">
+                  <button className="btn btn-sm btn-primary" onClick={() => setEditingId(cur.id)}>
+                    <EditIcon size={16} /> Bewerken<span className="sr-only">: {cur.title}</span>
+                  </button>
+                  <MenuButton
+                    Icon={MoreIcon}
+                    ariaLabel={`Acties voor ${cur.title}`}
+                    className="btn btn-quiet btn-icon"
+                    items={[
+                      {
+                        label: 'Exporteren', hint: 'Als bestand (.json)', Icon: ExportIcon,
+                        onSelect: () => downloadFile(`${cur.title || 'leerplan'}.json`, exportCurriculumJson(cur)),
+                      },
+                      { label: 'Verwijderen', Icon: DeleteIcon, danger: true, separator: true, onSelect: () => setDeleteTarget(cur) },
+                    ]}
+                  />
+                </div>
+              </article>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       {newOpen && (
@@ -219,23 +241,36 @@ function mergeGoals(existing: CurriculumGoal[], incoming: CurriculumGoal[]): Cur
 
 // ── Waar vind je de officiële documenten? ───────────────────────────────────
 
-function SourcesCallout() {
+function SourcesCallout({ defaultOpen }: { defaultOpen: boolean }) {
+  // Standaard dicht zodra er een eigen leerplan is; daarna beslist de leerkracht.
+  const [open, setOpen] = useState<boolean | null>(null);
   return (
-    <div className="callout" style={{ marginBottom: 18 }}>
-      <strong>Waar vind je de officiële doelen?</strong>
-      <ul style={{ margin: '6px 0 6px', paddingLeft: 20 }}>
-        <li><strong>Minimumdoelen</strong> (de wettelijke basis voor elk net): <code>onderwijsdoelen.be</code></li>
-        <li><strong>GO!</strong>-leerplannen: <code>pro.g-o.be</code></li>
-        <li><strong>Katholiek Onderwijs Vlaanderen</strong>: de leerplannen en ZILL via hun leerplansite</li>
-        <li><strong>OVSG</strong> (stedelijk en gemeentelijk): <code>ovsg.be</code></li>
-        <li><strong>POV</strong> (provinciaal): <code>pov.be</code></li>
-      </ul>
-      <p className="hint" style={{ margin: 0 }}>
-        Boosterz haalt die documenten niet zelf op: ze zijn auteursrechtelijk beschermd en een
-        browser mag ze niet zomaar van een andere website inladen (CORS). Kopieer de doelen uit het
-        document en plak ze hier, of lees de pdf in — alles blijft op dit toestel.
-      </p>
-    </div>
+    <details
+      className="callout mat-details"
+      style={{ marginBottom: 18 }}
+      open={open ?? defaultOpen}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
+      <summary>
+        <InfoIcon size={20} />
+        <span>Waar vind je de officiële doelen?</span>
+        <ChevronDown size={18} className="mat-chevron" />
+      </summary>
+      <div className="mat-details-body">
+        <ul style={{ margin: '0 0 6px', paddingLeft: 20 }}>
+          <li><strong>Minimumdoelen</strong> (de wettelijke basis voor elk net): <code>onderwijsdoelen.be</code></li>
+          <li><strong>GO!</strong>-leerplannen: <code>pro.g-o.be</code></li>
+          <li><strong>Katholiek Onderwijs Vlaanderen</strong>: de leerplannen en ZILL via hun leerplansite</li>
+          <li><strong>OVSG</strong> (stedelijk en gemeentelijk): <code>ovsg.be</code></li>
+          <li><strong>POV</strong> (provinciaal): <code>pov.be</code></li>
+        </ul>
+        <p className="hint" style={{ margin: 0 }}>
+          Boosterz haalt die documenten niet zelf op: ze zijn auteursrechtelijk beschermd en een
+          browser mag ze niet zomaar van een andere website inladen (CORS). Kopieer de doelen uit het
+          document en plak ze hier, of lees de pdf in. Alles blijft op dit toestel.
+        </p>
+      </div>
+    </details>
   );
 }
 
@@ -340,10 +375,10 @@ function CurriculumEditor({
   }, [goals]);
 
   return (
-    <div className="page">
+    <div className="page mat-page">
       <div className="page-head">
         <div>
-          <button className="btn btn-sm btn-quiet" onClick={onBack}>← Alle leerplannen</button>
+          <button className="btn btn-sm btn-quiet" onClick={onBack}><BackIcon size={16} /> Alle leerplannen</button>
           <h1 style={{ marginTop: 6 }}>{curriculum.title || 'Doelenlijst'}</h1>
           <p className="sub">
             {netLabel(curriculum.net)} · {goals.length} doel{goals.length === 1 ? '' : 'en'}
@@ -351,12 +386,12 @@ function CurriculumEditor({
           </p>
         </div>
         <div className="page-head-actions">
-          <button className="btn btn-ai" onClick={onAskAI}>✨ Doelen uit tekst of pdf</button>
+          <button className="btn btn-ai" onClick={onAskAI}><AIIcon size={18} /> Doelen uit tekst of pdf</button>
           <button
             className="btn btn-ghost"
             onClick={() => downloadFile(`${curriculum.title || 'leerplan'}.json`, exportCurriculumJson(curriculum))}
           >
-            💾 Exporteren
+            <ExportIcon size={18} /> Exporteren
           </button>
         </div>
       </div>
@@ -384,31 +419,34 @@ function CurriculumEditor({
       </div>
 
       {duplicateCodes.size > 0 && (
-        <p role="alert" className="callout warn" style={{ marginBottom: 12 }}>
-          ⚠️ Dubbele code(s): {[...duplicateCodes].join(', ')}. Een code moet uniek zijn binnen het
-          leerplan — anders tellen twee doelen als één bij de dekking en de resultaten.
-        </p>
+        <div role="alert" className="callout warn" style={{ marginBottom: 12 }}>
+          <WarningIcon size={20} style={{ flex: 'none', marginTop: 2, color: 'var(--warn-text)' }} />
+          <p style={{ margin: 0 }}>
+            Dubbele code(s): {[...duplicateCodes].join(', ')}. Een code moet uniek zijn binnen het
+            leerplan, anders tellen twee doelen als één bij de dekking en de resultaten.
+          </p>
+        </div>
       )}
 
       {goals.length === 0 ? (
-        <EmptyState icon="📝" title="Nog geen doelen">
+        <EmptyState icon={<GoalIcon size={40} />} title="Nog geen doelen">
           <p>Voeg doelen toe met de knop hieronder, of laat de AI ze uit je leerplantekst halen.</p>
         </EmptyState>
       ) : (
         <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 10 }}>
           {goals.map((goal, i) => (
             <li key={goal.id} className="editor-item">
-              <div className="editor-item-head">
+              <div className="editor-item-head mat-goal-actions">
                 <strong style={{ fontSize: '0.88rem' }}>Doel {i + 1}</strong>
                 <span style={{ flex: 1 }} />
-                <button className="btn btn-quiet btn-sm btn-icon" disabled={i === 0} aria-label={`Doel ${i + 1} omhoog`} onClick={() => move(i, -1)}>↑</button>
-                <button className="btn btn-quiet btn-sm btn-icon" disabled={i === goals.length - 1} aria-label={`Doel ${i + 1} omlaag`} onClick={() => move(i, 1)}>↓</button>
+                <button className="btn btn-quiet btn-sm btn-icon" disabled={i === 0} aria-label={`Doel ${i + 1} omhoog`} onClick={() => move(i, -1)}><MoveUpIcon size={16} /></button>
+                <button className="btn btn-quiet btn-sm btn-icon" disabled={i === goals.length - 1} aria-label={`Doel ${i + 1} omlaag`} onClick={() => move(i, 1)}><MoveDownIcon size={16} /></button>
                 <button
                   className="btn btn-quiet btn-sm btn-icon"
                   aria-label={`Doel ${i + 1} verwijderen`}
                   onClick={() => { setGoals(goals.filter((_, j) => j !== i)); toast('Doel verwijderd', 'ok'); }}
                 >
-                  🗑
+                  <DeleteIcon size={16} />
                 </button>
               </div>
               <div className="editor-item-body">
@@ -469,11 +507,14 @@ function CurriculumEditor({
         </ol>
       )}
 
-      <button className="btn btn-ghost" style={{ width: '100%', marginTop: 12 }} onClick={add}>+ Doel toevoegen</button>
+      <button className="btn btn-ghost" style={{ width: '100%', marginTop: 12 }} onClick={add}><AddIcon size={18} /> Doel toevoegen</button>
 
-      <p className="hint" style={{ marginTop: 14 }}>
-        💡 Koppel deze doelen daarna aan je cursussen via <Link to="/cursussen">Cursussen</Link> —
-        of laat de AI-cursusbouwer een dekkende cursus opzetten vanuit deze lijst.
+      <p className="hint" style={{ marginTop: 14, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+        <TipIcon size={16} style={{ flex: 'none', marginTop: 3 }} />
+        <span>
+          Koppel deze doelen daarna aan je cursussen via <Link to="/cursussen">Cursussen</Link>,
+          of laat de AI-cursusbouwer een dekkende cursus opzetten vanuit deze lijst.
+        </span>
       </p>
     </div>
   );
@@ -549,7 +590,7 @@ function CurriculumAIModal({
   };
 
   return (
-    <Modal title={curriculum ? '✨ Doelen toevoegen uit tekst of pdf' : '✨ Leerplan uit tekst of pdf'} onClose={onClose} wide>
+    <Modal title={curriculum ? 'Doelen toevoegen uit tekst of pdf' : 'Leerplan uit tekst of pdf'} onClose={onClose} wide>
       <AIGate>
         {!busy && !preview && (
           <div style={{ display: 'grid', gap: 4 }}>
@@ -606,7 +647,7 @@ function CurriculumAIModal({
             {error && <AIErrorBox error={error} onRetry={generate} />}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
               <button className="btn btn-ghost" onClick={onClose}>Annuleren</button>
-              <button className="btn btn-ai" disabled={text.trim().length < 40} onClick={generate}>✨ Doelen ophalen</button>
+              <button className="btn btn-ai" disabled={text.trim().length < 40} onClick={generate}><AIIcon size={18} /> Doelen ophalen</button>
             </div>
           </div>
         )}
@@ -636,10 +677,10 @@ function CurriculumAIModal({
               </ul>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button className="btn btn-ghost" onClick={() => setPreview(null)}>← Aanpassen</button>
-              <button className="btn btn-ghost" onClick={generate}>↺ Opnieuw</button>
+              <button className="btn btn-ghost" onClick={() => setPreview(null)}><BackIcon size={18} /> Aanpassen</button>
+              <button className="btn btn-ghost" onClick={generate}><RetryIcon size={18} /> Opnieuw</button>
               <button className="btn btn-primary" onClick={apply}>
-                {curriculum ? '✔ Doelen toevoegen' : '✔ Leerplan aanmaken'}
+                <CheckIcon size={18} /> {curriculum ? 'Doelen toevoegen' : 'Leerplan aanmaken'}
               </button>
             </div>
           </div>

@@ -10,13 +10,24 @@
 // De afbeeldingen zijn gewone bestanden naast de app (voorbeelden/nw/…): ze
 // reizen mee met een deellink of klaspakket zolang de app op dezelfde plek
 // staat, en wegen niet op localStorage of IndexedDB.
+//
+// De oefeningen komen in een eigen map ("Voorbeeld: natuurwetenschappen"),
+// zodat ze de eigen widgets niet overspoelen. Knop én ?voorbeeld=1 op
+// /cursussen gebruiken dezelfde functie: installExampleCourse().
 
 import { adoptSharedCourse, getCourse, importCourseJson } from './courses';
 import type { Course } from './courseTypes';
+import { getFolders, getWidgets, saveFolder, saveWidget } from './storage';
 import type { Widget } from './types';
+import {
+  EXAMPLE_COURSE_ID, EXAMPLE_FOLDER_ID, EXAMPLE_FOLDER_NAME, exampleInstallMessage, planExampleFolder,
+} from './library';
 
-export const EXAMPLE_COURSE_ID = 'nw-voorbeeld-1e-graad';
+export { EXAMPLE_COURSE_ID, EXAMPLE_FOLDER_ID, EXAMPLE_FOLDER_NAME };
+
 const EXAMPLE_COURSE_FILE = 'voorbeelden/natuurwetenschappen-1e-graad.json';
+/** Kleur van de voorbeeldmap (groen, zoals de natuurwetenschappen). */
+const EXAMPLE_FOLDER_COLOR = '#16a34a';
 
 /** Relatieve media-URL's uit het voorbeeldbestand absoluut maken t.o.v. de app-basis. */
 export function absolutizeExampleUrls(course: Course, base: string): Course {
@@ -37,12 +48,49 @@ export function exampleCourseInstalled(): boolean {
   return Boolean(getCourse(EXAMPLE_COURSE_ID));
 }
 
+export interface ExampleInstall {
+  course: Course;
+  widgets: Widget[];
+  /** Stond de cursus er al (en is ze nu vervangen door de bundelversie)? */
+  reinstalled: boolean;
+  /** Korte melding voor de leerkracht, met de telling per soort. */
+  message: string;
+}
+
+/** Maakt de voorbeeldmap aan als ze nog niet bestaat. Een hernoemde map blijft zoals ze is. */
+export function ensureExampleFolder(): void {
+  if (getFolders().some((f) => f.id === EXAMPLE_FOLDER_ID)) return;
+  saveFolder({ id: EXAMPLE_FOLDER_ID, name: EXAMPLE_FOLDER_NAME, color: EXAMPLE_FOLDER_COLOR, createdAt: Date.now() });
+}
+
 /**
- * Haalt het voorbeeldbestand op en zet de cursus (met haar flitskaarten) in
- * de bibliotheek. Bestaat ze al, dan wordt ze vervangen door de bundelversie
- * (de leerkracht kiest hier bewust voor: "opnieuw laden").
+ * Zet een ingelezen voorbeeldbundel in de bibliotheek. Bestaat de cursus al,
+ * dan wordt ze vervangen door de bundelversie (bewust "opnieuw laden");
+ * bestaande widgets worden nooit overschreven (adoptSharedCourse).
+ * Oefeningen zonder map komen in de voorbeeldmap; een map die de leerkracht
+ * zelf koos, blijft staan.
  */
-export async function loadExampleCourse(): Promise<{ course: Course; widgets: Widget[] }> {
+export function installExampleBundle(bundle: { course: Course; widgets: Widget[] }): ExampleInstall {
+  const reinstalled = exampleCourseInstalled();
+  let incoming = bundle.widgets;
+  let updates: Widget[] = [];
+  if (bundle.widgets.length > 0) {
+    ensureExampleFolder();
+    const folderIds = new Set(getFolders().map((f) => f.id));
+    ({ incoming, updates } = planExampleFolder(bundle.widgets, getWidgets(), folderIds));
+  }
+  adoptSharedCourse(bundle.course, incoming, { force: true });
+  for (const w of updates) saveWidget(w);
+  return {
+    course: bundle.course,
+    widgets: bundle.widgets,
+    reinstalled,
+    message: exampleInstallMessage({ chapters: bundle.course.chapters.length, widgets: bundle.widgets, reinstalled }),
+  };
+}
+
+/** Haalt het voorbeeldbestand op en installeert het (zie installExampleBundle). */
+export async function installExampleCourse(): Promise<ExampleInstall> {
   // De app staat op een relatieve basis (vite base './'): de map van het
   // document is de basis, los van de hash-route.
   const base = new URL('.', document.baseURI).href;
@@ -51,6 +99,11 @@ export async function loadExampleCourse(): Promise<{ course: Course; widgets: Wi
   const bundle = importCourseJson(await res.text());
   if (!bundle) throw new Error('Het voorbeeldbestand is geen geldige cursus');
   absolutizeExampleUrls(bundle.course, base);
-  adoptSharedCourse(bundle.course, bundle.widgets, { force: true });
-  return bundle;
+  return installExampleBundle(bundle);
+}
+
+/** Oudere naam, voor wie ze nog gebruikt: zelfde installatie. */
+export async function loadExampleCourse(): Promise<{ course: Course; widgets: Widget[] }> {
+  const { course, widgets } = await installExampleCourse();
+  return { course, widgets };
 }

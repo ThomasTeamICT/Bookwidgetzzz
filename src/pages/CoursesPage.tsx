@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { FileBraces, FlaskConical, Hash, LoaderCircle } from 'lucide-react';
 import type { Course } from '../lib/courseTypes';
 import type { Curriculum } from '../lib/curriculumTypes';
 import type { Widget } from '../lib/types';
@@ -11,12 +12,19 @@ import {
 import { getCurricula } from '../lib/curriculum';
 import { computeCoverage } from '../lib/coverage';
 import { takeHandoff } from '../lib/handoff';
+import { EXAMPLE_COURSE_ID } from '../lib/library';
 import { onStorageChange, getPrefs, getWidgets } from '../lib/storage';
 import { downloadFile, formatDateShort, makeCode, uid } from '../lib/utils';
 import { ConfirmModal, EmptyState, Field, Modal, useToast } from '../components/ui';
+import { MenuButton, type MenuItem } from '../components/Menu';
+import {
+  AddIcon, CourseIcon, DeleteIcon, DuplicateIcon, EditIcon, ExportIcon, GoalIcon, ImportIcon, MoreIcon, PrintIcon,
+  ResultsIcon, RetryIcon, ShareIcon, StudentIcon,
+} from '../components/icons';
 import { CourseShareModal } from '../components/course/CourseShareModal';
 import { CourseAIModal } from '../components/course/CourseAIModal';
 import { useNewParam } from '../lib/useNewParam';
+import '../styles/materiaal.css';
 
 /** Alles wat de AI-cursusbouwer vooringevuld kan krijgen. */
 interface AIStart {
@@ -28,23 +36,33 @@ interface AIStart {
   originNote?: string;
 }
 
+function n(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
 export function CoursesPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [curricula, setCurricula] = useState<Curriculum[]>([]);
-  const [widgets, setWidgets] = useState<Widget[]>([]);
+  // Meteen uit de opslag lezen: zo flitst de lege toestand niet eerst op.
+  const [courses, setCourses] = useState<Course[]>(getCourses);
+  const [curricula, setCurricula] = useState<Curriculum[]>(getCurricula);
+  const [widgets, setWidgets] = useState<Widget[]>(getWidgets);
   const [newOpen, setNewOpen] = useState(false);
   useNewParam(() => setNewOpen(true));
   const [aiStart, setAiStart] = useState<AIStart | null>(null);
   const [shareTarget, setShareTarget] = useState<Course | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Course | null>(null);
+  const [reloadExampleAsk, setReloadExampleAsk] = useState(false);
   const [importConflict, setImportConflict] = useState<{ course: Course; widgets: Widget[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [exampleBusy, setExampleBusy] = useState(false);
+  // Tijdens het installeren van de voorbeeldcursus schrijft de opslag honderden
+  // keren; dan niet telkens alles opnieuw inlezen, maar één keer op het einde.
+  const holdReload = useRef(false);
 
   const reload = () => {
+    if (holdReload.current) return;
     setCourses(getCourses());
     setCurricula(getCurricula());
     setWidgets(getWidgets());
@@ -77,9 +95,11 @@ export function CoursesPage() {
       originNote: h?.origin ? `Bron uit ${h.origin}` : h?.source ? 'Bron uit de importpagina' : undefined,
     });
     if (h?.origin) toast(`Bron uit ${h.origin} overgenomen`, 'ok');
-    const next = new URLSearchParams(searchParams);
-    next.delete('ai');
-    setSearchParams(next, { replace: true });
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('ai');
+      return next;
+    }, { replace: true });
   }, [searchParams, setSearchParams, toast]);
 
   /** Leerplantitel + dekkingspercentage per cursus (alleen met curriculumId). */
@@ -95,6 +115,13 @@ export function CoursesPage() {
     return map;
   }, [courses, curricula, widgets]);
 
+  const readersByCourse = useMemo(
+    () => new Map(courses.map((c) => [c.id, getCourseProgressAll(c.id).length])),
+    [courses]
+  );
+
+  const exampleInstalled = courses.some((c) => c.id === EXAMPLE_COURSE_ID);
+
   const duplicate = (course: Course) => {
     const copy: Course = JSON.parse(JSON.stringify(course));
     copy.id = uid();
@@ -106,21 +133,55 @@ export function CoursesPage() {
   };
 
   // Voorbeeldcursus (bestaand materiaal van een leerkracht, 14 hoofdstukken):
-  // lui opgehaald uit public/voorbeelden, zie lib/examples.ts.
+  // lui opgehaald uit public/voorbeelden, zie lib/examples.ts. Knop en
+  // ?voorbeeld=1 gebruiken dezelfde installatie.
+  const busyRef = useRef(false);
   const loadExample = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setExampleBusy(true);
+    holdReload.current = true;
     try {
       const m = await import('../lib/examples');
-      const already = m.exampleCourseInstalled();
-      const { course, widgets } = await m.loadExampleCourse();
-      const n = course.chapters.length;
-      toast(already ? `Voorbeeldcursus opnieuw geladen (${n} hoofdstukken)` : `Voorbeeldcursus geladen: ${n} hoofdstukken, ${widgets.length} flitskaartensets`, 'ok');
+      const res = await m.installExampleCourse();
+      toast(res.message, 'ok');
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Voorbeeldcursus laden mislukt', 'err');
     } finally {
+      holdReload.current = false;
+      busyRef.current = false;
       setExampleBusy(false);
+      reload();
     }
   };
+
+  // /cursussen?voorbeeld=1 (bv. vanaf de startpagina): één keer installeren
+  // en de parameter wegnemen, zodat terugkeren of herladen niets herhaalt.
+  // Staat de cursus er al, dan overschrijven we ze niet via een link: eigen
+  // aanpassingen blijven. Opnieuw laden kan bewust via het menu van de cursus.
+  const exampleParamDone = useRef(false);
+  useEffect(() => {
+    // De vlag vangt de dubbele uitvoering van StrictMode op; zodra de
+    // parameter weg is, mag een volgende link (ook op deze pagina) weer werken.
+    if (searchParams.get('voorbeeld') !== '1') { exampleParamDone.current = false; return; }
+    if (exampleParamDone.current) return;
+    exampleParamDone.current = true;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('voorbeeld');
+      return next;
+    }, { replace: true });
+    if (getCourse(EXAMPLE_COURSE_ID)) {
+      toast('De voorbeeldcursus staat al in je cursussen', 'info');
+      requestAnimationFrame(() => {
+        document.getElementById(`cursus-${EXAMPLE_COURSE_ID}`)?.scrollIntoView({ block: 'center' });
+      });
+      return;
+    }
+    void loadExample();
+    // loadExample is stabiel genoeg: enkel de URL is de trigger
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, setSearchParams, toast]);
 
   const importFile = async (f: File) => {
     try {
@@ -143,129 +204,161 @@ export function CoursesPage() {
     }
   };
 
+  const courseMenu = (course: Course): MenuItem[] => {
+    const items: MenuItem[] = [
+      { label: 'Volgen', hint: 'Voortgang van je leerlingen', Icon: ResultsIcon, to: `/cursus/volg/${course.id}` },
+      { label: 'Delen', hint: 'Link, code of insluiten in je leerplatform', Icon: ShareIcon, onSelect: () => setShareTarget(course) },
+      { label: 'Dupliceren', Icon: DuplicateIcon, onSelect: () => duplicate(course) },
+      {
+        label: 'Afdrukken', hint: 'Opent in een nieuw tabblad', Icon: PrintIcon,
+        onSelect: () => { window.open(`#/cursus/print/${course.id}`, '_blank', 'noopener'); },
+      },
+      {
+        label: 'Exporteren', hint: 'Als bestand (.json), met de oefeningen', Icon: ExportIcon,
+        onSelect: () => { void exportCourseJson(course).then((json) => downloadFile(`${course.title || 'cursus'}.json`, json)); },
+      },
+    ];
+    if (course.id === EXAMPLE_COURSE_ID) {
+      items.push({ label: 'Voorbeeld opnieuw laden', hint: 'Terug naar de originele versie', Icon: RetryIcon, onSelect: () => setReloadExampleAsk(true) });
+    }
+    items.push({ label: 'Verwijderen', Icon: DeleteIcon, danger: true, separator: true, onSelect: () => setDeleteTarget(course) });
+    return items;
+  };
+
+  const exampleButton = (className: string) => (
+    <button
+      type="button"
+      className={className}
+      onClick={() => { void loadExample(); }}
+      disabled={exampleBusy}
+      aria-busy={exampleBusy}
+      title="Een echte cursus natuurwetenschappen (14 hoofdstukken, uit pdf's ingelezen) als voorbeeld in je bibliotheek zetten"
+    >
+      {exampleBusy ? <LoaderCircle size={18} className="mat-spin" /> : <FlaskConical size={18} />}
+      {exampleBusy ? 'Voorbeeldcursus wordt geladen…' : 'Voorbeeldcursus laden'}
+    </button>
+  );
+
   return (
-    <div className="page">
+    <div className="page mat-page">
       <div className="page-head">
         <div>
-          <h1>📚 Cursussen</h1>
-          <p className="sub">Digitale cursussen die je per hoofdstuk deelt en opvolgt — met oefeningen erin.</p>
+          <h1>Cursussen</h1>
+          <p className="sub">Digitale cursussen die je per hoofdstuk deelt en opvolgt, met oefeningen erin.</p>
         </div>
         <div className="page-head-actions">
           <Link to="/importeren" className="btn btn-ghost" title="Vertrek van een document, pdf of presentatie die je al hebt">
-            📥 Uit bestaand materiaal
+            <ImportIcon size={18} /> Uit bestaand materiaal
           </Link>
           <button
-            className="btn btn-ai"
+            type="button"
+            className="btn btn-ghost"
             onClick={() => setAiStart({ focus: 'curriculum' })}
             title="Kies je leerplandoelen; de AI bouwt een cursus die ze allemaal dekt"
           >
-            🎯 Blanco vanuit leerplan
+            <GoalIcon size={18} /> Blanco vanuit leerplan
           </button>
-          <button className="btn btn-primary" onClick={() => setNewOpen(true)}>➕ Zelf bouwen</button>
-          <button className="btn btn-quiet" onClick={() => fileRef.current?.click()} title="Een cursusbestand (.json) terugzetten">
-            📂 JSON openen
+          <button type="button" className="btn btn-quiet" onClick={() => fileRef.current?.click()} title="Een cursusbestand (.json) terugzetten">
+            <FileBraces size={18} /> JSON openen
           </button>
-          <button
-            className="btn btn-quiet"
-            onClick={() => { void loadExample(); }}
-            disabled={exampleBusy}
-            title="Een echte cursus natuurwetenschappen (14 hoofdstukken, uit pdf's ingelezen) als voorbeeld in je bibliotheek zetten"
-          >
-            {exampleBusy ? '⏳ Laden…' : '🧪 Voorbeeldcursus laden'}
+          {!exampleInstalled && courses.length > 0 && exampleButton('btn btn-quiet')}
+          <button type="button" className="btn btn-primary" onClick={() => setNewOpen(true)}>
+            <AddIcon size={18} /> Zelf bouwen
           </button>
           <input ref={fileRef} type="file" accept="application/json,.json" hidden
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f); e.target.value = ''; }} />
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) void importFile(f); e.target.value = ''; }} />
         </div>
       </div>
 
       {courses.length === 0 ? (
-        <EmptyState icon="📚" title="Nog geen cursussen">
+        <EmptyState icon={<CourseIcon size={40} />} title="Nog geen cursussen">
           <p>
-            Er zijn drie manieren om te starten. Kies er een — je kan achteraf altijd alles zelf
+            Er zijn drie manieren om te starten. Kies er een: je kan achteraf altijd alles zelf
             aanpassen, en de AI blijft een voorzet die jij nakijkt.
           </p>
-          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', textAlign: 'left', marginTop: 8 }}>
+          <div className="mat-starts">
             <div className="card card-pad">
-              <strong>📥 Uit bestaand materiaal</strong>
+              <strong><ImportIcon size={18} /> Uit bestaand materiaal</strong>
               <p className="hint">Je hebt al een cursustekst, een pdf of een presentatie? Lees ze in en laat er een digitale cursus van maken.</p>
               <Link to="/importeren" className="btn btn-sm btn-ghost">Materiaal inlezen</Link>
             </div>
             <div className="card card-pad">
-              <strong>🎯 Blanco vanuit leerplan</strong>
+              <strong><GoalIcon size={18} /> Blanco vanuit leerplan</strong>
               <p className="hint">Kies je leerplandoelen; de AI bouwt een dekkende cursus met de doelcodes al op de secties.</p>
-              <button className="btn btn-sm btn-ai" onClick={() => setAiStart({ focus: 'curriculum' })}>Doelen kiezen</button>
+              <button type="button" className="btn btn-sm btn-ghost" onClick={() => setAiStart({ focus: 'curriculum' })}>Doelen kiezen</button>
             </div>
             <div className="card card-pad">
-              <strong>➕ Zelf bouwen</strong>
-              <p className="hint">Begin met een leeg hoofdstuk en bouw sectie per sectie — met of zonder AI-hulp onderweg.</p>
-              <button className="btn btn-sm btn-primary" onClick={() => setNewOpen(true)}>Lege cursus</button>
+              <strong><AddIcon size={18} /> Zelf bouwen</strong>
+              <p className="hint">Begin met een leeg hoofdstuk en bouw sectie per sectie, met of zonder AI-hulp onderweg.</p>
+              <button type="button" className="btn btn-sm btn-primary" onClick={() => setNewOpen(true)}>Lege cursus</button>
             </div>
           </div>
           <p className="hint" style={{ marginTop: 14 }}>
             Eerst eens zien hoe een ingelezen cursus eruitziet? Laad de <strong>voorbeeldcursus natuurwetenschappen</strong>:
-            14 hoofdstukken uit de pdf's van een leerkracht, met afbeeldingen, doelcodes en flitskaarten.{' '}
-            <button className="btn btn-sm btn-quiet" onClick={() => { void loadExample(); }} disabled={exampleBusy}>
-              {exampleBusy ? '⏳ Laden…' : '🧪 Voorbeeldcursus laden'}
-            </button>
+            14 hoofdstukken uit de pdf's van een leerkracht, met afbeeldingen, doelcodes en oefeningen.
           </p>
+          {exampleButton('btn btn-sm btn-ghost')}
         </EmptyState>
       ) : (
-        <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))' }}>
+        <ul className="mat-grid">
           {courses.map((course) => {
             const sections = course.chapters.reduce((a, c) => a + c.sections.length, 0);
-            const readers = getCourseProgressAll(course.id).length;
+            const readers = readersByCourse.get(course.id) ?? 0;
             const cov = coverageByCourse.get(course.id);
             return (
-              <div key={course.id} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
-                <div
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', height: 86,
-                    fontSize: '2.6rem', background: `${course.settings.accentColor}22`,
-                    borderRadius: 'var(--radius-m) var(--radius-m) 0 0',
-                  }}
-                  aria-hidden
-                >
-                  {course.coverEmoji}
-                </div>
-                <div style={{ padding: '12px 16px 14px', display: 'grid', gap: 6, flex: 1 }}>
-                  <h3 style={{ margin: 0 }}>{course.title}</h3>
-                  {course.subtitle && <p className="hint" style={{ margin: 0 }}>{course.subtitle}</p>}
-                  <p className="hint" style={{ margin: 0 }}>
-                    {course.chapters.length} hoofdstuk{course.chapters.length === 1 ? '' : 'ken'} · {sections} secties ·
-                    code <strong style={{ fontFamily: 'monospace' }}>{course.code}</strong> · bijgewerkt {formatDateShort(course.updatedAt)}
-                  </p>
-                  {cov && (
-                    <p style={{ margin: 0, fontSize: '0.84rem' }}>
-                      🎯 {cov.title}
-                      <br />
-                      <span className="badge" title={`${cov.covered} van ${cov.total} leerplandoelen komen aan bod in een gewone sectie`}>
-                        dekking {cov.percent}% ({cov.covered}/{cov.total})
-                      </span>
-                    </p>
-                  )}
-                  <p className="hint" style={{ margin: 0 }}>👥 {readers} lezer{readers === 1 ? '' : 's'}</p>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-                    <Link to={`/cursus/bewerk/${course.id}`} className="btn btn-sm btn-primary">✏️ Bewerken</Link>
-                    <Link to={`/cursus/volg/${course.id}`} className="btn btn-sm btn-ghost">📊 Volgen</Link>
-                    <button className="btn btn-sm btn-ghost" onClick={() => setShareTarget(course)}>📤 Delen</button>
+              <li key={course.id}>
+                <article className="card mat-card" id={`cursus-${course.id}`}>
+                  <div className="mat-card-head">
+                    <span className="mat-card-icon" aria-hidden="true"><CourseIcon size={20} /></span>
+                    <div className="mat-card-titles">
+                      <h2 className="mat-card-title">{course.title}</h2>
+                      {course.subtitle && <p className="mat-card-sub">{course.subtitle}</p>}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <button className="btn btn-sm btn-quiet" onClick={() => duplicate(course)}>📄 Dupliceren</button>
-                    <a className="btn btn-sm btn-quiet" href={`#/cursus/print/${course.id}`} target="_blank" rel="noopener">🖨️ Afdrukken</a>
-                    <button className="btn btn-sm btn-quiet" onClick={() => { void exportCourseJson(course).then((json) => downloadFile(`${course.title || 'cursus'}.json`, json)); }}>💾 Exporteren</button>
-                    <button
-                      className="btn btn-sm btn-quiet"
-                      aria-label={`Cursus "${course.title}" verwijderen`}
-                      onClick={() => setDeleteTarget(course)}
-                    >
-                      🗑
-                    </button>
+                  <ul className="mat-facts">
+                    <li>
+                      <CourseIcon size={16} />
+                      <span>{n(course.chapters.length, 'hoofdstuk', 'hoofdstukken')} · {n(sections, 'sectie', 'secties')}</span>
+                    </li>
+                    <li>
+                      <Hash size={16} />
+                      <span>Code <span className="mat-code">{course.code}</span> · bijgewerkt {formatDateShort(course.updatedAt)}</span>
+                    </li>
+                    {cov && (
+                      <li>
+                        <GoalIcon size={16} />
+                        <span>
+                          {cov.title}
+                          <span className="mat-cover">
+                            <span className="badge badge-brand" title={`${cov.covered} van ${cov.total} leerplandoelen komen aan bod in een gewone sectie`}>
+                              Dekking {cov.percent}% ({cov.covered}/{cov.total})
+                            </span>
+                          </span>
+                        </span>
+                      </li>
+                    )}
+                    <li>
+                      <StudentIcon size={16} />
+                      <span>{n(readers, 'lezer', 'lezers')}</span>
+                    </li>
+                  </ul>
+                  <div className="mat-card-actions">
+                    <Link to={`/cursus/bewerk/${course.id}`} className="btn btn-sm btn-primary">
+                      <EditIcon size={16} /> Bewerken
+                      <span className="sr-only">: {course.title}</span>
+                    </Link>
+                    <MenuButton
+                      items={courseMenu(course)}
+                      Icon={MoreIcon}
+                      ariaLabel={`Acties voor ${course.title}`}
+                      className="btn btn-quiet btn-icon"
+                    />
                   </div>
-                </div>
-              </div>
+                </article>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
 
       {newOpen && (
@@ -306,11 +399,20 @@ export function CoursesPage() {
           onClose={() => setImportConflict(null)}
         />
       )}
+      {reloadExampleAsk && (
+        <ConfirmModal
+          title="Voorbeeldcursus opnieuw laden?"
+          message="De voorbeeldcursus wordt vervangen door de originele versie. Wat je in de cursus zelf aanpaste, gaat verloren. De oefeningen en de leesvoortgang van je leerlingen blijven staan."
+          confirmLabel="Opnieuw laden"
+          onConfirm={() => { void loadExample(); }}
+          onClose={() => setReloadExampleAsk(false)}
+        />
+      )}
       {shareTarget && <CourseShareModal course={shareTarget} onClose={() => setShareTarget(null)} />}
       {deleteTarget && (
         <ConfirmModal
           title="Cursus verwijderen?"
-          message={`"${deleteTarget.title}" en de bijhorende leesvoortgang van leerlingen worden definitief verwijderd. Ingebedde widgets blijven bestaan bij "Mijn widgets".`}
+          message={`"${deleteTarget.title}" en de bijhorende leesvoortgang van leerlingen worden definitief verwijderd. De oefeningen uit de cursus blijven bestaan bij Widgets.`}
           onConfirm={() => { deleteCourse(deleteTarget.id); toast('Cursus verwijderd', 'ok'); }}
           onClose={() => setDeleteTarget(null)}
         />

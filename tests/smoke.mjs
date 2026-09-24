@@ -179,8 +179,9 @@ const demo = await page.evaluate(() => {
   const cs = JSON.parse(localStorage.getItem('wf.courses.v1'));
   return { id: cs[0].id, code: cs[0].code };
 });
-check('cursuskaart aanwezig', await page.getByRole('button', { name: /Delen/ }).first().isVisible());
-await page.getByRole('button', { name: /Delen/ }).first().click();
+check('cursuskaart aanwezig', await page.getByRole('button', { name: /^Acties voor/ }).first().isVisible());
+await page.getByRole('button', { name: /^Acties voor/ }).first().click();
+await page.getByRole('menuitem', { name: /Delen/ }).click();
 await sleep(600);
 check('embed-code voor LMS', (await page.locator('.modal textarea').first().inputValue()).includes('<iframe'));
 await page.keyboard.press('Escape');
