@@ -44,15 +44,21 @@ async function viaNode(route) {
   }
 }
 
-/** Start de browser met AI-instellingen voor Gemini op een vers toestel. */
-export async function startBrowser({ model = 'gemini-3.7-flash' } = {}) {
+/**
+ * Start de browser met AI-instellingen voor Gemini op een vers toestel.
+ * `seedAI: false` slaat het voorzetten van wf.ai.v1 helemaal over — nodig voor
+ * de instellingenflow, die zelf vanaf een lege opslag door het formulier gaat.
+ */
+export async function startBrowser({ model = 'gemini-3.7-flash', seedAI = true } = {}) {
   const key = readKey();
   const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || undefined });
   const context = await browser.newContext({ viewport: { width: 1360, height: 900 } });
   if (process.env.HTTPS_PROXY) await context.route(AI_HOSTS, viaNode);
-  await context.addInitScript(([k, m]) => {
-    if (!localStorage.getItem('wf.ai.v1')) localStorage.setItem('wf.ai.v1', JSON.stringify({ provider: 'gemini', apiKey: k, model: m }));
-  }, [key, model]);
+  if (seedAI) {
+    await context.addInitScript(([k, m]) => {
+      if (!localStorage.getItem('wf.ai.v1')) localStorage.setItem('wf.ai.v1', JSON.stringify({ provider: 'gemini', apiKey: k, model: m }));
+    }, [key, model]);
+  }
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
@@ -62,7 +68,7 @@ export async function startBrowser({ model = 'gemini-3.7-flash' } = {}) {
     if (/ERR_CERT_AUTHORITY_INVALID/.test(t)) return; // Google Fonts in de testomgeving
     errors.push(`console: ${t.slice(0, 300)}`);
   });
-  return { browser, context, page, errors };
+  return { browser, context, page, errors, key };
 }
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
