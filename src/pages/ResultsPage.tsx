@@ -1,5 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Brain, ClipboardCheck, Compass, Dices, Download, EyeOff, Glasses, HelpCircle, Highlighter,
+  Inbox as InboxIcon, Palette, Paperclip, Shield, Users,
+} from 'lucide-react';
 import { deleteSubmission, getLiveEntries, getSubmissions, getWidget, onStorageChange, saveSubmission } from '../lib/storage';
 import { getTypeDef } from '../widgets/registry';
 import type { LongAnswerValue, LongQuestion, Question, QuizConfig, SplitWorksheetConfig, Submission, UploadQuestion, Widget } from '../lib/types';
@@ -15,40 +20,128 @@ import { askAI, hasAIKey } from '../lib/ai';
 import { markTokens as playerMarkTokens, matchMarkers, ZoneCircle } from '../widgets/qtypes/interactTypes';
 import { getStudentFile } from '../lib/pdfStore';
 import { TypeTile } from '../components/TypeTile';
+import { filterSubmissionsByClass } from '../lib/resultsFilter';
+import { useResultsClassFilter } from '../lib/useResultsClassFilter';
+import {
+  AddIcon, AIIcon, BackIcon, CheckIcon, CloseIcon, CourseIcon, DeleteIcon, EditIcon,
+  ExportIcon, GoalIcon, ImportIcon, SearchIcon, TipIcon, WarningIcon,
+} from '../components/icons';
+import '../styles/opvolgen.css';
 
 // widgets met een QuizConfig-achtige 'questions'-lijst → volledige beoordelings-UI
 const QUIZ_FAMILY = new Set(['quiz', 'worksheet', 'exitticket', 'splitworksheet']);
+
+/** Eigen foutenanalyse van de leerling: label + icoon per categorie. */
+const FOUT_LABELS: Record<string, { Icon: LucideIcon; text: string }> = {
+  slordig: { Icon: EyeOff, text: 'slordig' },
+  gelezen: { Icon: Glasses, text: 'verkeerd gelezen' },
+  kennis: { Icon: CourseIcon, text: 'stof niet gekend' },
+  aanpak: { Icon: Compass, text: 'aanpak niet gekend' },
+};
+
+/** Juist- of foutmarkering i.p.v. een ✓/✗-teken (analyses, rubrics, antwoordoverzichten). */
+function OkMark() {
+  return <CheckIcon size={14} className="icon-inline" style={{ color: 'var(--ok)' }} />;
+}
+function ErrMark() {
+  return <CloseIcon size={14} className="icon-inline" style={{ color: 'var(--err)' }} />;
+}
+
+interface TabDef { key: TabKey; label: string; Icon: LucideIcon }
+
+/**
+ * Volledig ARIA-tabspatroon (niet enkel role="tab"): aria-selected,
+ * aria-controls, een tabpanel met aria-labelledby, pijltjestoetsen en enkel
+ * de actieve tab in de tabvolgorde (roving tabindex).
+ */
+function ResultsTabs({ tabs, active, onChange }: { tabs: TabDef[]; active: TabKey; onChange: (key: TabKey) => void }) {
+  const btnRefs = useRef<Partial<Record<TabKey, HTMLButtonElement | null>>>({});
+
+  const focusAndSelect = (key: TabKey) => {
+    onChange(key);
+    btnRefs.current[key]?.focus();
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === 'ArrowRight') { e.preventDefault(); focusAndSelect(tabs[(index + 1) % tabs.length].key); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); focusAndSelect(tabs[(index - 1 + tabs.length) % tabs.length].key); }
+    else if (e.key === 'Home') { e.preventDefault(); focusAndSelect(tabs[0].key); }
+    else if (e.key === 'End') { e.preventDefault(); focusAndSelect(tabs[tabs.length - 1].key); }
+  };
+
+  return (
+    <div className="tabbar" role="tablist" aria-label="Resultatenweergave">
+      {tabs.map((t, i) => {
+        const selected = active === t.key;
+        return (
+          <button
+            key={t.key}
+            ref={(el) => { btnRefs.current[t.key] = el; }}
+            type="button"
+            role="tab"
+            id={`tab-${t.key}`}
+            aria-selected={selected}
+            aria-controls={`panel-${t.key}`}
+            tabIndex={selected ? 0 : -1}
+            className={`btn btn-sm ${selected ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => onChange(t.key)}
+            onKeyDown={(e) => onKeyDown(e, i)}
+          >
+            <t.Icon size={16} /> {t.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+type TabKey = 'students' | 'questions' | 'grade';
 
 export function ResultsPage() {
   const { id } = useParams();
   const [, force] = useState(0);
   React.useEffect(() => onStorageChange(() => force((x) => x + 1)), []);
+  const { classes, filter, setFilter } = useResultsClassFilter();
 
   const widget = id ? getWidget(id) : undefined;
+  const isQuiz = widget ? QUIZ_FAMILY.has(widget.type) : false;
+  const rawSubs = widget ? getSubmissions(widget.id) : [];
+  const subs = filterSubmissionsByClass(rawSubs, filter).sort((a, b) => b.submittedAt - a.submittedAt);
+  const openQuestionsExist = isQuiz && widget
+    ? (widget.config as QuizConfig).questions.some((q) => q.type === 'long' || q.type === 'upload')
+    : false;
+  const pendingCount = subs.filter((s) => s.status === 'submitted').length;
+
   const [detail, setDetail] = useState<Submission | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Submission | null>(null);
-  const [tab, setTab] = useState<'students' | 'questions' | 'grade'>('students');
+  // Is er iets na te kijken? Dan opent de detailpagina meteen op de nakijktab.
+  const [tab, setTab] = useState<TabKey>(() => (openQuestionsExist && pendingCount > 0 ? 'grade' : 'students'));
   const [importOpen, setImportOpen] = useState(false);
   const toast = useToast();
+
+  React.useEffect(() => {
+    setTab(openQuestionsExist && pendingCount > 0 ? 'grade' : 'students');
+    // Enkel bij het wisselen van widget opnieuw bepalen welke tab eerst moet —
+    // een latere, bewuste tabkeuze van de leerkracht blijft daarna staan.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   if (!widget) {
     return (
       <div className="page" style={{ textAlign: 'center', paddingTop: 60 }}>
         <h1>Widget niet gevonden</h1>
-        <Link to="/resultaten" className="btn btn-primary">← Alle resultaten</Link>
+        <Link to="/resultaten" className="btn btn-primary"><BackIcon size={16} /> Alle resultaten</Link>
       </div>
     );
   }
 
   const def = getTypeDef(widget.type);
-  const subs = getSubmissions(widget.id).sort((a, b) => b.submittedAt - a.submittedAt);
   // live (zelfde toestel/browser): gestart maar nog niets ingediend sinds de start
   const busy = getLiveEntries(widget.id).filter(
     (e) => !subs.some((s) => s.studentName === e.studentName && s.submittedAt >= e.startedAt)
   );
   const scored = subs.filter((s) => s.totalMax > 0);
   const avg = scored.length > 0 ? Math.round(scored.reduce((sum, s) => sum + pct(s.totalEarned, s.totalMax), 0) / scored.length) : null;
-  const isQuiz = QUIZ_FAMILY.has(widget.type);
 
   const exportCsv = (anonymous = false) => {
     const rows: string[][] = [];
@@ -82,17 +175,37 @@ export function ResultsPage() {
     <div className="page">
       <div className="page-head">
         <div>
-          <Link to="/resultaten" className="hint" style={{ textDecoration: 'none' }}>← Alle resultaten</Link>
+          <Link to="/resultaten" className="hint" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <BackIcon size={14} /> Alle resultaten
+          </Link>
           <h1 style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 12 }}><TypeTile type={def} size="md" /> {widget.title}</h1>
           <p className="sub">{def.name} · code <strong style={{ fontFamily: 'monospace' }}>{widget.code}</strong></p>
         </div>
         <div className="page-head-actions">
-          <Link to={`/bewerk/${widget.id}`} className="btn btn-ghost">✏️ Bewerken</Link>
-          <button className="btn btn-ghost" onClick={() => setImportOpen(true)}>📮 Resultaatcode plakken</button>
-          <button className="btn btn-ghost" onClick={() => exportCsv(false)} disabled={subs.length === 0}>📄 CSV exporteren</button>
+          <Link to={`/bewerk/${widget.id}`} className="btn btn-ghost"><EditIcon size={18} /> Bewerken</Link>
+          <button className="btn btn-ghost" onClick={() => setImportOpen(true)}><ImportIcon size={18} /> Resultaatcode plakken</button>
+          <button className="btn btn-ghost" onClick={() => exportCsv(false)} disabled={subs.length === 0}><ExportIcon size={18} /> CSV exporteren</button>
           <button className="btn btn-quiet" onClick={() => exportCsv(true)} disabled={subs.length === 0} title="Voor teamoverleg: zonder leerlingnamen">CSV zonder namen</button>
         </div>
       </div>
+
+      {classes.length > 0 && (
+        <div className="field class-filter">
+          <label htmlFor="resultaten-klasfilter">Klas</label>
+          <select
+            id="resultaten-klasfilter"
+            className="select"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="all">Alle klassen</option>
+            {classes.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+            <option value="none">Zonder klas</option>
+          </select>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginBottom: 22 }}>
         <div className="card card-pad" style={{ textAlign: 'center' }}>
@@ -121,7 +234,7 @@ export function ResultsPage() {
 
       {busy.length > 0 && (
         <div className="callout" role="status" aria-live="polite" style={{ alignItems: 'center' }}>
-          <span aria-hidden>🟢</span>
+          <span aria-hidden className="live-dot" />
           <div>
             <strong>Nu bezig op dit toestel:</strong>{' '}
             {busy.map((e) => e.studentName).join(', ')}
@@ -131,72 +244,78 @@ export function ResultsPage() {
       )}
 
       {isQuiz && subs.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, marginBottom: 14 }} role="tablist">
-          <button className={`btn btn-sm ${tab === 'students' ? 'btn-primary' : 'btn-ghost'}`} role="tab" aria-selected={tab === 'students'} onClick={() => setTab('students')}>
-            👥 Per leerling
-          </button>
-          <button className={`btn btn-sm ${tab === 'questions' ? 'btn-primary' : 'btn-ghost'}`} role="tab" aria-selected={tab === 'questions'} onClick={() => setTab('questions')}>
-            ❓ Per vraag
-          </button>
-          {(widget.config as QuizConfig).questions.some((q) => q.type === 'long' || q.type === 'upload') && (
-            <button className={`btn btn-sm ${tab === 'grade' ? 'btn-primary' : 'btn-ghost'}`} role="tab" aria-selected={tab === 'grade'} onClick={() => setTab('grade')}>
-              ✍️ Nakijken {subs.filter((s) => s.status === 'submitted').length > 0 && `(${subs.filter((s) => s.status === 'submitted').length})`}
-            </button>
-          )}
-        </div>
+        <ResultsTabs
+          tabs={[
+            { key: 'students', label: 'Per leerling', Icon: Users },
+            { key: 'questions', label: 'Per vraag', Icon: HelpCircle },
+            ...((widget.config as QuizConfig).questions.some((q) => q.type === 'long' || q.type === 'upload')
+              ? [{ key: 'grade' as TabKey, label: pendingCount > 0 ? `Nakijken (${pendingCount})` : 'Nakijken', Icon: ClipboardCheck }]
+              : []),
+          ]}
+          active={tab}
+          onChange={setTab}
+        />
       )}
 
       {subs.length === 0 ? (
-        <EmptyState icon="📭" title="Nog geen inzendingen voor deze widget">
+        <EmptyState icon={<InboxIcon size={40} />} title="Nog geen inzendingen voor deze widget">
           <p>Deel de code <strong style={{ fontFamily: 'monospace' }}>{widget.code}</strong> met je klas om resultaten te verzamelen.</p>
         </EmptyState>
-      ) : tab === 'questions' && isQuiz ? (
-        <QuestionStats widget={widget} subs={subs} />
-      ) : tab === 'grade' && isQuiz ? (
-        <GradingCockpit widget={widget} subs={subs} />
       ) : (
-        <div className="table-wrap">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Leerling</th>
-                <th>Ingediend</th>
-                <th>Duur</th>
-                <th>Score</th>
-                <th>Status</th>
-                <th aria-label="acties" />
-              </tr>
-            </thead>
-            <tbody>
-              {subs.map((s) => {
-                const p = s.totalMax > 0 ? pct(s.totalEarned, s.totalMax) : null;
-                return (
-                  <tr key={s.id} onClick={() => setDetail(s)}>
-                    <td><strong>{s.studentName}</strong></td>
-                    <td className="hint">{formatDate(s.submittedAt)}</td>
-                    <td className="hint">{formatDuration(s.durationSec)}</td>
-                    <td>
-                      {p === null ? <span className="hint">—</span> : (
-                        <div className="scorebar">
-                          <div className="bar"><div style={{ width: `${p}%`, background: p >= 70 ? 'var(--ok)' : p >= 45 ? 'var(--warn)' : 'var(--err)' }} /></div>
-                          <strong>{s.totalEarned}/{s.totalMax}</strong>
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      {s.status === 'submitted'
-                        ? <span className="badge badge-warn">✍️ beoordelen</span>
-                        : <span className="badge badge-ok">✓ verbeterd</span>}
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <button className="btn btn-quiet btn-icon btn-sm" aria-label={`Inzending van ${s.studentName} verwijderen`}
-                        onClick={() => setDeleteTarget(s)} style={{ color: 'var(--err)' }}>🗑</button>
-                    </td>
+        <div
+          role={isQuiz && subs.length > 0 ? 'tabpanel' : undefined}
+          id={isQuiz && subs.length > 0 ? `panel-${tab}` : undefined}
+          aria-labelledby={isQuiz && subs.length > 0 ? `tab-${tab}` : undefined}
+        >
+          {tab === 'questions' && isQuiz ? (
+            <QuestionStats widget={widget} subs={subs} />
+          ) : tab === 'grade' && isQuiz ? (
+            <GradingCockpit widget={widget} subs={subs} />
+          ) : (
+            <div className="table-wrap">
+              <table className="data">
+                <thead>
+                  <tr>
+                    <th>Leerling</th>
+                    <th>Ingediend</th>
+                    <th>Duur</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                    <th aria-label="acties" />
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {subs.map((s) => {
+                    const p = s.totalMax > 0 ? pct(s.totalEarned, s.totalMax) : null;
+                    return (
+                      <tr key={s.id} onClick={() => setDetail(s)}>
+                        <td><strong>{s.studentName}</strong></td>
+                        <td className="hint">{formatDate(s.submittedAt)}</td>
+                        <td className="hint">{formatDuration(s.durationSec)}</td>
+                        <td>
+                          {p === null ? <span className="hint">—</span> : (
+                            <div className="scorebar">
+                              <div className="bar"><div style={{ width: `${p}%`, background: p >= 70 ? 'var(--ok)' : p >= 45 ? 'var(--warn)' : 'var(--err)' }} /></div>
+                              <strong>{s.totalEarned}/{s.totalMax}</strong>
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          {s.status === 'submitted'
+                            ? <span className="badge badge-warn"><ClipboardCheck size={14} className="icon-inline" /> beoordelen</span>
+                            : <span className="badge badge-ok"><OkMark /> verbeterd</span>}
+                        </td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <button className="btn btn-quiet btn-icon btn-sm" aria-label={`Inzending van ${s.studentName} verwijderen`}
+                            onClick={() => setDeleteTarget(s)} style={{ color: 'var(--err)' }}><DeleteIcon size={16} /></button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -230,7 +349,7 @@ function formatAnswer(q: Question, answer: unknown): string {
     case 'long': {
       if (typeof answer === 'string') return answer;
       const lv = answer as LongAnswerValue | null;
-      const parts = [lv?.tekst, lv?.tekening ? '🎨 [tekening]' : '', lv?.audio ? '🎤 [audio]' : ''].filter(Boolean);
+      const parts = [lv?.tekst, lv?.tekening ? '[tekening]' : '', lv?.audio ? '[audio]' : ''].filter(Boolean);
       return parts.length > 0 ? parts.join(' · ') : '—';
     }
     case 'order': return Array.isArray(answer) ? (answer as number[]).map((i) => q.items[i]).join(' → ') : '—';
@@ -252,7 +371,7 @@ function formatAnswer(q: Question, answer: unknown): string {
     }
     case 'upload': {
       const f = uploadAnswer(answer);
-      return f ? `📎 ${f.name}${f.size !== null ? ` (${formatBytes(f.size)})` : ''}` : '—';
+      return f ? `${f.name}${f.size !== null ? ` (${formatBytes(f.size)})` : ''}` : '—';
     }
     case 'marktext': {
       if (!Array.isArray(answer)) return '—';
@@ -356,10 +475,10 @@ function UploadAnswerLine({ ans }: { ans: unknown }) {
   const notFound = missing || (!f.dataUrl && !f.fileId);
   return (
     <p style={{ margin: 0 }}>
-      📎 <strong>{f.name}</strong>
+      <Paperclip size={15} className="icon-inline" /> <strong>{f.name}</strong>
       {f.size !== null && <span className="hint"> ({formatBytes(f.size)})</span>}
       {href
-        ? <> · <a href={href} download={f.name}>⬇ Bestand downloaden</a></>
+        ? <> · <a href={href} download={f.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Download size={14} /> Bestand downloaden</a></>
         : notFound
           ? <span className="hint"> — het bestand staat op het toestel van de leerling (kwam deze inzending via een resultaatcode?)</span>
           : <span className="hint"> · bestand laden…</span>}
@@ -413,7 +532,7 @@ function ExtraAnswerView({ q, ans }: { q: Question; ans: unknown }) {
               <p key={i} style={{ margin: '2px 0' }}>
                 <span className="hint">gat {i + 1}:</span>{' '}
                 <span style={{ color: ok ? 'var(--ok)' : 'var(--err)', fontWeight: 600 }}>
-                  {ok ? '✓' : '✗'} {chosen ?? '(geen keuze)'}
+                  {ok ? <OkMark /> : <ErrMark />} {chosen ?? '(geen keuze)'}
                 </span>
                 {!ok && <span className="hint"> · juist: {correct}</span>}
               </p>
@@ -467,7 +586,7 @@ function ExtraAnswerView({ q, ans }: { q: Question; ans: unknown }) {
             : marked.map((mi, k) => {
                 const t = tokens[mi];
                 const ok = !!t?.correct;
-                return <span key={k} style={ok ? OK_CHIP : ERR_CHIP}>{ok ? '✓' : '✗'} {t?.word ?? '?'}</span>;
+                return <span key={k} style={ok ? OK_CHIP : ERR_CHIP}>{ok ? <OkMark /> : <ErrMark />} {t?.word ?? '?'}</span>;
               })}
           {missed.length > 0 && (
             <p className="hint" style={{ margin: '4px 0 0' }}>gemist: {missed.map((t) => t.word).join(', ')}</p>
@@ -490,7 +609,7 @@ function ExtraAnswerView({ q, ans }: { q: Question; ans: unknown }) {
               <p key={it.id ?? i} style={{ margin: '2px 0' }}>
                 {it.text}:{' '}
                 <span style={{ color: ok ? 'var(--ok)' : 'var(--err)', fontWeight: 600 }}>
-                  {ok ? '✓' : '✗'} {typeof chosen === 'string' ? nameOf(chosen) : '(niet geplaatst)'}
+                  {ok ? <OkMark /> : <ErrMark />} {typeof chosen === 'string' ? nameOf(chosen) : '(niet geplaatst)'}
                 </span>
                 {!ok && <span className="hint"> · juist: {nameOf(it.categoryId)}</span>}
               </p>
@@ -569,7 +688,7 @@ function ExtraAnswerView({ q, ans }: { q: Question; ans: unknown }) {
                       const ok = isOk(accepted, given);
                       return (
                         <td key={ci} style={{ ...cellStyle, color: ok ? 'var(--ok)' : 'var(--err)', fontWeight: 600 }}>
-                          {ok ? '✓' : '✗'} {given || '—'}
+                          {ok ? <OkMark /> : <ErrMark />} {given || '—'}
                           {!ok && accepted && <span className="hint" style={{ fontWeight: 400 }}> ({accepted.split('|')[0]})</span>}
                         </td>
                       );
@@ -635,8 +754,8 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
           {submission.focusLosses !== undefined && (
             <p style={{ margin: '4px 0 0' }}>
               {submission.focusLosses > 0
-                ? <span className="badge badge-warn">👀 verliet het toetsvenster {submission.focusLosses}×</span>
-                : <span className="badge badge-ok">🛡 bleef in het toetsvenster</span>}
+                ? <span className="badge badge-warn"><EyeOff size={14} className="icon-inline" /> verliet het toetsvenster {submission.focusLosses}×</span>
+                : <span className="badge badge-ok"><Shield size={14} className="icon-inline" /> bleef in het toetsvenster</span>}
             </p>
           )}
         </div>
@@ -649,7 +768,7 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
         if (!fa?.volgendeKeer && !doel && !doelReflectie) return null;
         return (
           <div className="callout" style={{ marginBottom: 12 }}>
-            <span aria-hidden>🧠</span>
+            <span aria-hidden><Brain size={18} /></span>
             <div>
               {doel && (
                 <p style={{ margin: '0 0 4px' }}>
@@ -665,7 +784,7 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
       })()}
       {isRenderableMedia(drawing) && (
         <div style={{ marginBottom: 14 }}>
-          <h3>🎨 Tekening</h3>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Palette size={20} /> Tekening</h3>
           <img src={drawing} alt={`Tekening van ${submission.studentName}`} style={{ maxWidth: '100%', borderRadius: 10, border: '1px solid var(--line)' }} />
         </div>
       )}
@@ -678,7 +797,7 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
         const labelFor = (color: string) => palette.find((p) => p.color === color)?.label?.trim();
         return (
           <div style={{ marginBottom: 14 }}>
-            <h3>🖍 Markeringen in de bron</h3>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Highlighter size={20} /> Markeringen in de bron</h3>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
               {(hls as PdfHighlight[]).map((h) => (
                 <li key={h.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 6 }}>
@@ -716,7 +835,6 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
               : undefined;
             const hintLevel = hintEntry ? (hintEntry.includes(':') ? parseInt(hintEntry.split(':')[1], 10) || 1 : 1) : 0;
             const foutLabel = (submission.answers['_foutenanalyse'] as { labels?: Record<string, string> } | undefined)?.labels?.[q.id];
-            const FOUT_TEKST: Record<string, string> = { slordig: '🙈 slordig', gelezen: '👓 verkeerd gelezen', kennis: '📖 stof niet gekend', aanpak: '🧭 aanpak niet gekend' };
             return (
               <div key={q.id} className="card" style={{ padding: '12px 14px', marginBottom: 10 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
@@ -726,18 +844,24 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
                   </span>
                   {hintLevel > 0 && (
                     <span className="badge" title="Aantal geopende hints (hintladder)">
-                      💡 {hintLevel === 1 ? 'hint' : `${hintLevel} hints`}
+                      <TipIcon size={14} className="icon-inline" /> {hintLevel === 1 ? 'hint' : `${hintLevel} hints`}
                     </span>
                   )}
-                  {foutLabel && FOUT_TEKST[foutLabel] && (
-                    <span className="badge" title="Eigen foutenanalyse van de leerling">{FOUT_TEKST[foutLabel]}</span>
+                  {foutLabel && FOUT_LABELS[foutLabel] && (
+                    <span className="badge" title="Eigen foutenanalyse van de leerling">
+                      {(() => { const { Icon, text } = FOUT_LABELS[foutLabel]; return <><Icon size={14} className="icon-inline" /> {text}</>; })()}
+                    </span>
                   )}
                   {conf && (
                     <span
                       className={`badge ${conf === 'zeker' && score.earned < score.max && score.mode !== 'pending' ? 'badge-err' : ''}`}
                       title={conf === 'zeker' && score.earned < score.max ? 'Zeker maar fout: mogelijke misvatting' : 'Zelfinschatting van de leerling'}
                     >
-                      {conf === 'zeker' ? '🎯 was zeker' : conf === 'twijfel' ? '🤔 twijfelde' : '🎲 gokte'}
+                      {conf === 'zeker'
+                        ? <><GoalIcon size={14} className="icon-inline" /> was zeker</>
+                        : conf === 'twijfel'
+                          ? <><HelpCircle size={14} className="icon-inline" /> twijfelde</>
+                          : <><Dices size={14} className="icon-inline" /> gokte</>}
                     </span>
                   )}
                   <span className={`badge ${score.mode === 'pending' ? 'badge-warn' : score.earned >= score.max ? 'badge-ok' : score.earned > 0 ? 'badge-warn' : 'badge-err'}`}>
@@ -913,7 +1037,7 @@ function AIFeedbackSuggest({
         maxTokens: 400,
       });
       onSuggest(text.trim());
-      toast('✨ Voorstel klaar — pas gerust aan', 'ok');
+      toast('Voorstel klaar — pas gerust aan', 'ok');
     } catch (e) {
       toast((e as Error).message, 'err');
     } finally {
@@ -924,7 +1048,7 @@ function AIFeedbackSuggest({
   return (
     <button className="btn btn-sm btn-ghost" onClick={suggest} disabled={busy}
       title="AI stelt een taakgerichte feedbacktekst voor; jij past aan en beslist">
-      {busy ? <span className="ai-pulse" aria-hidden>✨</span> : '✨'} Stel feedback voor
+      <AIIcon size={16} className={busy ? 'ai-pulse' : undefined} /> Stel feedback voor
     </button>
   );
 }
@@ -962,7 +1086,7 @@ function ResultCodeImportModal({
 
   return (
     <Modal
-      title="📮 Resultaatcodes plakken"
+      title="Resultaatcodes plakken"
       onClose={onClose}
       footer={
         <>
@@ -1033,7 +1157,7 @@ function RubricGrader({
       ))}
       <p className="hint" aria-live="polite">
         {vals.every((v) => v !== null)
-          ? `✓ Totaal: ${Math.min(maxPoints, sum)} van ${maxPoints}`
+          ? <><OkMark /> Totaal: {Math.min(maxPoints, sum)} van {maxPoints}</>
           : 'Vul alle criteria in om de score toe te kennen.'}
       </p>
     </div>
@@ -1076,13 +1200,17 @@ function DistractorBars({ q, subs }: { q: Question; subs: Submission[] }) {
           const isTopDistractor = !r.correct && r.count > 0 && r.count === maxWrong && r.count >= Math.ceil(total / 4);
           return (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: '0.86rem' }}>
-              <span style={{ width: 18 }} aria-hidden>{r.correct ? '✓' : ''}</span>
+              <span style={{ width: 18 }} aria-hidden>{r.correct ? <OkMark /> : ''}</span>
               <span style={{ flex: '0 0 40%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</span>
               <div className="bar" style={{ flex: 1, height: 8, borderRadius: 99, background: 'var(--bg-sunken)', overflow: 'hidden' }}>
                 <div style={{ width: `${p}%`, height: '100%', background: r.correct ? 'var(--ok)' : 'var(--err)', opacity: r.correct ? 1 : 0.75 }} />
               </div>
               <span style={{ width: 70, textAlign: 'right', color: 'var(--text-soft)' }}>{r.count} ({p}%)</span>
-              {isTopDistractor && <span className="badge badge-warn" title="Deze afleider werd opvallend vaak gekozen — mogelijke misvatting">⚠ populair</span>}
+              {isTopDistractor && (
+                <span className="badge badge-warn" title="Deze afleider werd opvallend vaak gekozen — mogelijke misvatting">
+                  <WarningIcon size={14} className="icon-inline" /> populair
+                </span>
+              )}
             </div>
           );
         })}
@@ -1154,7 +1282,7 @@ function GoalStats({ widget, subs }: { widget: Widget; subs: Submission[] }) {
 
   return (
     <div className="card card-pad" style={{ marginBottom: 14 }}>
-      <h3>🎯 Beheersing per leerdoel</h3>
+      <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><GoalIcon size={20} /> Beheersing per leerdoel</h3>
       {goals.map((g) => {
         const ps = subs.map((s) => scoreFor(s, g.key)).filter((p): p is number => p !== null);
         const avg = ps.length > 0 ? Math.round(ps.reduce((a, b) => a + b, 0) / ps.length) : null;
@@ -1245,8 +1373,9 @@ function QuestionStats({ widget, subs }: { widget: Widget; subs: Submission[] })
               <div style={{ width: `${(zero / total) * 100}%`, background: 'var(--err)' }} />
               <div style={{ width: `${(pending / total) * 100}%`, background: 'var(--text-faint)' }} />
             </div>
-            <div className="hint" style={{ marginTop: 6 }}>
-              ✓ {full} juist · ◐ {partial} deels · ✗ {zero} fout{pending > 0 ? ` · ✍️ ${pending} te beoordelen` : ''}
+            <div className="hint" style={{ marginTop: 6, display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+              <OkMark /> {full} juist · ◐ {partial} deels · <ErrMark /> {zero} fout
+              {pending > 0 && <>· <ClipboardCheck size={14} className="icon-inline" /> {pending} te beoordelen</>}
               {got < subs.length ? ` · (${got} van ${subs.length} leerlingen kreeg deze vraag)` : ''}
             </div>
             <DistractorBars q={q} subs={subs} />
@@ -1278,7 +1407,7 @@ function QuestionStats({ widget, subs }: { widget: Widget; subs: Submission[] })
               if (!signal) return null;
               return (
                 <p className="hint" style={{ marginTop: 6 }}>
-                  🔎 <em>Signaal (n={got}):</em> {signal}
+                  <SearchIcon size={14} className="icon-inline" /> <em>Signaal (n={got}):</em> {signal}
                 </p>
               );
             })()}
@@ -1313,7 +1442,7 @@ function GradingCockpit({ widget, subs }: { widget: Widget; subs: Submission[] }
   const toast = useToast();
   const q = openQuestions.find((x) => x.id === qid);
 
-  if (!q) return <EmptyState icon="✅" title="Geen open vragen of inleveropdrachten om na te kijken" />;
+  if (!q) return <EmptyState icon={<CheckIcon size={40} />} title="Geen open vragen of inleveropdrachten om na te kijken" />;
 
   const rows = subs.filter((s) => !s.itemScores || q.id in s.itemScores);
   const rubric = q.type === 'long' ? (q.rubric ?? []).filter((r) => r.criterion.trim()) : [];
@@ -1321,7 +1450,7 @@ function GradingCockpit({ widget, subs }: { widget: Widget; subs: Submission[] }
   return (
     <div>
       <div className="callout">
-        <span aria-hidden>💡</span>
+        <span aria-hidden><TipIcon size={18} /></span>
         <div>Per <strong>vraag</strong> verbeteren houdt je beoordelingskader constant: sneller én consistenter dan per leerling.</div>
       </div>
       <div className="field" style={{ maxWidth: 520 }}>
@@ -1329,17 +1458,17 @@ function GradingCockpit({ widget, subs }: { widget: Widget; subs: Submission[] }
         <select className="select" value={qid} onChange={(e) => setQid(e.target.value)}>
           {openQuestions.map((oq, i) => (
             <option key={oq.id} value={oq.id}>
-              {i + 1}. {oq.type === 'upload' ? '📎 ' : ''}{oq.prompt.slice(0, 80)}
+              {i + 1}. {oq.type === 'upload' ? '(bijlage) ' : ''}{oq.prompt.slice(0, 80)}
             </option>
           ))}
         </select>
         {q.type === 'long' && q.modelAnswer && (
-          <span className="hint">📖 Modelantwoord: {q.modelAnswer}</span>
+          <span className="hint"><CourseIcon size={14} className="icon-inline" /> Modelantwoord: {q.modelAnswer}</span>
         )}
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState icon="📭" title="Nog geen inzendingen met deze vraag" />
+        <EmptyState icon={<InboxIcon size={40} />} title="Nog geen inzendingen met deze vraag" />
       ) : (
         rows.map((s) => (
           <CockpitRow
@@ -1395,7 +1524,7 @@ function CockpitRow({
     <div className="card" style={{ padding: '13px 16px', marginBottom: 10, borderLeft: graded ? '4px solid var(--ok)' : '4px solid var(--warn)' }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', marginBottom: 6 }}>
         <strong>{submission.studentName}</strong>
-        {graded ? <span className="badge badge-ok">✓ {existing.earned}/{question.points}</span> : <span className="badge badge-warn">te beoordelen</span>}
+        {graded ? <span className="badge badge-ok"><OkMark /> {existing.earned}/{question.points}</span> : <span className="badge badge-warn">te beoordelen</span>}
       </div>
       <div style={{ background: 'var(--bg-sunken)', borderRadius: 8, padding: '8px 12px', marginBottom: 8 }}>
         {(() => {
@@ -1465,13 +1594,13 @@ function CockpitRow({
             ))}
             {comment.trim() && !bank.includes(comment.trim()) && (
               <button className="btn btn-sm btn-quiet" onClick={() => onBankAdd(comment.trim())}>
-                ➕ Bewaar in feedbackbank
+                <AddIcon size={14} /> Bewaar in feedbackbank
               </button>
             )}
           </div>
         </div>
         <button className="btn btn-primary btn-sm" disabled={points === null} onClick={save}>
-          Opslaan ✓
+          <CheckIcon size={16} /> Opslaan
         </button>
       </div>
     </div>
@@ -1502,7 +1631,7 @@ function CockpitAISuggest({
         maxTokens: 250,
       });
       onSuggest(text.trim());
-      toast('✨ Voorstel ingevoegd — pas gerust aan', 'ok');
+      toast('Voorstel ingevoegd — pas gerust aan', 'ok');
     } catch (e) {
       toast((e as Error).message, 'err');
     } finally {
@@ -1519,7 +1648,7 @@ function CockpitAISuggest({
       title="AI stelt feedback voor op dit antwoord; jij past aan en beslist"
       aria-label="AI-feedbackvoorstel voor dit antwoord"
     >
-      {busy ? <span className="ai-pulse" aria-hidden>✨</span> : '✨'}
+      <AIIcon size={16} className={busy ? 'ai-pulse' : undefined} />
     </button>
   );
 }

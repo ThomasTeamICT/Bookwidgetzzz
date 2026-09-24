@@ -1,0 +1,32 @@
+/* ── Delen, resultaten en klassen ────────────────────────────────────────── */
+/* Nieuwe stijlen voor het herontwerp "Werkflows": het inklapbare "Meer
+   manieren om te delen", het klasfilter op de resultatenpagina's, de
+   nakijk/vraag/leerling-tabs en een paar kleine statusindicaties. Tokens uit
+   global.css, geen losse kleurcodes. */
+
+/* Inklapbaar blok in de deelvensters (ShareModal, CourseShareModal) */
+.more-ways > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--brand);
+  padding: 6px 0;
+  list-style: revert;
+}
+.more-ways > summary:hover { text-decoration: underline; }
+.more-ways[open] > summary { margin-bottom: 4px; }
+
+/* Klasfilter bovenaan /resultaten en /resultaten/:id */
+.class-filter { max-width: 280px; margin-bottom: 18px; }
+
+/* Tabbalk (rol tablist) op de resultaten-detailpagina */
+.tabbar { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+
+/* Klein "live nu bezig"-stipje i.p.v. een emoji */
+.live-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ok-strong);
+  flex: none;
+}

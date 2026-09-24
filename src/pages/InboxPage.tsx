@@ -1,9 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Camera, Inbox } from 'lucide-react';
 import { processCodes, summarizeReport, type InboxRow } from '../lib/inbox';
 import { QrScanner } from '../components/QrScanner';
 import { EmptyState, useToast } from '../components/ui';
 import { formatDate } from '../lib/utils';
+import {
+  AssignIcon, CheckIcon, CloseIcon, PrivacyIcon, TipIcon, WarningIcon,
+} from '../components/icons';
 
 /**
  * /inleverpunt — één plek waar al het werk van elders binnenkomt.
@@ -63,19 +67,19 @@ export function InboxPage() {
     <div className="page page-narrow">
       <div className="page-head">
         <div>
-          <h1>📥 Inleverpunt</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Inbox size={24} /> Inleverpunt</h1>
           <p className="sub">
-            Werk dat op een ander toestel gemaakt is, komt hier binnen: plak de codes van je
-            leerlingen, of scan hun QR-codes met de camera.
+            Codes van leerlingen die thuis of zonder klaslink werkten: plak ze hier, of scan hun QR-code
+            met de camera.
           </p>
         </div>
         <div className="page-head-actions">
-          <Link to="/klassen" className="btn btn-ghost">👥 Klassen</Link>
+          <Link to="/klassen" className="btn btn-ghost"><AssignIcon size={18} /> Klassen</Link>
         </div>
       </div>
 
       <div className="callout">
-        <span aria-hidden>💡</span>
+        <span aria-hidden><TipIcon size={18} /></span>
         <div>
           Een leerling vindt zijn code in de app: na het indienen van een oefening (<code>WF1.…</code>)
           of in een cursus (<code>WFC1.…</code>). Werkt hij met een klaslink, dan staan al zijn codes
@@ -88,7 +92,7 @@ export function InboxPage() {
       ) : (
         <p style={{ margin: '14px 0' }}>
           <button className="btn btn-primary" onClick={() => setScanning(true)}>
-            📷 Camera starten en scannen
+            <Camera size={18} /> Camera starten en scannen
           </button>
         </p>
       )}
@@ -111,7 +115,7 @@ export function InboxPage() {
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
         <button className="btn btn-primary" disabled={!text.trim()} onClick={verwerkTekst}>
-          ✔ Codes verwerken
+          <CheckIcon size={16} /> Codes verwerken
         </button>
         {rows.length > 0 && (
           <button className="btn btn-ghost" onClick={() => { setRows([]); setMelding(''); }}>
@@ -122,7 +126,7 @@ export function InboxPage() {
       <p className="hint" role="status" aria-live="polite" style={{ minHeight: '1.2em' }}>{melding}</p>
 
       {rows.length === 0 ? (
-        <EmptyState icon="📭" title="Nog niets verwerkt">
+        <EmptyState icon={<Inbox size={40} />} title="Nog niets verwerkt">
           <p>
             De verwerkte codes verschijnen hier, met per code wat ermee gebeurde. Resultaten vind je
             daarna gewoon bij <Link to="/resultaten">Resultaten</Link> en in je{' '}
@@ -166,7 +170,10 @@ export function InboxPage() {
                           r.outcome === 'nieuw' ? 'badge-ok' : r.outcome === 'onbekend' ? 'badge-warn' : r.outcome === 'ongeldig' ? 'badge-err' : ''
                         }`}
                       >
-                        {r.outcome === 'nieuw' ? '✔ toegevoegd' : r.outcome === 'dubbel' ? '= al aanwezig' : r.outcome === 'onbekend' ? '⚠ bewaard' : '✗ ongeldig'}
+                        {r.outcome === 'nieuw' && <><CheckIcon size={14} className="icon-inline" /> toegevoegd</>}
+                        {r.outcome === 'dubbel' && '= al aanwezig'}
+                        {r.outcome === 'onbekend' && <><WarningIcon size={14} className="icon-inline" /> bewaard</>}
+                        {r.outcome === 'ongeldig' && <><CloseIcon size={14} className="icon-inline" /> ongeldig</>}
                       </span>
                       {r.message && <span className="hint" style={{ display: 'block' }}>{r.message}</span>}
                     </td>
@@ -179,7 +186,7 @@ export function InboxPage() {
       )}
 
       <p className="hint" style={{ marginTop: 20 }}>
-        🔒 Alles blijft op dit toestel. Een code bevat het werk van één leerling; er gaat niets naar
+        <PrivacyIcon size={14} className="icon-inline" /> Alles blijft op dit toestel. Een code bevat het werk van één leerling; er gaat niets naar
         internet.
       </p>
     </div>

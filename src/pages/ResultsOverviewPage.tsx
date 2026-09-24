@@ -6,8 +6,13 @@ import { formatDate, pct } from '../lib/utils';
 import { EmptyState } from '../components/ui';
 import { gradeQuestion } from '../lib/grading';
 import { goalLabel, normalizeGoalCode } from '../lib/curriculum';
+import { filterSubmissionsByClass } from '../lib/resultsFilter';
+import { useResultsClassFilter } from '../lib/useResultsClassFilter';
 import type { Question, QuizConfig, Submission, Widget } from '../lib/types';
 import { TypeTile } from '../components/TypeTile';
+import { CheckIcon, GoalIcon, ResultsIcon } from '../components/icons';
+import { ClipboardCheck } from 'lucide-react';
+import '../styles/opvolgen.css';
 
 // widgets met een QuizConfig-achtige 'questions'-lijst (zelfde set als ResultsPage)
 const QUIZ_FAMILY = new Set<string>(['quiz', 'worksheet', 'exitticket', 'splitworksheet']);
@@ -15,10 +20,11 @@ const QUIZ_FAMILY = new Set<string>(['quiz', 'worksheet', 'exitticket', 'splitwo
 export function ResultsOverviewPage() {
   const [, force] = useState(0);
   React.useEffect(() => onStorageChange(() => force((x) => x + 1)), []);
+  const { classes, filter, setFilter } = useResultsClassFilter();
 
   const widgets = getWidgets().filter((w) => getTypeDef(w.type).hasSubmissions);
   const withSubs = widgets
-    .map((w) => ({ widget: w, subs: getSubmissions(w.id) }))
+    .map((w) => ({ widget: w, subs: filterSubmissionsByClass(getSubmissions(w.id), filter) }))
     .filter((x) => x.subs.length > 0)
     .sort((a, b) => Math.max(...b.subs.map((s) => s.submittedAt)) - Math.max(...a.subs.map((s) => s.submittedAt)));
 
@@ -31,8 +37,26 @@ export function ResultsOverviewPage() {
         </div>
       </div>
 
+      {classes.length > 0 && (
+        <div className="field class-filter">
+          <label htmlFor="resultaten-klasfilter">Klas</label>
+          <select
+            id="resultaten-klasfilter"
+            className="select"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="all">Alle klassen</option>
+            {classes.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+            <option value="none">Zonder klas</option>
+          </select>
+        </div>
+      )}
+
       {withSubs.length === 0 ? (
-        <EmptyState icon="📊" title="Nog geen inzendingen">
+        <EmptyState icon={<ResultsIcon size={40} />} title="Nog geen inzendingen">
           <p>Deel een widget met je klas via de code of link — de resultaten verschijnen hier automatisch.</p>
           <Link to="/widgets" className="btn btn-primary">Naar mijn widgets</Link>
         </EmptyState>
@@ -74,7 +98,11 @@ export function ResultsOverviewPage() {
                           </div>
                         )}
                       </td>
-                      <td>{pending > 0 ? <span className="badge badge-warn">✍️ {pending}</span> : <span className="badge badge-ok">✓ klaar</span>}</td>
+                      <td>
+                        {pending > 0
+                          ? <span className="badge badge-warn"><ClipboardCheck size={14} className="icon-inline" /> {pending}</span>
+                          : <span className="badge badge-ok"><CheckIcon size={14} className="icon-inline" /> klaar</span>}
+                      </td>
                       <td className="hint">{formatDate(last)}</td>
                     </tr>
                   );
@@ -203,7 +231,7 @@ function CrossWidgetGoals({ items }: { items: { widget: Widget; subs: Submission
   return (
     <details className="card card-pad" open style={{ marginBottom: 18 }}>
       <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: '1.05rem' }}>
-        🎯 Leerdoelen over widgets heen
+        <GoalIcon size={18} className="icon-inline" /> Leerdoelen over widgets heen
       </summary>
       <p className="hint" style={{ margin: '8px 0 14px' }}>
         Dit zijn <strong>indicaties</strong>, samengeteld over alle widgets waarvan vragen dit leerdoel dragen.

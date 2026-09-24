@@ -1,11 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import QRCode from 'qrcode';
+import { Accessibility, ArrowRight, Globe, Mail, School } from 'lucide-react';
 import type { Widget } from '../lib/types';
 import { encodeWidgetToUrl, exportWidgetJson, playUrlForCode } from '../lib/share';
 import { assignmentsForClass, createAssignment, dueBadge, getClasses, saveAssignment } from '../lib/classes';
 import { countUnresolvedMedia, inlineMedia } from '../lib/mediaStore';
 import { downloadFile } from '../lib/utils';
+import {
+  AddIcon, AssignIcon, CheckIcon, ExportIcon, LinkIcon, WarningIcon,
+} from './icons';
 import { CheckRow, CopyButton, Field, Modal, useToast } from './ui';
 
 interface Inlined {
@@ -64,11 +68,15 @@ export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () =>
 
   return (
     <Modal title={`“${widget.title}” delen`} onClose={onClose} wide>
+      <AssignToClassSection kind="widget" targetId={widget.id} title={widget.title} />
+
+      <hr className="divider" />
+
       <div className="callout">
-        <span aria-hidden>🏫</span>
+        <span aria-hidden><School size={18} /></span>
         <div>
-          <strong>Klascode (zelfde toestel/browser):</strong> leerlingen surfen naar de app, klikken op
-          {' '}<em>Ik ben leerling</em> en geven deze code in. Resultaten komen automatisch bij jou terecht.
+          <strong>Losse code (zelfde toestel/browser):</strong> leerlingen surfen naar de app, klikken op
+          {' '}<em>Ik ben leerling</em> en typen deze code in — en dus ook zelf hun naam, los van een klaslijst.
         </div>
       </div>
       <div style={{ textAlign: 'center', margin: '10px 0 18px' }}>
@@ -76,90 +84,101 @@ export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () =>
           {widget.code}
         </div>
         <CopyButton text={widget.code} label="Code kopiëren" />
-        <CopyButton text={codeUrl} label="Directe link kopiëren" />
       </div>
 
       <hr className="divider" />
 
-      <AssignToClassSection kind="widget" targetId={widget.id} title={widget.title} />
+      <details className="more-ways">
+        <summary>Meer manieren om te delen</summary>
 
-      <hr className="divider" />
+        <div style={{ paddingTop: 10 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
+            <LinkIcon size={16} className="icon-inline" />
+            <strong>Directe link</strong>
+            <span className="hint">(zelfde toestel) — opent de widget meteen met deze code al ingevuld.</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
+            <input className="input input-sm" readOnly value={codeUrl} aria-label="Directe link met de klascode" onFocus={(e) => e.target.select()} />
+            <CopyButton text={codeUrl} label="Kopiëren" />
+          </div>
 
-      <div className="callout">
-        <span aria-hidden>🌍</span>
-        <div>
-          <strong>Draagbare link (elk toestel):</strong> de volledige widget zit in de link zelf,
-          dus deze werkt overal — ook thuis. Resultaten blijven dan wel op het toestel van de leerling.
-        </div>
-      </div>
-      {inlined.unresolved > 0 && (
-        <div className="callout warn">
-          <span aria-hidden>⚠️</span>
-          <div>
-            {inlined.unresolved === 1 ? 'Eén afbeelding of bijlage' : `${inlined.unresolved} afbeeldingen of bijlagen`} van deze
-            widget staan niet (meer) op dit toestel en reizen dus niet mee in de link of het bestand.
+          <div className="callout">
+            <span aria-hidden><Globe size={18} /></span>
+            <div>
+              <strong>Draagbare link (elk toestel):</strong> de volledige widget zit in de link zelf,
+              dus deze werkt overal — ook thuis. Resultaten blijven dan wel op het toestel van de leerling.
+            </div>
+          </div>
+          {inlined.unresolved > 0 && (
+            <div className="callout warn">
+              <span aria-hidden><WarningIcon size={18} /></span>
+              <div>
+                {inlined.unresolved === 1 ? 'Eén afbeelding of bijlage' : `${inlined.unresolved} afbeeldingen of bijlagen`} van deze
+                widget staan niet (meer) op dit toestel en reizen dus niet mee in de link of het bestand.
+              </div>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 12 }}>
+            <div style={{ flex: '1 1 300px' }}>
+              {portableUrl ? (
+                <>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                    <input className="input input-sm" readOnly value={portableUrl} aria-label="Draagbare deellink" onFocus={(e) => e.target.select()} />
+                    <CopyButton text={portableUrl} label="Kopiëren" />
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <a className="btn btn-sm btn-ghost" href={classroomUrl} target="_blank" rel="noopener noreferrer">
+                      <AssignIcon size={16} /> Delen in Google Classroom
+                    </a>
+                    <a className="btn btn-sm btn-ghost" href={mailUrl}>
+                      <Mail size={16} /> Mailen
+                    </a>
+                  </div>
+                </>
+              ) : (
+                // Pas tonen als de link er écht is: anders kopieert of mailt iemand een lege link.
+                <p className="hint" role="status" aria-busy>Link wordt klaargemaakt (afbeeldingen worden ingevoegd)…</p>
+              )}
+            </div>
+            {qr && (
+              <figure style={{ margin: 0, textAlign: 'center' }}>
+                <img
+                  src={qr}
+                  alt={`QR-code voor de draagbare link van ${widget.title}`}
+                  style={{ width: 132, height: 132, borderRadius: 10, border: '1px solid var(--line)', background: '#fff' }}
+                />
+                <figcaption className="hint" style={{ marginTop: 4 }}>
+                  Scan met tablet of gsm
+                  <br />
+                  <a href={qr} download={`qr-${widget.code}.png`}>QR downloaden</a>
+                </figcaption>
+              </figure>
+            )}
+          </div>
+
+          <hr className="divider" />
+
+          <AdaptedLinkSection widget={widget} inlined={inlined.widget} />
+
+          <hr className="divider" />
+
+          <details style={{ marginBottom: 12 }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 600 }}><LinkIcon size={16} className="icon-inline" /> Insluiten in je eigen website (embed)</summary>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 8 }}>
+              <textarea className="textarea" rows={3} readOnly value={embedCode} aria-label="Embed-code" onFocus={(e) => e.target.select()} style={{ fontFamily: 'monospace', fontSize: '0.8rem' }} />
+              <CopyButton text={embedCode} label="Kopiëren" />
+            </div>
+          </details>
+
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <strong>Bestand:</strong>
+            <button className="btn btn-sm btn-ghost" onClick={() => { void exportJson(); }}>
+              <ExportIcon size={16} /> Exporteren (.json)
+            </button>
+            <span className="hint">Importeer dit bestand op een ander toestel of geef het aan een collega.</span>
           </div>
         </div>
-      )}
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 12 }}>
-        <div style={{ flex: '1 1 300px' }}>
-          {portableUrl ? (
-            <>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-                <input className="input input-sm" readOnly value={portableUrl} aria-label="Draagbare deellink" onFocus={(e) => e.target.select()} />
-                <CopyButton text={portableUrl} label="Kopiëren" />
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <a className="btn btn-sm btn-ghost" href={classroomUrl} target="_blank" rel="noopener noreferrer">
-                  🎓 Delen in Google Classroom
-                </a>
-                <a className="btn btn-sm btn-ghost" href={mailUrl}>
-                  ✉️ Mailen
-                </a>
-              </div>
-            </>
-          ) : (
-            // Pas tonen als de link er écht is: anders kopieert of mailt iemand een lege link.
-            <p className="hint" role="status" aria-busy>Link wordt klaargemaakt (afbeeldingen worden ingevoegd)…</p>
-          )}
-        </div>
-        {qr && (
-          <figure style={{ margin: 0, textAlign: 'center' }}>
-            <img
-              src={qr}
-              alt={`QR-code voor de draagbare link van ${widget.title}`}
-              style={{ width: 132, height: 132, borderRadius: 10, border: '1px solid var(--line)', background: '#fff' }}
-            />
-            <figcaption className="hint" style={{ marginTop: 4 }}>
-              Scan met tablet of gsm
-              <br />
-              <a href={qr} download={`qr-${widget.code}.png`}>QR downloaden</a>
-            </figcaption>
-          </figure>
-        )}
-      </div>
-
-      <hr className="divider" />
-
-      <AdaptedLinkSection widget={widget} inlined={inlined.widget} />
-
-      <hr className="divider" />
-
-      <details style={{ marginBottom: 12 }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 600 }}>🔗 Insluiten in je eigen website (embed)</summary>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 8 }}>
-          <textarea className="textarea" rows={3} readOnly value={embedCode} aria-label="Embed-code" onFocus={(e) => e.target.select()} style={{ fontFamily: 'monospace', fontSize: '0.8rem' }} />
-          <CopyButton text={embedCode} label="Kopiëren" />
-        </div>
       </details>
-
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <strong>Bestand:</strong>
-        <button className="btn btn-sm btn-ghost" onClick={() => { void exportJson(); }}>
-          💾 Exporteren (.json)
-        </button>
-        <span className="hint">Importeer dit bestand op een ander toestel of geef het aan een collega.</span>
-      </div>
     </Modal>
   );
 }
@@ -190,7 +209,7 @@ function AdaptedLinkSection({ widget, inlined }: { widget: Widget; inlined: Widg
   return (
     <details open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)} style={{ marginBottom: 4 }}>
       <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
-        ♿ Aangepaste link (redelijke aanpassingen)
+        <Accessibility size={16} className="icon-inline" /> Aangepaste link (redelijke aanpassingen)
       </summary>
       <div style={{ paddingTop: 8 }}>
         <p className="hint" style={{ marginTop: 0 }}>
@@ -239,11 +258,12 @@ export function AssignToClassSection({
   if (classes.length === 0) {
     return (
       <div className="callout">
-        <span aria-hidden>👥</span>
+        <span aria-hidden><AssignIcon size={18} /></span>
         <div>
-          <strong>Toewijzen aan een klas?</strong> Maak eerst een klas aan bij{' '}
-          <Link to="/klassen">Klassen</Link>. Daarna geef je deze {kind === 'course' ? 'cursus' : 'oefening'}{' '}
-          in één klik op, met deadline — en volg je in één overzicht wie ze al maakte.
+          <strong>Toewijzen aan een klas?</strong>{' '}
+          <Link to="/klassen?nieuw=1">Maak een klas aan</Link>. Daarna geef je deze {kind === 'course' ? 'cursus' : 'oefening'}{' '}
+          in één klik op, met deadline — en volg je in één overzicht wie ze al maakte. Namen hangen dan
+          vast aan je klaslijst, in plaats van dat leerlingen ze zelf intikken.
         </div>
       </div>
     );
@@ -266,10 +286,11 @@ export function AssignToClassSection({
   return (
     <div>
       <div className="callout">
-        <span aria-hidden>👥</span>
+        <span aria-hidden><AssignIcon size={18} /></span>
         <div>
-          <strong>Toewijzen aan een klas:</strong> je leerlingen zien deze opdracht in hun klaslink,
-          met naam en deadline. Hun werk komt onder hun eigen naam in je klasoverzicht terecht.
+          <strong>Toewijzen aan een klas:</strong> je leerlingen zien deze opdracht in hun klaslink en
+          kiezen hun naam uit de klaslijst — geen tikfouten of dubbels, en hun werk komt automatisch
+          onder hun eigen naam in je klasoverzicht terecht.
         </div>
       </div>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -299,14 +320,14 @@ export function AssignToClassSection({
       </Field>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <button className="btn btn-primary btn-sm" disabled={!classId} onClick={toewijzen}>
-          {bestaande ? '✔ Opdracht bijwerken' : '➕ Toewijzen aan deze klas'}
+          {bestaande ? <><CheckIcon size={16} /> Opdracht bijwerken</> : <><AddIcon size={16} /> Toewijzen aan deze klas</>}
         </button>
         {bestaande && !melding && (
           <span className="hint">Staat al in deze klas — bijwerken past de deadline aan.</span>
         )}
         {melding && (
           <span className="hint" role="status">
-            {melding} <Link to={`/klas/${classId}`}>→ klasoverzicht</Link>
+            {melding} <Link to={`/klas/${classId}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>klasoverzicht <ArrowRight size={14} /></Link>
           </span>
         )}
       </div>

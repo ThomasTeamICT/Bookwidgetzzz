@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import {
+  ArrowRight, Calendar, Clock, ClipboardCheck, ClipboardList, FileText, Globe, Inbox, Puzzle, School, Search,
+} from 'lucide-react';
 import type { Assignment, ClassGroup, ClassStudent } from '../lib/classTypes';
 import type { Course } from '../lib/courseTypes';
 import type { Widget } from '../lib/types';
@@ -17,6 +20,11 @@ import { getTypeDef } from '../widgets/registry';
 import { csvCell, downloadFile, formatDate, formatDateShort, uid } from '../lib/utils';
 import { CodeQr } from '../components/CodeQr';
 import { ConfirmModal, CopyButton, EmptyState, Field, Modal, useToast } from '../components/ui';
+import {
+  AddIcon, AssignIcon, BackIcon, CheckIcon, CourseIcon, DeleteIcon, EditIcon, ExportIcon,
+  GoalIcon, LinkIcon, PrivacyIcon, StudentIcon, WarningIcon,
+} from '../components/icons';
+import '../styles/opvolgen.css';
 
 /** Leerlinglink van een klas (de hub waar de leerling zijn opdrachten ziet). */
 function studentHubUrl(code: string): string {
@@ -24,10 +32,18 @@ function studentHubUrl(code: string): string {
   return `${base}#/leerling/${code}`;
 }
 
-function stateBadge(status: AssignmentStatus): { text: string; cls: string } {
-  if (status.state === 'ingediend') return { text: '✔ ingediend', cls: 'badge-ok' };
-  if (status.state === 'bezig') return { text: '◐ bezig', cls: 'badge-warn' };
-  return { text: '· niet gestart', cls: '' };
+/** Cursus (lezen) of oefening (maken)? Zelfde icoon overal in het klasdashboard. */
+function AssignmentKindIcon({ kind }: { kind: Assignment['kind'] }) {
+  return kind === 'course' ? <CourseIcon size={16} /> : <Puzzle size={16} />;
+}
+
+/** Statusbadge van een opdracht bij één leerling (matrix + per-leerlingpaneel). */
+function StateBadge({ status }: { status: AssignmentStatus }) {
+  if (status.state === 'ingediend') {
+    return <span className="badge badge-ok"><CheckIcon size={14} className="icon-inline" /> ingediend</span>;
+  }
+  if (status.state === 'bezig') return <span className="badge badge-warn">◐ bezig</span>;
+  return <span className="badge">niet gestart</span>;
 }
 
 /**
@@ -87,9 +103,9 @@ export function ClassDashboardPage() {
   if (!cls) {
     return (
       <div className="page page-narrow" style={{ paddingTop: 60 }}>
-        <EmptyState icon="👥" title="Klas niet gevonden">
+        <EmptyState icon={<AssignIcon size={40} />} title="Klas niet gevonden">
           <p>Deze klas staat niet (meer) op dit toestel.</p>
-          <Link to="/klassen" className="btn btn-primary">← Naar mijn klassen</Link>
+          <Link to="/klassen" className="btn btn-primary"><BackIcon size={16} /> Naar mijn klassen</Link>
         </EmptyState>
       </div>
     );
@@ -123,7 +139,7 @@ export function ClassDashboardPage() {
     <div className="page">
       <div className="page-head">
         <div>
-          <h1>👥 {cls.name}</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}><AssignIcon size={24} /> {cls.name}</h1>
           <p className="sub">
             {cls.schoolYear ? `${cls.schoolYear} · ` : ''}
             {cls.students.length} leerling{cls.students.length === 1 ? '' : 'en'} · klascode{' '}
@@ -131,18 +147,20 @@ export function ClassDashboardPage() {
           </p>
         </div>
         <div className="page-head-actions">
-          <button className="btn btn-ghost" onClick={() => setEditList(true)}>✏️ Klaslijst</button>
-          <button className="btn btn-ghost" onClick={exportCsv} disabled={students.length === 0}>⬇ CSV</button>
-          <Link to="/inleverpunt" className="btn btn-ghost">📥 Inleverpunt</Link>
-          <button className="btn btn-primary" onClick={() => setShareOpen(true)}>🔗 Klaslink & pakket</button>
+          <button className="btn btn-ghost" onClick={() => setEditList(true)}><EditIcon size={18} /> Klaslijst</button>
+          <button className="btn btn-ghost" onClick={exportCsv} disabled={students.length === 0}><ExportIcon size={18} /> CSV</button>
+          <Link to="/inleverpunt" className="btn btn-ghost"><Inbox size={18} /> Inleverpunt</Link>
+          <button className="btn btn-primary" onClick={() => setShareOpen(true)}><LinkIcon size={18} /> Klaslink & pakket</button>
         </div>
       </div>
 
       {/* ── Opdrachten ───────────────────────────────────────────────────── */}
       <section className="card card-pad" style={{ marginBottom: 20 }} aria-label="Opdrachten">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <h2 style={{ margin: 0, fontSize: '1.05rem', flex: 1 }}>📋 Opdrachten</h2>
-          <button className="btn btn-sm btn-primary" onClick={() => setNewAssignment(true)}>➕ Opdracht toevoegen</button>
+          <h2 style={{ margin: 0, fontSize: '1.05rem', flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ClipboardList size={20} /> Opdrachten
+          </h2>
+          <button className="btn btn-sm btn-primary" onClick={() => setNewAssignment(true)}><AddIcon size={16} /> Opdracht toevoegen</button>
         </div>
         {assignments.length === 0 ? (
           <p className="hint" style={{ marginBottom: 0 }}>
@@ -158,14 +176,14 @@ export function ClassDashboardPage() {
                   key={a.id}
                   style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', borderTop: '1px solid var(--line)', paddingTop: 8 }}
                 >
-                  <span aria-hidden>{a.kind === 'course' ? '📖' : '🧩'}</span>
+                  <span aria-hidden><AssignmentKindIcon kind={a.kind} /></span>
                   <span style={{ flex: '1 1 200px', minWidth: 0 }}>
                     <strong>{titleOf(a)}</strong>
                     {a.note && <span className="hint" style={{ display: 'block' }}>{a.note}</span>}
                   </span>
                   {due && (
                     <span className={`badge badge-${due.tone}`}>
-                      {due.overdue ? '⏰' : '📅'} {due.label}
+                      {due.overdue ? <Clock size={14} className="icon-inline" /> : <Calendar size={14} className="icon-inline" />} {due.label}
                       <span className="sr-only"> (deadline {formatDateShort(a.dueAt!)})</span>
                     </span>
                   )}
@@ -173,17 +191,17 @@ export function ClassDashboardPage() {
                     {klaar}/{students.length} klaar
                   </span>
                   {a.kind === 'widget' && ctx.widgets.has(a.targetId) && (
-                    <Link to={`/resultaten/${a.targetId}`} className="btn btn-sm btn-ghost">→ Resultaten</Link>
+                    <Link to={`/resultaten/${a.targetId}?klas=${cls.id}`} className="btn btn-sm btn-ghost">Resultaten <ArrowRight size={14} /></Link>
                   )}
                   {a.kind === 'course' && ctx.courses.has(a.targetId) && (
-                    <Link to={`/cursus/volg/${a.targetId}`} className="btn btn-sm btn-ghost">→ Volgen</Link>
+                    <Link to={`/cursus/volg/${a.targetId}`} className="btn btn-sm btn-ghost">Volgen <ArrowRight size={14} /></Link>
                   )}
                   <button
                     className="btn btn-sm btn-quiet btn-icon"
                     aria-label={`Opdracht "${titleOf(a)}" verwijderen`}
                     onClick={() => setDeleteAssignmentTarget(a)}
                   >
-                    🗑
+                    <DeleteIcon size={16} />
                   </button>
                 </li>
               );
@@ -195,13 +213,13 @@ export function ClassDashboardPage() {
       {/* ── Nog te verbeteren ────────────────────────────────────────────── */}
       {teVerbeteren.length > 0 && (
         <div className="callout warn" style={{ marginBottom: 20 }}>
-          <span aria-hidden>✍️</span>
+          <span aria-hidden><ClipboardCheck size={18} /></span>
           <div>
             <strong>Nog na te kijken:</strong>{' '}
             {teVerbeteren.map((t, i) => (
               <React.Fragment key={t.widget.id}>
                 {i > 0 && ' · '}
-                <Link to={`/resultaten/${t.widget.id}`}>
+                <Link to={`/resultaten/${t.widget.id}?klas=${cls.id}`}>
                   {t.widget.title} ({t.count})
                 </Link>
               </React.Fragment>
@@ -212,9 +230,9 @@ export function ClassDashboardPage() {
 
       {/* ── Matrix ───────────────────────────────────────────────────────── */}
       {students.length === 0 ? (
-        <EmptyState icon="🧑‍🎓" title="Nog geen leerlingen in deze klas">
+        <EmptyState icon={<StudentIcon size={40} />} title="Nog geen leerlingen in deze klas">
           <p>Plak je klaslijst — daarna krijgt elk stuk werk automatisch de juiste naam.</p>
-          <button className="btn btn-primary" onClick={() => setEditList(true)}>✏️ Klaslijst invullen</button>
+          <button className="btn btn-primary" onClick={() => setEditList(true)}><EditIcon size={16} /> Klaslijst invullen</button>
         </EmptyState>
       ) : assignments.length > 0 ? (
         <div className="card" style={{ overflowX: 'auto', marginBottom: 20 }}>
@@ -227,7 +245,7 @@ export function ClassDashboardPage() {
                 </th>
                 {assignments.map((a) => (
                   <th key={a.id} scope="col" style={{ padding: '8px 10px', fontSize: '0.82rem', maxWidth: 160 }}>
-                    {a.kind === 'course' ? '📖' : '🧩'} {titleOf(a)}
+                    <AssignmentKindIcon kind={a.kind} /> {titleOf(a)}
                   </th>
                 ))}
               </tr>
@@ -244,14 +262,17 @@ export function ClassDashboardPage() {
                   </th>
                   {assignments.map((a) => {
                     const st = statuses.get(`${s.id}|${a.id}`) ?? statusForAssignment(a, s, ctx);
-                    const badge = stateBadge(st);
                     return (
                       <td key={a.id} style={{ textAlign: 'center', padding: '6px 8px' }}>
-                        <span className={`badge ${badge.cls}`}>{badge.text}</span>
+                        <StateBadge status={st} />
                         {st.state !== 'niet gestart' && (
                           <span className="hint" style={{ display: 'block' }}>{statusSummary(st)}</span>
                         )}
-                        {st.needsGrading && <span className="hint" style={{ display: 'block' }}>✍️ na te kijken</span>}
+                        {st.needsGrading && (
+                          <span className="hint" style={{ display: 'block' }}>
+                            <ClipboardCheck size={12} className="icon-inline" /> na te kijken
+                          </span>
+                        )}
                       </td>
                     );
                   })}
@@ -265,7 +286,9 @@ export function ClassDashboardPage() {
       {/* ── Per leerling ─────────────────────────────────────────────────── */}
       {students.length > 0 && (
         <section aria-label="Per leerling" style={{ display: 'grid', gap: 8 }}>
-          <h2 style={{ fontSize: '1.05rem', margin: '4px 0' }}>🔍 Per leerling</h2>
+          <h2 style={{ fontSize: '1.05rem', margin: '4px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Search size={18} /> Per leerling
+          </h2>
           {students.map((s) => (
             <StudentPanel key={s.id} student={s} assignments={assignments} ctx={ctx} titleOf={titleOf} />
           ))}
@@ -273,7 +296,7 @@ export function ClassDashboardPage() {
       )}
 
       <p className="hint" style={{ marginTop: 24 }}>
-        🔎 Eerlijk over de werking: werk dat op een ánder toestel gemaakt is, komt pas binnen via het
+        <Search size={14} className="icon-inline" /> Eerlijk over de werking: werk dat op een ánder toestel gemaakt is, komt pas binnen via het
         <Link to="/inleverpunt"> inleverpunt</Link> (geplakte of gescande codes). Wat hier staat, is dus
         wat dit toestel weet.
       </p>
@@ -352,12 +375,11 @@ function StudentPanel({
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6 }}>
             {assignments.map((a) => {
               const st = statusForAssignment(a, student, ctx);
-              const badge = stateBadge(st);
               return (
                 <li key={a.id} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span aria-hidden>{a.kind === 'course' ? '📖' : '🧩'}</span>
+                  <span aria-hidden><AssignmentKindIcon kind={a.kind} /></span>
                   <span style={{ flex: '1 1 160px' }}>{titleOf(a)}</span>
-                  <span className={`badge ${badge.cls}`}>{badge.text}</span>
+                  <StateBadge status={st} />
                   <span className="hint">{statusSummary(st)}</span>
                   {st.lastAt && <span className="hint">{formatDate(st.lastAt)}</span>}
                 </li>
@@ -366,7 +388,9 @@ function StudentPanel({
           </ul>
         )}
 
-        <h3 style={{ fontSize: '0.95rem', margin: '14px 0 6px' }}>🎯 Score per leerplandoel</h3>
+        <h3 style={{ fontSize: '0.95rem', margin: '14px 0 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <GoalIcon size={16} /> Score per leerplandoel
+        </h3>
         {goals.length === 0 ? (
           <p className="hint" style={{ margin: 0 }}>
             Nog geen scores met een leerplandoel. Koppel doelcodes aan je vragen — dan telt Boosterz
@@ -429,7 +453,7 @@ function ClassShareModal({
   return (
     <Modal title={`“${cls.name}” delen met je leerlingen`} onClose={onClose} wide>
       <div className="callout">
-        <span aria-hidden>🏫</span>
+        <span aria-hidden><School size={18} /></span>
         <div>
           <strong>In de klas (zelfde toestel of browser):</strong> je leerlingen surfen naar de app,
           klikken op <em>Ik ben leerling</em> en typen de klascode. Daarna kiezen ze hun naam uit de lijst.
@@ -449,7 +473,7 @@ function ClassShareModal({
       <hr className="divider" />
 
       <div className="callout">
-        <span aria-hidden>🌍</span>
+        <span aria-hidden><Globe size={18} /></span>
         <div>
           <strong>Klaspakket (elk toestel, ook thuis):</strong> de klaslijst, de opdrachten én hun
           inhoud (cursussen met hun oefeningen) zitten in de link zelf. De leerling opent ze één
@@ -460,7 +484,7 @@ function ClassShareModal({
         <p className="hint" role="status" aria-busy>Pakket wordt klaargemaakt (afbeeldingen worden ingevoegd)…</p>
       ) : !pack ? (
         <div className="callout err" role="alert">
-          <span aria-hidden>⚠️</span>
+          <span aria-hidden><WarningIcon size={18} /></span>
           <div>Het pakket kon niet gemaakt worden. Probeer het opnieuw, of deel de cursussen apart.</div>
         </div>
       ) : (
@@ -480,7 +504,7 @@ function ClassShareModal({
           </p>
           {pack.unresolved > 0 && (
             <div className="callout warn" style={{ marginBottom: 8 }}>
-              <span aria-hidden>⚠️</span>
+              <span aria-hidden><WarningIcon size={18} /></span>
               <div>
                 {pack.unresolved === 1 ? 'Eén afbeelding of bijlage' : `${pack.unresolved} afbeeldingen of bijlagen`} staan
                 niet (meer) op dit toestel en reizen dus niet mee.
@@ -489,7 +513,7 @@ function ClassShareModal({
           )}
           {pack.length > QR_MAX_CHARS ? (
             <div className="callout">
-              <span aria-hidden>📄</span>
+              <span aria-hidden><FileText size={18} /></span>
               <div>
                 Dit pakket is te groot voor een QR-code ({pack.length.toLocaleString('nl-BE')} tekens).
                 Deel de link via je gewone kanaal (Smartschool, mail), of geef het bestand mee.
@@ -502,7 +526,7 @@ function ClassShareModal({
           )}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginTop: 12 }}>
             <button className="btn btn-sm btn-ghost" onClick={() => { void downloadPack(); }}>
-              💾 Klaspakket downloaden (.json)
+              <ExportIcon size={16} /> Klaspakket downloaden (.json)
             </button>
             <span className="hint">
               Handig bij een lange link: zet het bestand op de schoolserver of een USB-stick. De
@@ -514,7 +538,7 @@ function ClassShareModal({
 
       <hr className="divider" />
       <p className="hint" style={{ marginBottom: 0 }}>
-        🔒 In het pakket zitten de namen van je leerlingen. Deel het alleen met je eigen klas.
+        <PrivacyIcon size={14} className="icon-inline" /> In het pakket zitten de namen van je leerlingen. Deel het alleen met je eigen klas.
       </p>
     </Modal>
   );
@@ -575,8 +599,8 @@ function NewAssignmentModal({
           value={kind}
           onChange={(e) => { setKind(e.target.value as 'course' | 'widget'); setTargetId(''); }}
         >
-          <option value="course">📖 Een cursus (lezen)</option>
-          <option value="widget">🧩 Een oefening (maken)</option>
+          <option value="course">Een cursus (lezen)</option>
+          <option value="widget">Een oefening (maken)</option>
         </select>
       </Field>
 
@@ -707,7 +731,7 @@ function EditStudentsModal({
               aria-label={`${s.name || 'Leerling'} uit de lijst verwijderen`}
               onClick={() => setDraft((cur) => cur.filter((x) => x.id !== s.id))}
             >
-              🗑
+              <DeleteIcon size={16} />
             </button>
           </li>
         ))}
@@ -728,12 +752,14 @@ function EditStudentsModal({
           </Field>
         </div>
         <button className="btn btn-ghost" style={{ marginBottom: 14 }} disabled={!nieuw.trim()} onClick={voegToe}>
-          ➕ Toevoegen
+          <AddIcon size={16} /> Toevoegen
         </button>
       </div>
 
       <details>
-        <summary style={{ cursor: 'pointer', fontWeight: 600 }}>📋 Hele lijst vervangen door geplakte tekst</summary>
+        <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
+          <ClipboardList size={16} className="icon-inline" /> Hele lijst vervangen door geplakte tekst
+        </summary>
         <p className="hint" style={{ marginTop: 8 }}>
           Eén leerling per regel, een klasnummer mag erbij (“12 Emma Peeters”, “Emma Peeters;12”).
           Namen die al in de lijst staan, houden hun werk; wie je weglaat, verdwijnt uit de lijst.

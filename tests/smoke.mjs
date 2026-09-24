@@ -108,6 +108,10 @@ await go('/#/resultaten');
 check('resultatenrij', (await page.locator('table.data tbody tr').count()) >= 1);
 await page.locator('table.data tbody tr').first().click();
 await sleep(700);
+// Er staat een open vraag klaar: de detailpagina opent dan op "Nakijken".
+check('detailpagina opent op nakijken', (await page.getByRole('tab', { name: /Nakijken/ }).getAttribute('aria-selected')) === 'true');
+await page.getByRole('tab', { name: /Per leerling/ }).click();
+await sleep(300);
 check('detailpagina', await page.locator('.table-wrap').isVisible());
 check('resultaatcode-knop', await page.getByRole('button', { name: /Resultaatcode plakken/ }).isVisible());
 check('anonieme CSV-knop', await page.getByRole('button', { name: /CSV zonder namen/ }).isVisible());
@@ -149,6 +153,9 @@ await go('/#/widgets');
 await page.locator('.widget-card').first().locator('button[aria-label^="Acties"]').click();
 await page.getByRole('menuitem', { name: /Delen/ }).click();
 await sleep(700);
+check('delen begint bij de klas', await page.locator('.modal').getByText(/Toewijzen aan een klas/).first().isVisible());
+await page.locator('summary', { hasText: 'Meer manieren om te delen' }).click();
+await sleep(300);
 check('QR-code', await page.locator('img[alt^="QR-code"]').isVisible());
 check('Classroom-knop', await page.locator('a', { hasText: 'Google Classroom' }).isVisible());
 await page.keyboard.press('Escape');
@@ -183,6 +190,8 @@ check('cursuskaart aanwezig', await page.getByRole('button', { name: /^Acties vo
 await page.getByRole('button', { name: /^Acties voor/ }).first().click();
 await page.getByRole('menuitem', { name: /Delen/ }).click();
 await sleep(600);
+await page.locator('summary', { hasText: 'Meer manieren om te delen' }).click();
+await sleep(300);
 check('embed-code voor LMS', (await page.locator('.modal textarea').first().inputValue()).includes('<iframe'));
 await page.keyboard.press('Escape');
 

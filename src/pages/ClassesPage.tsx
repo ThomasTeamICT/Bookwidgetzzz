@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, Inbox } from 'lucide-react';
 import type { ClassGroup, ClassStudent } from '../lib/classTypes';
 import {
   assignmentsForClass, createClass, deleteClass, getClasses, parseStudentList, saveClass, seedExampleClass,
@@ -8,6 +9,7 @@ import { onStorageChange } from '../lib/storage';
 import { ConfirmModal, EmptyState, Field, Modal, useToast } from '../components/ui';
 import { formatDateShort } from '../lib/utils';
 import { useNewParam } from '../lib/useNewParam';
+import { AddIcon, AssignIcon, DeleteIcon, PrivacyIcon, StudentIcon } from '../components/icons';
 
 /**
  * /klassen — het overzicht van de leerkracht.
@@ -39,26 +41,26 @@ export function ClassesPage() {
     <div className="page">
       <div className="page-head">
         <div>
-          <h1>👥 Klassen</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}><AssignIcon size={24} /> Klassen</h1>
           <p className="sub">
             Eén klaslink voor je leerlingen, één overzicht voor jou — ook als ze thuis op hun eigen
             toestel werken.
           </p>
         </div>
         <div className="page-head-actions">
-          <Link to="/inleverpunt" className="btn btn-ghost">📥 Inleverpunt</Link>
-          <button className="btn btn-primary" onClick={() => setNewOpen(true)}>➕ Nieuwe klas</button>
+          <Link to="/inleverpunt" className="btn btn-ghost"><Inbox size={18} /> Inleverpunt</Link>
+          <button className="btn btn-primary" onClick={() => setNewOpen(true)}><AddIcon size={18} /> Nieuwe klas</button>
         </div>
       </div>
 
       {classes.length === 0 ? (
-        <EmptyState icon="👥" title="Nog geen klassen">
+        <EmptyState icon={<AssignIcon size={40} />} title="Nog geen klassen">
           <p>
             Maak een klas aan en plak je klaslijst erin. Je leerlingen openen één klaslink (of QR),
             kiezen hun naam en zien meteen hun opdrachten. Hun resultaten komen via het
             <strong> inleverpunt</strong> bij jou terecht — zonder server, zonder account.
           </p>
-          <button className="btn btn-primary" onClick={() => setNewOpen(true)}>➕ Eerste klas maken</button>
+          <button className="btn btn-primary" onClick={() => setNewOpen(true)}><AddIcon size={18} /> Eerste klas maken</button>
         </EmptyState>
       ) : (
         <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
@@ -77,14 +79,14 @@ export function ClassesPage() {
                   {' · '}bijgewerkt {formatDateShort(cls.updatedAt)}
                 </p>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 'auto', paddingTop: 8 }}>
-                  <Link to={`/klas/${cls.id}`} className="btn btn-sm btn-primary">📊 Openen</Link>
-                  <Link to={`/leerling/${cls.code}`} className="btn btn-sm btn-ghost">🎓 Leerlingweergave</Link>
+                  <Link to={`/klas/${cls.id}`} className="btn btn-sm btn-primary"><ArrowRight size={16} /> Openen</Link>
+                  <Link to={`/leerling/${cls.code}`} className="btn btn-sm btn-ghost"><StudentIcon size={16} /> Leerlingweergave</Link>
                   <button
-                    className="btn btn-sm btn-quiet"
+                    className="btn btn-sm btn-quiet btn-icon"
                     aria-label={`Klas "${cls.name}" verwijderen`}
                     onClick={() => setDeleteTarget(cls)}
                   >
-                    🗑
+                    <DeleteIcon size={16} />
                   </button>
                 </div>
               </div>
@@ -94,7 +96,7 @@ export function ClassesPage() {
       )}
 
       <p className="hint" style={{ marginTop: 24 }}>
-        🔒 Klaslijsten blijven op dit toestel. Deel je een klaspakket, dan reist de lijst met namen
+        <PrivacyIcon size={14} className="icon-inline" /> Klaslijsten blijven op dit toestel. Deel je een klaspakket, dan reist de lijst met namen
         mee in die link of dat bestand — geef ze dus alleen aan je eigen leerlingen.
       </p>
 
