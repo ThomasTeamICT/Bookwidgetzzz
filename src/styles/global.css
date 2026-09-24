@@ -282,18 +282,22 @@ input[type='color'] {
 /* ── Toasts ─────────────────────────────────────────────────────────────── */
 
 .toast-stack {
-  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+  /* Volle breedte met marge: met left: 50% kreeg een lange melding op gsm
+     maar de helft van het scherm en werd ze een ronde vlek. */
+  position: fixed; left: 16px; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   z-index: 150; display: flex; flex-direction: column; gap: 8px; align-items: center;
   pointer-events: none;
 }
 .toast {
   background: var(--text); color: var(--bg-raised);
-  padding: 10px 18px; border-radius: 999px; font-weight: 600; font-size: 0.92rem;
+  max-width: min(560px, 100%);
+  padding: 10px 18px; border-radius: 14px; font-weight: 600; font-size: 0.92rem; line-height: 1.4;
   box-shadow: var(--shadow-2);
   animation: toastIn 0.25s ease;
   pointer-events: auto;
   display: flex; align-items: center; gap: 8px;
 }
+.toast > svg { flex: none; }
 .toast-ok { background: var(--ok-strong); color: #fff; }
 .toast-err { background: var(--err-strong); color: #fff; }
 @keyframes toastIn { from { opacity: 0; transform: translateY(12px); } }
