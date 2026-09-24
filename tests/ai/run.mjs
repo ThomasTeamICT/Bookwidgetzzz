@@ -73,6 +73,35 @@ async function runAIStep(page, aiCalls, flow, task, clickFn, { timeout = AI_TIME
   return { usage, durationMs };
 }
 
+/**
+ * Voor een AI-stap die INTERN meerdere aanroepen doet (één per widgetsoort of
+ * per hoofdstuk, zie lib/aiBatch.ts): runAIStep hierboven merkt de EERSTE
+ * afgeronde aanroep al als "klaar" (het gebruikslogboek groeit al bij één),
+ * terwijl de rest van de reeks nog verder loopt. Deze variant klikt, wacht tot
+ * `settled()` zichtbaar wordt — dat verschijnt pas als de HELE reeks klaar is
+ * (de app toont dan de voorvertoning, ongeacht per-soort/hoofdstuk succes) —
+ * en neemt dan ALLE nieuwe regels uit het gebruikslogboek op (niet enkel de
+ * laatste), zodat het tokentotaal van de test klopt.
+ */
+async function runBatchAIStep(page, aiCalls, flow, task, clickFn, settled, { timeout = AI_TIMEOUT } = {}) {
+  const before = await usageCount(page);
+  const t0 = Date.now();
+  await clickFn();
+  const ok = await settled().isVisible({ timeout }).catch(() => false);
+  const durationMs = Date.now() - t0;
+  if (ok) {
+    const all = await readLS(page, 'wf.aiusage.v1', []); // nieuwste eerst (zie lib/ai.ts: logUsage)
+    const fresh = all.slice(0, Math.max(0, all.length - before)).reverse(); // oud → nieuw
+    for (const u of fresh) {
+      aiCalls.push({
+        flow, task: u.task ?? task, model: u.model ?? null,
+        inputTokens: u.inputTokens ?? null, outputTokens: u.outputTokens ?? null, durationMs,
+      });
+    }
+  }
+  return { settled: ok, durationMs };
+}
+
 async function readLS(page, key, fallback = null) {
   return page.evaluate(({ key, fallback }) => {
     try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch { return fallback; }
@@ -404,13 +433,18 @@ async function flowStudio(page, report, aiCalls, ctx, texts) {
     for (const t of roundTypes) if (!current.has(t)) await setTypeOn(typeGroup, TYPE_NAME[t], true);
     current = new Set(roundTypes);
 
-    await runAIStep(page, aiCalls, flow, 'widgets uit bron', () =>
-      page.getByRole('button', { name: /^✨ Genereer/ }).click()
+    // Elke widgetsoort is een eigen AI-aanroep (hoogstens 3 tegelijk, zie
+    // lib/aiBatch.ts): pas als de HELE ronde klaar is (gelukt of niet, per
+    // soort) toont de app de "Bewaren"-voorvertoning. Ruim getimed: bij 5
+    // soorten kunnen dat 2 golven zijn, en elke aanroep denkt apart na.
+    const { settled: previewShown } = await runBatchAIStep(
+      page, aiCalls, flow, 'widgets uit bron',
+      () => page.getByRole('button', { name: /^Genereer/ }).click(),
+      () => page.getByRole('heading', { name: 'Bewaren' }),
+      { timeout: 270000 }
     );
-
-    const previewShown = await page.getByRole('heading', { name: '💾 Bewaren' }).isVisible({ timeout: 15000 }).catch(() => false);
     let warningsText = [];
-    if (previewShown) warningsText = await page.locator('[role="status"]', { hasText: '⚠️' }).allTextContents().catch(() => []);
+    if (previewShown) warningsText = await page.locator('[role="status"]').allTextContents().catch(() => []);
     const roundDetail = previewShown ? warningsText.join(' | ') : (warningsText.join(' | ') || (await failureDetail(page)));
     report.check(flow, `ronde ${i + 1}: voorstel verschenen voor ${roundTypes.join(', ')}`, previewShown, roundDetail);
     if (!previewShown) await shot(page, `${flow}-ronde${i + 1}-geen-voorstel`);
@@ -434,7 +468,7 @@ async function flowStudio(page, report, aiCalls, ctx, texts) {
     }
 
     if (i < ROUNDS.length - 1) {
-      await page.getByRole('button', { name: '✨ Nog iets maken' }).click().catch(() => {});
+      await page.getByRole('button', { name: 'Nog iets maken' }).click().catch(() => {});
     }
   }
 
@@ -627,8 +661,8 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
   try {
     await goto(page, '/#/cursussen');
     const beforeCourses = new Set((await readLS(page, 'wf.courses.v1', [])).map((c) => c.id));
-    await page.getByRole('button', { name: '🎯 Blanco vanuit leerplan' }).click();
-    const dNew = page.getByRole('dialog', { name: '✨ AI-cursusbouwer' });
+    await page.getByRole('button', { name: 'Blanco vanuit leerplan' }).click();
+    const dNew = page.getByRole('dialog', { name: 'AI-cursusbouwer' });
     await dNew.getByLabel('Leerplan', { exact: true }).selectOption(EXAMPLE_CURRICULUM_ID);
     await dNew.locator('fieldset', { hasText: 'Krachten en beweging' }).getByRole('button', { name: 'heel thema' }).click();
     const opdrachtA = { theme: 'Krachten en beweging', subject: 'Natuurwetenschappen — krachten', audience: '1e graad A-stroom', chapterCount: '2' };
@@ -638,19 +672,19 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
     const withQuizzesChecked = await dNew.locator('input[type=checkbox]').last().isChecked().catch(() => false);
     report.check(flow, '5a: "oefenquiz maken" staat standaard aan', withQuizzesChecked);
 
-    await runAIStep(page, aiCalls, flow, 'cursus bouwen', () => dNew.getByRole('button', { name: '✨ Genereren' }).click());
+    await runAIStep(page, aiCalls, flow, 'cursus bouwen', () => dNew.getByRole('button', { name: 'Genereren' }).click());
     // "✔ Cursus aanmaken" verschijnt pas als er een voorstel is; bij een te
     // lang afgekapt AI-antwoord (zie ook 5d) geeft de app een foutmelding met
     // een "Opnieuw proberen"-knop — dat proberen we eenmaal, zoals een
     // leerkracht ook zou doen, vóór we het als mislukt melden. De voorvertoning
     // moet nog blijven staan om ze na te lezen, dus niet meteen wegklikken.
     const goalTextBefore = () => dNew.locator('text=/gekozen doelen/').first().textContent().catch(() => '');
-    let previewOk = await dNew.getByRole('button', { name: '✔ Cursus aanmaken' }).isVisible({ timeout: 20000 }).catch(() => false);
+    let previewOk = await dNew.getByRole('button', { name: 'Cursus aanmaken' }).isVisible({ timeout: 20000 }).catch(() => false);
     if (!previewOk) {
       const retryBtn = dNew.getByRole('button', { name: 'Opnieuw proberen' });
       if (await retryBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
         await runAIStep(page, aiCalls, flow, 'cursus bouwen', () => retryBtn.click());
-        previewOk = await dNew.getByRole('button', { name: '✔ Cursus aanmaken' }).isVisible({ timeout: 20000 }).catch(() => false);
+        previewOk = await dNew.getByRole('button', { name: 'Cursus aanmaken' }).isVisible({ timeout: 20000 }).catch(() => false);
       }
     }
     const detailA = previewOk ? '' : await failureDetail(page);
@@ -662,7 +696,7 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
       const gm = (goalText ?? '').match(/(\d+) van (\d+) gekozen doelen/);
       report.check(flow, '5a: "3 van 3 gekozen doelen"', !!gm && gm[1] === '3' && gm[2] === '3', goalText ?? '');
 
-      await dNew.getByRole('button', { name: '✔ Cursus aanmaken' }).click();
+      await dNew.getByRole('button', { name: 'Cursus aanmaken' }).click();
       await page.waitForURL(/#\/cursus\/bewerk\//, { timeout: 15000 }).catch(() => {});
       await sleep(500);
 
@@ -693,32 +727,32 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
   // ── 5b. Importeren: tekst plakken → cursus bouwen met AI ────────────────
   try {
     await goto(page, '/#/importeren');
-    await page.locator('summary', { hasText: '✍️ Of plak je tekst rechtstreeks' }).click();
+    await page.locator('summary', { hasText: 'Of plak je tekst rechtstreeks' }).click();
     const opdrachtB = { title: 'Massa, volume en massadichtheid (AI-test)', sourceText: texts.massadichtheid, curriculumId: EXAMPLE_CURRICULUM_ID };
     await page.getByPlaceholder('bv. "Hoofdstuk 3 — de waterkringloop"').fill(opdrachtB.title);
     await page.locator('textarea[placeholder="Plak hier je tekst…"]').fill(opdrachtB.sourceText);
-    await page.getByRole('button', { name: '+ Tekst toevoegen als bron' }).click();
+    await page.getByRole('button', { name: 'Tekst toevoegen als bron' }).click();
     await sleep(300);
     await page.getByLabel('Leerplan (optioneel)').selectOption(EXAMPLE_CURRICULUM_ID);
     const coursesBefore = new Set((await readLS(page, 'wf.courses.v1', [])).map((c) => c.id));
-    await page.getByRole('button', { name: '✨ Cursus bouwen met AI' }).click();
+    await page.getByRole('button', { name: 'Cursus bouwen met AI' }).click();
     await page.waitForURL(/#\/cursussen/, { timeout: 10000 }).catch(() => {});
-    const dImport = page.getByRole('dialog', { name: '✨ AI-cursusbouwer' });
-    await dImport.getByRole('button', { name: '✨ Genereren' }).waitFor({ timeout: 10000 });
-    await runAIStep(page, aiCalls, flow, 'cursus bouwen', () => dImport.getByRole('button', { name: '✨ Genereren' }).click());
-    let previewOkB = await dImport.getByRole('button', { name: '✔ Cursus aanmaken' }).isVisible({ timeout: 20000 }).catch(() => false);
+    const dImport = page.getByRole('dialog', { name: 'AI-cursusbouwer' });
+    await dImport.getByRole('button', { name: 'Genereren' }).waitFor({ timeout: 10000 });
+    await runAIStep(page, aiCalls, flow, 'cursus bouwen', () => dImport.getByRole('button', { name: 'Genereren' }).click());
+    let previewOkB = await dImport.getByRole('button', { name: 'Cursus aanmaken' }).isVisible({ timeout: 20000 }).catch(() => false);
     if (!previewOkB) {
       const retryBtnB = dImport.getByRole('button', { name: 'Opnieuw proberen' });
       if (await retryBtnB.isVisible({ timeout: 2000 }).catch(() => false)) {
         await runAIStep(page, aiCalls, flow, 'cursus bouwen', () => retryBtnB.click());
-        previewOkB = await dImport.getByRole('button', { name: '✔ Cursus aanmaken' }).isVisible({ timeout: 20000 }).catch(() => false);
+        previewOkB = await dImport.getByRole('button', { name: 'Cursus aanmaken' }).isVisible({ timeout: 20000 }).catch(() => false);
       }
     }
     const detailB = previewOkB ? '' : await failureDetail(page);
     report.check(flow, '5b: voorvertoning verschenen', previewOkB, detailB);
     if (!previewOkB) await shot(page, `${flow}-5b-geen-voorvertoning`);
     if (previewOkB) {
-      await dImport.getByRole('button', { name: '✔ Cursus aanmaken' }).click();
+      await dImport.getByRole('button', { name: 'Cursus aanmaken' }).click();
       await page.waitForURL(/#\/cursus\/bewerk\//, { timeout: 15000 }).catch(() => {});
       await sleep(500);
       const coursesAfter = await readLS(page, 'wf.courses.v1', []);
@@ -761,14 +795,14 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
 
     // Vul deze sectie met AI
     const sectionOpdracht = 'Leg uit wat een kracht is, met een herkenbaar voorbeeld uit het dagelijks leven en een korte begrippenlijst.';
-    await page.getByRole('button', { name: '✨ Vul deze sectie met AI' }).click();
-    const dSection = page.getByRole('dialog', { name: '✨ Sectie vullen met AI' });
+    await page.getByRole('button', { name: 'Vul deze sectie met AI' }).click();
+    const dSection = page.getByRole('dialog', { name: 'Sectie vullen met AI' });
     await dSection.getByLabel('Wat moet er in deze sectie komen?').fill(sectionOpdracht);
     const blocksBefore = courseCheckpoint.chapters.flatMap((ch) => ch.sections.flatMap((s) => s.blocks)).length;
-    await runAIStep(page, aiCalls, flow, 'sectie-inhoud', () => dSection.getByRole('button', { name: '✨ Genereren' }).click());
-    const sectionResult = await applyOrRetryOnce(page, dSection, '✔ Toepassen', { aiCalls, flow, task: 'sectie-inhoud' });
+    await runAIStep(page, aiCalls, flow, 'sectie-inhoud', () => dSection.getByRole('button', { name: 'Genereren' }).click());
+    const sectionResult = await applyOrRetryOnce(page, dSection, 'Toepassen', { aiCalls, flow, task: 'sectie-inhoud' });
     const sectionApplied = sectionResult.applied;
-    if (sectionApplied) await page.locator('text=✓ Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
+    if (sectionApplied) await page.locator('text=Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
     else await shot(page, `${flow}-5c-sectie-vullen-mislukt`);
     const courseAfterFill = await courseById(page, ctx.state.courseAId);
     const blocksAfter = courseAfterFill.chapters.flatMap((ch) => ch.sections.flatMap((s) => s.blocks)).length;
@@ -781,14 +815,14 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
 
     // Stel oefeningen voor
     const exerciseCount = '2';
-    await page.getByRole('button', { name: '✨ Stel oefeningen voor' }).click();
-    const dExerc = page.getByRole('dialog', { name: '✨ Oefeningen voorstellen' });
+    await page.getByRole('button', { name: 'Stel oefeningen voor' }).click();
+    const dExerc = page.getByRole('dialog', { name: 'Oefeningen voorstellen' });
     await dExerc.getByLabel('Aantal oefeningen').fill(exerciseCount);
     const widgetIdsBeforeExerc = new Set((await readLS(page, 'wf.widgets.v1', [])).map((w) => w.id));
-    await runAIStep(page, aiCalls, flow, 'oefeningen bij een sectie', () => dExerc.getByRole('button', { name: '✨ Genereren' }).click());
-    const exercResult = await applyOrRetryOnce(page, dExerc, '✔ Oefeningen toevoegen', { aiCalls, flow, task: 'oefeningen bij een sectie' });
+    await runAIStep(page, aiCalls, flow, 'oefeningen bij een sectie', () => dExerc.getByRole('button', { name: 'Genereren' }).click());
+    const exercResult = await applyOrRetryOnce(page, dExerc, 'Oefeningen toevoegen', { aiCalls, flow, task: 'oefeningen bij een sectie' });
     const exercApplied = exercResult.applied;
-    if (exercApplied) await page.locator('text=✓ Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
+    if (exercApplied) await page.locator('text=Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
     else await shot(page, `${flow}-5c-oefeningen-mislukt`);
     const widgetsAfterExercList = await readLS(page, 'wf.widgets.v1', []);
     const widgetsBefore = widgetIdsBeforeExerc.size;
@@ -802,14 +836,25 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
     const sectionsChangedByExercises = changedSections(courseCheckpoint, courseAfterExercises);
     courseCheckpoint = courseAfterExercises;
 
-    // Optimaliseer: Vereenvoudig de taal
-    await page.getByRole('button', { name: '✨ Optimaliseer' }).click();
-    const dOpt1 = page.getByRole('dialog', { name: '✨ Cursus optimaliseren' });
+    // Optimaliseer: Vereenvoudig de taal — één aanroep per hoofdstuk (zie
+    // lib/aiCourse.ts: buildOptimizeChapterPrompt), hoogstens 2 tegelijk; pas
+    // als ALLE hoofdstukken klaar zijn (gelukt of niet) toont de app de
+    // voorvertoning, dus wachten op precies dat scherm i.p.v. op één aanroep.
+    await page.getByRole('button', { name: 'Optimaliseer' }).click();
+    const dOpt1 = page.getByRole('dialog', { name: 'Cursus optimaliseren' });
     await dOpt1.locator('label.checkbox-row', { hasText: 'Vereenvoudig de taal' }).locator('input[type=radio]').check();
-    await runAIStep(page, aiCalls, flow, 'cursus optimaliseren', () => dOpt1.getByRole('button', { name: '✨ Genereren' }).click());
-    const opt1Result = await applyOrRetryOnce(page, dOpt1, '✔ Optimalisatie toepassen', { aiCalls, flow, task: 'cursus optimaliseren' });
+    await runBatchAIStep(
+      page, aiCalls, flow, 'cursus optimaliseren',
+      () => dOpt1.getByRole('button', { name: 'Genereren' }).click(),
+      () => dOpt1.getByRole('button', { name: 'Optimalisatie toepassen' }),
+      { timeout: 120000 }
+    );
+    // Al zichtbaar dankzij de wacht hierboven, dus een korte timeout volstaat
+    // (geen "opnieuw proberen" nodig — een per-hoofdstuk mislukking blijft
+    // binnen de voorvertoning, met een eigen "opnieuw proberen" per hoofdstuk).
+    const opt1Result = await applyOrRetryOnce(page, dOpt1, 'Optimalisatie toepassen', { flow, task: 'cursus optimaliseren', timeout: 3000 });
     const opt1Applied = opt1Result.applied;
-    if (opt1Applied) await page.locator('text=✓ Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
+    if (opt1Applied) await page.locator('text=Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
     else await shot(page, `${flow}-5c-optimaliseer-taal-mislukt`);
     report.check(flow, '5c: "Optimaliseer — Vereenvoudig de taal" toegepast', opt1Applied, opt1Applied ? '' : opt1Result.detail);
     const courseAfterOpt1 = await courseById(page, ctx.state.courseAId);
@@ -817,13 +862,18 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
     courseCheckpoint = courseAfterOpt1;
 
     // Optimaliseer: Voeg controlevragen toe
-    await page.getByRole('button', { name: '✨ Optimaliseer' }).click();
-    const dOpt2 = page.getByRole('dialog', { name: '✨ Cursus optimaliseren' });
+    await page.getByRole('button', { name: 'Optimaliseer' }).click();
+    const dOpt2 = page.getByRole('dialog', { name: 'Cursus optimaliseren' });
     await dOpt2.locator('label.checkbox-row', { hasText: 'Voeg controlevragen toe' }).locator('input[type=radio]').check();
-    await runAIStep(page, aiCalls, flow, 'cursus optimaliseren', () => dOpt2.getByRole('button', { name: '✨ Genereren' }).click());
-    const opt2Result = await applyOrRetryOnce(page, dOpt2, '✔ Optimalisatie toepassen', { aiCalls, flow, task: 'cursus optimaliseren' });
+    await runBatchAIStep(
+      page, aiCalls, flow, 'cursus optimaliseren',
+      () => dOpt2.getByRole('button', { name: 'Genereren' }).click(),
+      () => dOpt2.getByRole('button', { name: 'Optimalisatie toepassen' }),
+      { timeout: 120000 }
+    );
+    const opt2Result = await applyOrRetryOnce(page, dOpt2, 'Optimalisatie toepassen', { flow, task: 'cursus optimaliseren', timeout: 3000 });
     const opt2Applied = opt2Result.applied;
-    if (opt2Applied) await page.locator('text=✓ Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
+    if (opt2Applied) await page.locator('text=Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
     else await shot(page, `${flow}-5c-optimaliseer-controlevragen-mislukt`);
     report.check(flow, '5c: "Optimaliseer — Voeg controlevragen toe" toegepast', opt2Applied, opt2Applied ? '' : opt2Result.detail);
     const courseAfterOpt2 = await courseById(page, ctx.state.courseAId);
@@ -857,18 +907,18 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
     const sectionIdsBefore = new Set(demo.chapters.flatMap((ch) => ch.sections.map((s) => s.id)));
 
     // Doelendekking: dekking vóór meten
-    await page.getByRole('button', { name: '🎯 Doelendekking' }).click();
-    let dCov = page.getByRole('dialog', { name: '🎯 Doelendekking' });
+    await page.getByRole('button', { name: 'Doelendekking' }).click();
+    let dCov = page.getByRole('dialog', { name: 'Doelendekking' });
     const summaryBefore = (await dCov.locator('text=/Dekkend/').first().textContent().catch(() => '')) ?? '';
     const mBefore = summaryBefore.match(/Dekkend:\s*(?:alle\s*(\d+)|(\d+)\s*van\s*(\d+))/);
     const coveredBefore = mBefore ? parseInt(mBefore[1] ?? mBefore[2], 10) : null;
 
-    await dCov.getByRole('button', { name: '✨ Vul de hiaten' }).click();
-    const dFill = page.getByRole('dialog', { name: '✨ Cursus optimaliseren' });
-    await runAIStep(page, aiCalls, flow, 'cursus optimaliseren', () => dFill.getByRole('button', { name: '✨ Genereren' }).click());
-    const fillResult = await applyOrRetryOnce(page, dFill, '✔ Optimalisatie toepassen', { aiCalls, flow, task: 'cursus optimaliseren' });
+    await dCov.getByRole('button', { name: 'Vul de hiaten' }).click();
+    const dFill = page.getByRole('dialog', { name: 'Cursus optimaliseren' });
+    await runAIStep(page, aiCalls, flow, 'cursus optimaliseren', () => dFill.getByRole('button', { name: 'Genereren' }).click());
+    const fillResult = await applyOrRetryOnce(page, dFill, 'Optimalisatie toepassen', { aiCalls, flow, task: 'cursus optimaliseren' });
     const fillApplied = fillResult.applied;
-    if (fillApplied) await page.locator('text=✓ Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
+    if (fillApplied) await page.locator('text=Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
     else await shot(page, `${flow}-5d-vul-hiaten-mislukt`);
     report.check(flow, '5d: "Vul de hiaten" leverde een toepasbaar voorstel op', fillApplied, fillApplied ? '' : fillResult.detail);
 
@@ -878,8 +928,8 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
     report.check(flow, '5d: bestaande secties bleven behouden na "Vul de hiaten"', preserved, `${sectionIdsBefore.size} secties voordien`);
     const sectionsChangedByFill = changedSections(demo, demoAfterFill);
 
-    await page.getByRole('button', { name: '🎯 Doelendekking' }).click();
-    dCov = page.getByRole('dialog', { name: '🎯 Doelendekking' });
+    await page.getByRole('button', { name: 'Doelendekking' }).click();
+    dCov = page.getByRole('dialog', { name: 'Doelendekking' });
     const summaryAfter = (await dCov.locator('text=/Dekkend/').first().textContent().catch(() => '')) ?? '';
     const mAfter = summaryAfter.match(/Dekkend:\s*(?:alle\s*(\d+)|(\d+)\s*van\s*(\d+))/);
     const coveredAfter = mAfter ? parseInt(mAfter[1] ?? mAfter[2], 10) : null;
@@ -907,13 +957,13 @@ async function flowCursus(page, report, aiCalls, ctx, texts) {
 
     // Herwerk met AI
     const reworkWish = 'verdeel in kleinere secties';
-    await page.getByRole('button', { name: '✨ Herwerk met AI' }).click();
-    const dRework = page.getByRole('dialog', { name: '✨ Cursus herwerken met AI' });
+    await page.getByRole('button', { name: 'Herwerk met AI' }).click();
+    const dRework = page.getByRole('dialog', { name: 'Cursus herwerken met AI' });
     await dRework.getByLabel('Wat moet er anders?').fill(reworkWish);
-    await runAIStep(page, aiCalls, flow, 'cursus herwerken', () => dRework.getByRole('button', { name: '✨ Genereren' }).click());
-    const reworkResult = await applyOrRetryOnce(page, dRework, '✔ Herwerking toepassen', { aiCalls, flow, task: 'cursus herwerken' });
+    await runAIStep(page, aiCalls, flow, 'cursus herwerken', () => dRework.getByRole('button', { name: 'Genereren' }).click());
+    const reworkResult = await applyOrRetryOnce(page, dRework, 'Herwerking toepassen', { aiCalls, flow, task: 'cursus herwerken' });
     const reworkApplied = reworkResult.applied;
-    if (reworkApplied) await page.locator('text=✓ Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
+    if (reworkApplied) await page.locator('text=Bewaard').waitFor({ timeout: 8000 }).catch(() => {});
     else await shot(page, `${flow}-5d-herwerken-mislukt`);
     report.check(flow, '5d: "Herwerk met AI" leverde een toepasbaar voorstel op', reworkApplied, reworkApplied ? '' : reworkResult.detail);
 

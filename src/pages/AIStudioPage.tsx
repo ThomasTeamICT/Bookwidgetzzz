@@ -15,7 +15,9 @@ import type { Curriculum, CurriculumGoal } from '../lib/curriculumTypes';
 import { askAI, extractJson } from '../lib/ai';
 import { AI_GEN_TYPES, buildWidgetGenPrompt, sanitizeGeneratedWidgets } from '../lib/aiWidgetGen';
 import type { GeneratedResult } from '../lib/aiWidgetGen';
-import { AIErrorBox, AIGate, AIReviewNote, AIWorkingBox } from '../components/aiCommon';
+import { runBatch } from '../lib/aiBatch';
+import type { BatchItemStatus, BatchResult } from '../lib/aiBatch';
+import { AIErrorBox, AIGate, AIReviewNote } from '../components/aiCommon';
 import { PdfImportButton } from '../components/PdfImportButton';
 import { CheckRow, Field, useToast } from '../components/ui';
 import { getFolders, saveFolder, saveWidget } from '../lib/storage';
@@ -27,6 +29,32 @@ import { lintQuiz } from '../lib/linter';
 import type { LintWarning } from '../lib/linter';
 import { clamp, uid } from '../lib/utils';
 import { TypeTile } from '../components/TypeTile';
+
+/** Hoogstens dit veel AI-aanroepen tegelijk bij "meerdere widgettypes tegelijk". */
+const WIDGET_BATCH_CONCURRENCY = 3;
+
+/** Eén type per aanroep i.p.v. alles samen: het antwoord blijft zo altijd binnen de tokenlimiet. */
+const WIDGET_TYPE_MAX_TOKENS = 13000;
+
+/** Voortgang + resultaat van één widgettype binnen een generatiebeurt. */
+interface TypeState {
+  status: BatchItemStatus;
+  widgets: Widget[];
+  warnings: string[];
+  error?: string;
+}
+
+function emptyTypeState(): TypeState {
+  return { status: 'wachten', widgets: [], warnings: [] };
+}
+
+const STATUS_LABEL: Record<BatchItemStatus, string> = {
+  wachten: 'wacht op zijn beurt',
+  bezig: 'bezig…',
+  klaar: 'klaar',
+  mislukt: 'mislukt',
+  geannuleerd: 'geannuleerd',
+};
 
 // ── Hulpjes voor de voorvertoning ───────────────────────────────────────────
 
@@ -145,6 +173,45 @@ const STEPS = [
   { nr: 3, title: 'Kijk na en bewaar', text: 'Jij beslist wat goed genoeg is; bijschaven kan altijd in de editor.' },
 ];
 
+/** Voortgang tijdens het genereren: status per gevraagd widgettype, met annuleerknop. */
+function TypeBatchProgress({
+  activeTypes, typeStates, onCancel,
+}: {
+  activeTypes: WidgetTypeId[];
+  typeStates: Partial<Record<WidgetTypeId, TypeState>>;
+  onCancel: () => void;
+}) {
+  const done = activeTypes.filter((t) => {
+    const s = typeStates[t]?.status;
+    return s === 'klaar' || s === 'mislukt' || s === 'geannuleerd';
+  }).length;
+  return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span className="ai-pulse" aria-hidden><AIIcon size={18} /></span>
+        <strong aria-live="polite">De AI maakt je widgets… ({done}/{activeTypes.length})</strong>
+        <span style={{ flex: 1 }} />
+        <button className="btn btn-sm btn-ghost" onClick={onCancel}>Annuleren</button>
+      </div>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6 }}>
+        {activeTypes.map((t) => {
+          const def = getTypeDef(t);
+          const status = typeStates[t]?.status ?? 'wachten';
+          return (
+            <li key={t} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <TypeTile type={def} size="xs" />
+              <span style={{ flex: 1 }}>{def.name}</span>
+              {status === 'klaar' && <CheckIcon size={16} aria-hidden style={{ color: 'var(--ok)' }} />}
+              {status === 'mislukt' && <WarningIcon size={16} aria-hidden style={{ color: 'var(--err)' }} />}
+              <span className="hint">{STATUS_LABEL[status]}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 // ── De pagina ───────────────────────────────────────────────────────────────
 
 type Phase = 'idle' | 'busy' | 'preview' | 'saved';
@@ -167,9 +234,10 @@ export function AIStudioPage() {
 
   // verloop
   const [phase, setPhase] = useState<Phase>('idle');
-  const [stream, setStream] = useState('');
   const [error, setError] = useState('');
-  const [result, setResult] = useState<GeneratedResult | null>(null);
+  // Eén status + resultaat per gevraagd widgettype (aparte AI-aanroep per soort).
+  const [activeTypes, setActiveTypes] = useState<WidgetTypeId[]>([]);
+  const [typeStates, setTypeStates] = useState<Partial<Record<WidgetTypeId, TypeState>>>({});
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState<Widget[]>([]);
 
@@ -177,10 +245,17 @@ export function AIStudioPage() {
   const [folderId, setFolderId] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
 
+  // De hoofdaanroep (Genereren) deelt één AbortController over alle soorten;
+  // een "Opnieuw proberen" van één mislukte soort krijgt een eigen controller
+  // zodat ze los van elkaar geannuleerd kunnen worden.
   const ctrlRef = useRef<AbortController | null>(null);
+  const retryCtrlsRef = useRef<Map<WidgetTypeId, AbortController>>(new Map());
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => () => ctrlRef.current?.abort(), []);
+  useEffect(() => () => {
+    ctrlRef.current?.abort();
+    retryCtrlsRef.current.forEach((c) => c.abort());
+  }, []);
 
   const folders: Folder[] = useMemo(() => getFolders(), [phase]);
   const curricula: Curriculum[] = useMemo(() => getCurricula(), []);
@@ -207,13 +282,37 @@ export function AIStudioPage() {
 
   const canGenerate = types.length > 0 && (source.trim() !== '' || wish.trim() !== '');
   const sourceTooLong = source.length > MAX_SOURCE_COMFORT;
-  const checkedCount = result ? result.widgets.filter((w) => checked[w.id]).length : 0;
+
+  // Alle widgets van alle soorten samen, voor de voorvertoning en het bewaren.
+  const mergedWidgets = useMemo(
+    () => activeTypes.flatMap((t) => typeStates[t]?.widgets ?? []),
+    [activeTypes, typeStates]
+  );
+  const mergedWarnings = useMemo(
+    () => activeTypes.flatMap((t) => typeStates[t]?.warnings ?? []),
+    [activeTypes, typeStates]
+  );
+  const failedTypes = useMemo(
+    () => activeTypes.filter((t) => typeStates[t]?.status === 'mislukt'),
+    [activeTypes, typeStates]
+  );
+  const hasPreview = activeTypes.length > 0;
+  const checkedCount = mergedWidgets.filter((w) => checked[w.id]).length;
 
   const toggleType = (t: WidgetTypeId) =>
     setTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
 
   const renameWidget = (id: string, title: string) =>
-    setResult((r) => (r ? { ...r, widgets: r.widgets.map((w) => (w.id === id ? { ...w, title } : w)) } : r));
+    setTypeStates((prev) => {
+      const next = { ...prev };
+      for (const t of activeTypes) {
+        const st = next[t];
+        if (!st?.widgets.some((w) => w.id === id)) continue;
+        next[t] = { ...st, widgets: st.widgets.map((w) => (w.id === id ? { ...w, title } : w)) };
+        break;
+      }
+      return next;
+    });
 
   function loadFile(f: File) {
     const reader = new FileReader();
@@ -230,50 +329,83 @@ export function AIStudioPage() {
     setSource(text);
   }
 
+  /** Eén AI-aanroep voor precies één widgettype — de bouwsteen voor de batch. */
+  async function generateType(t: WidgetTypeId, signal: AbortSignal, allowedGoalCodes: string[]): Promise<GeneratedResult> {
+    const { system, prompt } = buildWidgetGenPrompt({
+      source, wish, types: [t], itemCount, audience, goals,
+      goalCodes: chosenGoals.length > 0 ? chosenGoals : undefined,
+      differentiate,
+    });
+    const full = await askAI({
+      system, prompt, task: 'widgets uit bron', maxTokens: WIDGET_TYPE_MAX_TOKENS, signal,
+    });
+    return sanitizeGeneratedWidgets(extractJson(full), { allowedGoalCodes });
+  }
+
+  /** Verwerkt de uitkomst van een (deel van een) batch in de typestatussen + aangevinkte widgets. */
+  function applyBatchOutcome(outcome: BatchResult<WidgetTypeId, GeneratedResult>) {
+    setTypeStates((prev) => {
+      const next = { ...prev };
+      for (const { id, value } of outcome.results) {
+        next[id] = { status: 'klaar', widgets: value.widgets, warnings: value.warnings };
+      }
+      for (const { id, error: e } of outcome.errors) {
+        if (e.name === 'AbortError') continue; // 'geannuleerd' staat al via onProgress
+        next[id] = { ...(next[id] ?? emptyTypeState()), status: 'mislukt', error: e.message };
+      }
+      return next;
+    });
+    const freshChecked: Record<string, boolean> = {};
+    for (const { value } of outcome.results) for (const w of value.widgets) freshChecked[w.id] = true;
+    if (Object.keys(freshChecked).length) setChecked((c) => ({ ...c, ...freshChecked }));
+  }
+
   function generate() {
     if (!canGenerate || phase === 'busy') return;
+    const activeList = AI_GEN_TYPES.filter((t) => types.includes(t));
     const ctrl = new AbortController();
     ctrlRef.current = ctrl;
     setPhase('busy');
     setError('');
-    setStream('');
-    const { system, prompt } = buildWidgetGenPrompt({
-      source,
-      wish,
-      types: AI_GEN_TYPES.filter((t) => types.includes(t)),
-      itemCount,
-      audience,
-      goals,
-      goalCodes: chosenGoals.length > 0 ? chosenGoals : undefined,
-      differentiate,
-    });
+    setActiveTypes(activeList);
+    setChecked({});
+    const initial: Partial<Record<WidgetTypeId, TypeState>> = {};
+    activeList.forEach((t) => { initial[t] = emptyTypeState(); });
+    setTypeStates(initial);
+
     const allowedGoalCodes = chosenGoals.map((g) => g.code);
-    let acc = '';
-    askAI({
-      system,
-      prompt,
-      task: 'widgets uit bron',
-      // Meer widgettypes in één aanvraag = meer uitvoer: de limiet schaalt mee.
-      maxTokens: Math.min(64000, 8000 + 5000 * types.length),
+    runBatch<WidgetTypeId, GeneratedResult>({
+      ids: activeList,
+      concurrency: WIDGET_BATCH_CONCURRENCY,
       signal: ctrl.signal,
-      onDelta: (t) => { acc += t; setStream(acc); },
-    })
-      .then((full) => {
-        const res = sanitizeGeneratedWidgets(extractJson(full), { allowedGoalCodes });
-        if (res.widgets.length === 0) {
-          setError(res.warnings.join(' ') || 'De AI leverde geen bruikbare widgets op. Probeer het opnieuw.');
-          setPhase('idle');
-          return;
-        }
-        setResult(res);
-        setChecked(Object.fromEntries(res.widgets.map((w) => [w.id, true])));
-        setPhase('preview');
-      })
-      .catch((e) => {
-        if ((e as Error).name === 'AbortError') return;
-        setError((e as Error).message);
-        setPhase('idle');
-      });
+      run: (t, signal) => generateType(t, signal, allowedGoalCodes),
+      onProgress: ({ id, status }) => {
+        setTypeStates((prev) => ({ ...prev, [id]: { ...(prev[id] ?? emptyTypeState()), status } }));
+      },
+    }).then((outcome) => {
+      if (ctrlRef.current !== ctrl) return; // ondertussen geannuleerd of een nieuwe beurt gestart
+      applyBatchOutcome(outcome);
+      setPhase(outcome.canceled && outcome.results.length === 0 ? 'idle' : 'preview');
+    });
+  }
+
+  /** Eén mislukte (of geannuleerde) soort opnieuw proberen, los van de andere. */
+  function retryType(t: WidgetTypeId) {
+    retryCtrlsRef.current.get(t)?.abort();
+    const ctrl = new AbortController();
+    retryCtrlsRef.current.set(t, ctrl);
+    setTypeStates((prev) => ({ ...prev, [t]: { ...(prev[t] ?? emptyTypeState()), status: 'bezig', error: undefined } }));
+    const allowedGoalCodes = chosenGoals.map((g) => g.code);
+    runBatch<WidgetTypeId, GeneratedResult>({
+      ids: [t],
+      concurrency: 1,
+      signal: ctrl.signal,
+      run: (id, signal) => generateType(id, signal, allowedGoalCodes),
+    }).then((outcome) => {
+      if (retryCtrlsRef.current.get(t) !== ctrl) return;
+      retryCtrlsRef.current.delete(t);
+      applyBatchOutcome(outcome);
+    });
   }
 
   function cancel() {
@@ -282,7 +414,7 @@ export function AIStudioPage() {
   }
 
   function saveAll() {
-    if (!result || checkedCount === 0) return;
+    if (checkedCount === 0) return;
     let targetFolder: string | null = folderId && folderId !== '__new__' ? folderId : null;
     if (folderId === '__new__') {
       const name = newFolderName.trim();
@@ -291,7 +423,7 @@ export function AIStudioPage() {
       saveFolder(folder);
       targetFolder = folder.id;
     }
-    const toSave = result.widgets
+    const toSave = mergedWidgets
       .filter((w) => checked[w.id])
       .map((w) => ({
         ...w,
@@ -310,10 +442,10 @@ export function AIStudioPage() {
   }
 
   function resetForNext() {
-    setResult(null);
+    setActiveTypes([]);
+    setTypeStates({});
     setSaved([]);
     setChecked({});
-    setStream('');
     setError('');
     setPhase('idle');
   }
@@ -485,7 +617,7 @@ export function AIStudioPage() {
                 <AIErrorBox error={error} onRetry={canGenerate ? generate : undefined} />
               )}
               {phase === 'busy' ? (
-                <AIWorkingBox streamText={stream} label="De AI maakt je widgets…" onCancel={cancel} />
+                <TypeBatchProgress activeTypes={activeTypes} typeStates={typeStates} onCancel={cancel} />
               ) : (
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                   <button className="btn btn-primary btn-lg" onClick={generate} disabled={!canGenerate}>
@@ -496,7 +628,7 @@ export function AIStudioPage() {
                       Plak bronmateriaal óf beschrijf wat je wil, en kies minstens één widgettype.
                     </span>
                   )}
-                  {result && result.widgets.length > 0 && (
+                  {hasPreview && (
                     <button className="btn btn-ghost" onClick={() => setPhase('preview')}>
                       Terug naar de voorstellen <ArrowRight size={16} aria-hidden />
                     </button>
@@ -507,20 +639,20 @@ export function AIStudioPage() {
           </div>
         )}
 
-        {phase === 'preview' && result && (
+        {phase === 'preview' && hasPreview && (
           <div style={{ display: 'grid', gap: 14 }}>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
               <button className="btn btn-ghost" onClick={() => setPhase('idle')}><BackIcon size={16} aria-hidden /> Invoer aanpassen</button>
               <button className="btn btn-ghost" onClick={generate}><RetryIcon size={16} aria-hidden /> Opnieuw genereren</button>
               <span style={{ flex: 1 }} />
               <span className="hint">
-                {result.widgets.length} {n(result.widgets.length, 'voorstel', 'voorstellen')}
+                {mergedWidgets.length} {n(mergedWidgets.length, 'voorstel', 'voorstellen')}
               </span>
             </div>
 
             <AIReviewNote />
 
-            {result.warnings.length > 0 && (
+            {mergedWarnings.length > 0 && (
               <div
                 role="status"
                 style={{
@@ -528,13 +660,37 @@ export function AIStudioPage() {
                   borderRadius: 10, padding: '10px 14px', display: 'grid', gap: 4, fontSize: '0.9rem',
                 }}
               >
-                {result.warnings.map((wtext, i) => (
+                {mergedWarnings.map((wtext, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><WarningIcon size={16} aria-hidden /> {wtext}</div>
                 ))}
               </div>
             )}
 
-            {result.widgets.map((w) => {
+            {failedTypes.map((t) => {
+              const def = getTypeDef(t);
+              const st = typeStates[t];
+              const retrying = st?.status === 'bezig';
+              return (
+                <div
+                  key={t}
+                  className="card"
+                  style={{ padding: 14, display: 'flex', gap: 12, alignItems: 'center', borderColor: 'var(--err)' }}
+                >
+                  <TypeTile type={def} size="md" />
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <strong>{def.name}</strong>
+                    <span className="hint" style={{ display: 'block' }}>
+                      {retrying ? 'Wordt opnieuw geprobeerd…' : (st?.error || 'Deze soort kon niet gemaakt worden.')}
+                    </span>
+                  </div>
+                  <button className="btn btn-sm" onClick={() => retryType(t)} disabled={retrying}>
+                    <RetryIcon size={16} aria-hidden /> Opnieuw proberen
+                  </button>
+                </div>
+              );
+            })}
+
+            {mergedWidgets.map((w) => {
               const def = getTypeDef(w.type);
               const sum = widgetSummary(w);
               const lint = lintFor(w);
@@ -675,7 +831,7 @@ export function AIStudioPage() {
                     <TypeTile type={def} size="sm" />
                     <strong style={{ flex: 1, minWidth: 160 }}>{w.title}</strong>
                     <Link className="btn btn-sm btn-ghost" to={`/bewerk/${w.id}`}><EditIcon size={16} aria-hidden /> Bewerken</Link>
-                    <Link className="btn btn-sm btn-ghost" to={`/speel/${w.code}`}><TryIcon size={16} aria-hidden /> Uittesten</Link>
+                    <Link className="btn btn-sm btn-ghost" to={`/speel/${w.code}`}><TryIcon size={16} aria-hidden /> Uitproberen</Link>
                   </div>
                 );
               })}

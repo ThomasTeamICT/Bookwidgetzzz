@@ -8,8 +8,7 @@
 // ongewijzigd op hun (nieuwe) plek terugkomen.
 
 import type { Widget } from './types';
-import type { Course, CourseBlock, CourseSection } from './courseTypes';
-import { allSections } from './courseTypes';
+import type { Course, CourseBlock, CourseChapter, CourseSection } from './courseTypes';
 import type { CurriculumGoal } from './curriculumTypes';
 import { normalizeGoalCode, normalizeGoalCodes } from './curriculum';
 import { sanitizeCourse } from './courses';
@@ -129,41 +128,49 @@ ${quizSchemaText()}`;
   return { system: COURSE_SYSTEM, prompt: parts.join('\n\n') };
 }
 
-/** Compacte JSON-weergave van een cursus voor herwerk-prompts (zonder data-URLs). */
-function compactCourse(course: Course): string {
-  const MEDIA = new Set(['image', 'video', 'audio', 'embed', 'attachment', 'widget']);
-  const compact = {
-    title: course.title,
-    subtitle: course.subtitle,
-    chapters: course.chapters.map((ch) => ({
-      title: ch.title,
-      emoji: ch.emoji,
-      sections: ch.sections.map((se) => ({
-        id: se.id,
-        title: se.title,
-        goals: se.goals,
-        goalCodes: se.goalCodes,
-        optional: se.optional || undefined,
-        blocks: se.blocks.map((b) => {
-          if (MEDIA.has(b.type)) return { type: 'keep', id: b.id, was: b.type };
-          switch (b.type) {
-            case 'heading': return { type: 'heading', text: b.text, level: b.level };
-            case 'text': return { type: 'text', markdown: b.markdown.slice(0, 1200) };
-            case 'callout': return { type: 'callout', kind: b.kind, title: b.title, text: b.text.slice(0, 600) };
-            case 'quote': return { type: 'quote', text: b.text.slice(0, 400), source: b.source };
-            case 'divider': return { type: 'divider' };
-            case 'accordion': return { type: 'accordion', items: b.items.map((i) => ({ title: i.title, text: i.text.slice(0, 400) })) };
-            case 'columns': return { type: 'columns', left: b.left.slice(0, 600), right: b.right.slice(0, 600) };
-            case 'table': return { type: 'table', header: b.header, rows: b.rows };
-            case 'terms': return { type: 'terms', items: b.items.map((i) => ({ term: i.term, uitleg: i.uitleg })) };
-            case 'checklist': return { type: 'checklist', title: b.title, items: b.items.map((i) => i.text) };
-            default: return { type: 'keep', id: (b as CourseBlock).id };
-          }
-        }),
-      })),
+const MEDIA_BLOCK_TYPES = new Set(['image', 'video', 'audio', 'embed', 'attachment', 'widget']);
+
+/** Eén blok compact voor in een herwerk-prompt: mediablokken worden een "keep"-verwijzing. */
+function compactBlock(b: CourseBlock): Record<string, unknown> {
+  if (MEDIA_BLOCK_TYPES.has(b.type)) return { type: 'keep', id: b.id, was: b.type };
+  switch (b.type) {
+    case 'heading': return { type: 'heading', text: b.text, level: b.level };
+    case 'text': return { type: 'text', markdown: b.markdown.slice(0, 1200) };
+    case 'callout': return { type: 'callout', kind: b.kind, title: b.title, text: b.text.slice(0, 600) };
+    case 'quote': return { type: 'quote', text: b.text.slice(0, 400), source: b.source };
+    case 'divider': return { type: 'divider' };
+    case 'accordion': return { type: 'accordion', items: b.items.map((i) => ({ title: i.title, text: i.text.slice(0, 400) })) };
+    case 'columns': return { type: 'columns', left: b.left.slice(0, 600), right: b.right.slice(0, 600) };
+    case 'table': return { type: 'table', header: b.header, rows: b.rows };
+    case 'terms': return { type: 'terms', items: b.items.map((i) => ({ term: i.term, uitleg: i.uitleg })) };
+    case 'checklist': return { type: 'checklist', title: b.title, items: b.items.map((i) => i.text) };
+    default: return { type: 'keep', id: (b as CourseBlock).id };
+  }
+}
+
+/** Eén hoofdstuk compact voor in een herwerk-prompt (zonder data-URLs). */
+function compactChapter(chapter: CourseChapter): Record<string, unknown> {
+  return {
+    title: chapter.title,
+    emoji: chapter.emoji,
+    sections: chapter.sections.map((se) => ({
+      id: se.id,
+      title: se.title,
+      goals: se.goals,
+      goalCodes: se.goalCodes,
+      optional: se.optional || undefined,
+      blocks: se.blocks.map(compactBlock),
     })),
   };
-  return JSON.stringify(compact);
+}
+
+/** Compacte JSON-weergave van een cursus voor herwerk-prompts (zonder data-URLs). */
+function compactCourse(course: Course): string {
+  return JSON.stringify({
+    title: course.title,
+    subtitle: course.subtitle,
+    chapters: course.chapters.map(compactChapter),
+  });
 }
 
 export function buildReworkPrompt({
@@ -275,6 +282,95 @@ export function buildOptimizePrompt(req: OptimizeRequest): { system: string; pro
   });
 }
 
+// ── Optimaliseren, per hoofdstuk ────────────────────────────────────────────
+//
+// "Vereenvoudig de taal" en "Voeg controlevragen toe" op de HELE cursus in
+// één aanroep leverde bij een cursus van een paar hoofdstukken al een
+// afgekapt (onvolledig) AI-antwoord op. Deze presets werken sectie voor
+// sectie op wat er al staat, dus hoeven geen coursebreed overzicht: één
+// aanroep per hoofdstuk (elders met hoogstens 2 tegelijk gestart) houdt elk
+// antwoord klein genoeg.
+//
+// De preset "hiaten" blijft bewust ÉÉN aanroep voor de hele cursus (zie
+// buildOptimizePrompt hierboven): ze moet per doel kiezen in welk bestaand
+// hoofdstuk een nieuwe sectie het best past en mag hetzelfde doel niet in
+// meerdere hoofdstukken tegelijk dekken — dat vraagt net het overzicht over
+// alle hoofdstukken dat per-hoofdstuk-aanroepen niet hebben.
+
+export interface OptimizeChapterRequest {
+  /** Volledige cursus, voor context (titel) — enkel `chapter` wordt herwerkt. */
+  course: Course;
+  chapter: CourseChapter;
+  /** 1-gebaseerd, voor "hoofdstuk X van Y" in de prompt. */
+  chapterIndex: number;
+  chapterCount: number;
+  /** Presets zonder 'hiaten' — die blijft coursebreed (zie buildOptimizePrompt). */
+  presets: Exclude<OptimizePreset, 'hiaten'>[];
+  wishes: string;
+  /** Alle doelen van het gekoppelde leerplan, als context voor "goalCodes". */
+  curriculumGoals?: CurriculumGoal[];
+}
+
+export function buildOptimizeChapterPrompt(req: OptimizeChapterRequest): { system: string; prompt: string } {
+  const rules = req.presets.map((p) => PRESET_RULES[p]).filter(Boolean);
+  const wants = req.presets
+    .map((p) => OPTIMIZE_PRESETS.find((x) => x.id === p)?.label.toLowerCase())
+    .filter(Boolean)
+    .join(', ');
+  const wishes = [wants ? `optimaliseer dit hoofdstuk: ${wants}` : '', req.wishes.trim()].filter(Boolean).join('. ');
+  const goalContext = req.curriculumGoals?.length
+    ? `\nLEERPLAN waaraan deze cursus gekoppeld is — gebruik in "goalCodes" uitsluitend codes uit deze lijst:\n${goalListText(req.curriculumGoals)}\n`
+    : '';
+  const prompt = `Herwerk ALLEEN hoofdstuk ${req.chapterIndex} van ${req.chapterCount} ("${req.chapter.title}") van de cursus "${req.course.title}". De andere hoofdstukken zie je niet en verander je niet.
+
+Wat de leerkracht anders wil: ${wishes || 'verbeter de structuur en de didactische kwaliteit van dit hoofdstuk.'}
+${rules.length ? `\n${rules.join('\n')}\n` : ''}
+BELANGRIJKE regels:
+- Behoud het "id" van secties waarvan de inhoud in essentie dezelfde blijft (zo blijft de leesvoortgang van leerlingen geldig). Nieuwe of sterk veranderde secties krijgen géén id.
+- Blokken van het type {"type":"keep","id":"…"} zijn mediablokken (afbeeldingen, video's, oefeningen) die je NIET mag wijzigen of weglaten: zet exact datzelfde keep-blok op de best passende plek terug.
+- Behoud de "goalCodes" die al op een sectie staan; voeg er enkel codes uit de leerplanlijst aan toe.
+- Geef het VOLLEDIGE herwerkte hoofdstuk terug, niet alleen de wijzigingen.
+${goalContext}
+${BLOCK_SCHEMA}
+
+Geef terug: {"chapter":{"title":"…","emoji":"…","sections":[{"id":"(alleen bij behouden secties)","title":"…","goals":["…"],"goalCodes":["…"],"optional":false,"blocks":[blok,…]}]}}
+
+=== HOOFDSTUK (compact) ===
+${JSON.stringify(compactChapter(req.chapter))}`;
+  return { system: COURSE_SYSTEM, prompt };
+}
+
+export interface AIChapterResult {
+  /** null als de AI geen bruikbare structuur teruggaf voor dit hoofdstuk. */
+  chapter: CourseChapter | null;
+  warnings: string[];
+}
+
+/**
+ * {"chapter": {…}} van de AI → een geldig CourseChapter, met hetzelfde id als
+ * het origineel (posities/leesvoortgang blijven zo geldig) en keep-blokken
+ * teruggezet uit `opts.base`.
+ */
+export function sanitizeAIChapter(
+  json: unknown,
+  opts: { base: Course; chapterId: string; allowedGoalCodes?: string[] }
+): AIChapterResult {
+  const warnings: string[] = [];
+  const envelope = (json && typeof json === 'object' ? json : {}) as Record<string, unknown>;
+  const rawChapter = (envelope.chapter ?? json) as Record<string, unknown>;
+  const wrapped = resolveKeepBlocks(
+    { chapters: [rawChapter] }, opts.base, warnings, new Set([opts.chapterId])
+  ) as Record<string, unknown>;
+  const course = sanitizeCourse({ title: 'x', chapters: wrapped.chapters });
+  const chapter = course?.chapters[0] ?? null;
+  if (!chapter) {
+    return { chapter: null, warnings: [...warnings, 'De AI gaf geen bruikbare structuur terug voor dit hoofdstuk. Probeer het opnieuw.'] };
+  }
+  chapter.id = opts.chapterId; // hoofdstuk blijft op zijn plaats, ook als de AI geen (geldig) id teruggaf
+  filterSectionGoalCodes(chapter.sections, opts.allowedGoalCodes, warnings);
+  return { chapter, warnings };
+}
+
 // ── Oefeningen voorstellen bij één sectie ───────────────────────────────────
 
 /** De tekstuele inhoud van een sectie, voor in een prompt. */
@@ -357,8 +453,12 @@ export function buildSectionPrompt({
   course, section, wishes, source,
 }: { course: Course; section: CourseSection; wishes: string; source?: string }): { system: string; prompt: string } {
   const chapter = course.chapters.find((ch) => ch.sections.some((s) => s.id === section.id));
+  // De ACTUELE tekst van de sectie meesturen (niet enkel de bloktypes): zonder
+  // dit herhaalde "Vul deze sectie met AI" al eens dezelfde uitleg opnieuw,
+  // omdat de AI niet kon zien wat er al stond.
+  const existingText = sectionPlainText(section);
   const existing = section.blocks.length
-    ? `\nDe sectie bevat al ${section.blocks.length} blok(ken): ${section.blocks.map((b) => b.type).join(', ')} — maak inhoud die daarop aansluit zonder te herhalen.`
+    ? `\nDe sectie bevat al ${section.blocks.length} blok(ken). VUL AAN op wat er al staat — herhaal NIET dezelfde uitleg of begrippen.\n=== BESTAANDE INHOUD VAN DE SECTIE ===\n${existingText || '(geen platte tekst — bv. enkel een afbeelding of oefening; behandel de sectie als leeg)'}\n=== EINDE BESTAANDE INHOUD ===`
     : '';
   const prompt = `Vul één sectie van een digitale cursus.
 
@@ -386,13 +486,24 @@ export interface AICourseResult {
   warnings: string[];
 }
 
-/** Vervangt keep-blokken door de originele blokken uit de basiscursus. */
-function resolveKeepBlocks(raw: unknown, base: Course | undefined, warnings: string[]): unknown {
+/**
+ * Vervangt keep-blokken door de originele blokken uit de basiscursus.
+ * `scopeChapterIds` beperkt zowel de bron als de "kwam niet terug"-controle
+ * tot die hoofdstukken — nodig bij per-hoofdstuk herwerken, want dan bevat
+ * `raw` maar één hoofdstuk en zouden de mediablokken van ALLE ANDERE
+ * hoofdstukken anders onterecht als "weggevallen" gemeld worden.
+ */
+function resolveKeepBlocks(
+  raw: unknown, base: Course | undefined, warnings: string[], scopeChapterIds?: Set<string>
+): unknown {
   if (!raw || typeof raw !== 'object') return raw;
   const byId = new Map<string, CourseBlock>();
   if (base) {
-    for (const { section } of allSections(base)) {
-      for (const b of section.blocks) byId.set(b.id, b);
+    for (const chapter of base.chapters) {
+      if (scopeChapterIds && !scopeChapterIds.has(chapter.id)) continue;
+      for (const section of chapter.sections) {
+        for (const b of section.blocks) byId.set(b.id, b);
+      }
     }
   }
   const c = raw as Record<string, unknown>;
@@ -435,6 +546,34 @@ function resolveKeepBlocks(raw: unknown, base: Course | undefined, warnings: str
 }
 
 /**
+ * Vergelijksleutel voor doelcodes: naast de gewone normalisatie (hoofdletters,
+ * spaties samenvoegen) ook zonder ENIGE spatie. Een model schrijft een code
+ * wel eens zonder de spatie tussen vak en nummer ("NW7.1" i.p.v. "NW 7.1");
+ * zonder deze extra tolerantie werd zo'n — verder correcte — code linea recta
+ * afgekeurd, met een cursus zonder één enkele doelcode tot gevolg terwijl de
+ * AI ze wel degelijk aanleverde.
+ */
+function goalCodeMatchKey(code: string): string {
+  return normalizeGoalCode(code).replace(/\s+/g, '');
+}
+
+/** Filtert de doelcodes van een reeks secties tot de toegelaten lijst. */
+function filterSectionGoalCodes(sections: CourseSection[], allowedGoalCodes: string[] | undefined, warnings: string[]) {
+  if (!allowedGoalCodes?.length) return;
+  const allowed = new Set(normalizeGoalCodes(allowedGoalCodes).map(goalCodeMatchKey));
+  let dropped = 0;
+  for (const section of sections) {
+    if (!section.goalCodes?.length) continue;
+    const kept = section.goalCodes.filter((c) => allowed.has(goalCodeMatchKey(c)));
+    dropped += section.goalCodes.length - kept.length;
+    section.goalCodes = kept.length ? kept : undefined;
+  }
+  if (dropped > 0) {
+    warnings.push(`${dropped} doelcode(s) van de AI stonden niet in je leerplan en zijn weggelaten.`);
+  }
+}
+
+/**
  * De goalCodes die uit sanitizeCourse komen zijn al genormaliseerd en
  * ontdubbeld; hier kijken we nog of de AI binnen de gevraagde lijst bleef en
  * hangen we het leerplan aan de cursus.
@@ -442,20 +581,7 @@ function resolveKeepBlocks(raw: unknown, base: Course | undefined, warnings: str
 function applyGoalCodes(course: Course, opts: SanitizeAICourseOptions, warnings: string[]) {
   const curriculumId = opts.curriculumId ?? opts.base?.curriculumId;
   if (curriculumId) course.curriculumId = curriculumId;
-  const allowed = opts.allowedGoalCodes?.length ? new Set(normalizeGoalCodes(opts.allowedGoalCodes)) : null;
-  if (!allowed) return;
-  let dropped = 0;
-  for (const chapter of course.chapters) {
-    for (const section of chapter.sections) {
-      if (!section.goalCodes?.length) continue;
-      const kept = section.goalCodes.filter((c) => allowed.has(c));
-      dropped += section.goalCodes.length - kept.length;
-      section.goalCodes = kept.length ? kept : undefined;
-    }
-  }
-  if (dropped > 0) {
-    warnings.push(`${dropped} doelcode(s) van de AI stonden niet in je leerplan en zijn weggelaten.`);
-  }
+  filterSectionGoalCodes(course.chapters.flatMap((ch) => ch.sections), opts.allowedGoalCodes, warnings);
 }
 
 export interface SanitizeAICourseOptions {
@@ -519,4 +645,80 @@ export function sanitizeAIBlocks(json: unknown): CourseBlock[] {
     chapters: [{ title: 'x', sections: [{ title: 'x', blocks }] }],
   });
   return course?.chapters[0]?.sections[0]?.blocks ?? [];
+}
+
+// ── Ontbrekend onderwerp signaleren ─────────────────────────────────────────
+//
+// De AI verzint geen leerstof die niet in de brontekst staat — maar als de
+// brontekst een deel van de titel/opdracht niet behandelt, ontbreekt dat deel
+// stilzwijgend, en dat merkt niemand zonder na te lezen. Een zachte,
+// woordgebaseerde controle (geen AI-oordeel, dus gratis en deterministisch):
+// komt elk "belangrijk" woord uit de titel/opdracht ergens in de gegenereerde
+// tekst terug?
+
+/**
+ * Vlaamse/Nederlandse woorden van 6+ letters die op zich niets over het
+ * ONDERWERP zeggen en dus nooit als kernwoord tellen, ook al zijn ze lang
+ * genoeg (bv. "worden", "waarbij"). Bewust kort gehouden: een gemist
+ * stopwoord kost hoogstens een woord in `keywords` dat toevallig ook in de
+ * tekst voorkomt — geen gemiste waarschuwing.
+ */
+const TOPIC_STOPWORDS = new Set([
+  'worden', 'wordt', 'werden', 'hebben', 'gehad', 'kunnen', 'konden', 'moeten',
+  'moesten', 'zullen', 'zouden', 'andere', 'anders', 'elkaar', 'waarbij',
+  'waarvan', 'waarmee', 'waarop', 'waarin', 'hierbij', 'hiervan', 'hiermee',
+  'daarbij', 'daarvan', 'daarmee', 'binnen', 'buiten', 'tussen', 'tijdens',
+  'volgens', 'ondanks', 'zowel', 'inclusief', 'exclusief', 'ongeveer',
+  'diverse', 'enkele', 'sommige', 'allerlei', 'telkens', 'meestal', 'echter',
+  'daarom', 'dankzij', 'zonder', 'wanneer', 'zodat',
+]);
+
+function stripAccents(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+/**
+ * Kernwoorden uit een titel of vrije opdrachttekst: woorden van minstens 6
+ * letters, zonder stopwoorden, zonder hoofdletters en zonder accenten (zodat
+ * "Écologie" en "ecologie" hetzelfde woord zijn). Ontdubbeld, volgorde uit de
+ * tekst behouden.
+ */
+export function extractTopicKeywords(text: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of stripAccents(text.toLowerCase()).split(/[^\p{L}]+/u)) {
+    if (raw.length < 6 || TOPIC_STOPWORDS.has(raw) || seen.has(raw)) continue;
+    seen.add(raw);
+    out.push(raw);
+  }
+  return out;
+}
+
+export interface MissingTopicCheck {
+  /** Kernwoorden uit de titel/opdracht die getoetst werden. */
+  keywords: string[];
+  /** Kernwoorden die nergens in de gegenereerde cursus terug te vinden zijn. */
+  missing: string[];
+}
+
+/**
+ * Zachte controle na het genereren: komt elk kernwoord uit de titel/opdracht
+ * ergens in de cursus terug? Geen hard oordeel — een cursus mag een begrip
+ * best anders formuleren — maar een kernwoord dat NERGENS terugkomt (zoals
+ * "massadichtheid" in een cursus "Massa, volume en massadichtheid" waarvan de
+ * brontekst dat deel niet bevatte) is een sterk signaal dat de leerkracht
+ * even moet nakijken of er een onderdeel ontbreekt.
+ */
+export function checkMissingTopics(titleOrWish: string, course: Course): MissingTopicCheck {
+  const keywords = extractTopicKeywords(titleOrWish);
+  if (keywords.length === 0) return { keywords, missing: [] };
+  // Enkel de HOOFDSTUKKEN doorzoeken, niet course.title zelf: de titel
+  // herhaalt meestal gewoon de opdracht van de leerkracht (vaak letterlijk),
+  // waardoor elk kernwoord daar altijd "gevonden" zou worden — ook als de
+  // INHOUD het onderwerp mist. Precies dat scenario (titel "Massa, volume en
+  // massadichtheid" zonder massadichtheid in de tekst) moet deze controle
+  // juist opvangen.
+  const haystack = stripAccents(JSON.stringify(course.chapters).toLowerCase());
+  const missing = keywords.filter((k) => !haystack.includes(k));
+  return { keywords, missing };
 }

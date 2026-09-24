@@ -1,25 +1,32 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Puzzle } from 'lucide-react';
 import type { Widget } from '../../lib/types';
-import type { Course, CourseBlock } from '../../lib/courseTypes';
+import type { Course, CourseBlock, CourseChapter } from '../../lib/courseTypes';
 import { allSections } from '../../lib/courseTypes';
 import type { CurriculumGoal } from '../../lib/curriculumTypes';
 import { exportCourseJson } from '../../lib/courses';
 import { getCurriculum, normalizeGoalCode } from '../../lib/curriculum';
 import { computeCoverage } from '../../lib/coverage';
 import {
-  buildNewCoursePrompt, buildOptimizePrompt, buildReworkPrompt, buildSectionExercisesPrompt,
-  buildSectionPrompt, MAX_SOURCE_CHARS, OPTIMIZE_PRESETS, sanitizeAIBlocks, sanitizeAICourse,
-  sanitizeSectionExercises, type OptimizePreset,
+  buildNewCoursePrompt, buildOptimizeChapterPrompt, buildOptimizePrompt, buildReworkPrompt,
+  buildSectionExercisesPrompt, buildSectionPrompt, checkMissingTopics, MAX_SOURCE_CHARS, OPTIMIZE_PRESETS,
+  sanitizeAIBlocks, sanitizeAIChapter, sanitizeAICourse, sanitizeSectionExercises, type OptimizePreset,
 } from '../../lib/aiCourse';
-import { askAI, extractJson } from '../../lib/ai';
+import { AIError, askAI, extractJson } from '../../lib/ai';
+import { runBatch } from '../../lib/aiBatch';
+import type { BatchItemStatus } from '../../lib/aiBatch';
 import { AIErrorBox, AIGate, AIReviewNote, AIWorkingBox } from '../aiCommon';
 import { CurriculumPicker, type CurriculumSelection } from '../curriculum/CurriculumPicker';
 import { PdfImportButton } from '../PdfImportButton';
 import { Field, Modal, useToast } from '../ui';
 import { downloadFile, uid } from '../../lib/utils';
 import { getWidgets, saveWidget } from '../../lib/storage';
-import { AIIcon, BackIcon, CheckIcon, DownloadIcon, GoalIcon, ImportIcon, RetryIcon } from '../icons';
+import {
+  AIIcon, BackIcon, CheckIcon, DownloadIcon, GoalIcon, ImportIcon, RetryIcon, WarningIcon,
+} from '../icons';
+
+/** Hoogstens dit veel hoofdstukken tegelijk optimaliseren (per hoofdstuk één aanroep). */
+const CHAPTER_BATCH_CONCURRENCY = 2;
 
 type Mode = 'new' | 'rework' | 'optimize' | 'section' | 'exercises';
 
@@ -96,6 +103,10 @@ export function CourseAIModal({
   const [stream, setStream] = useState('');
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<PreviewState | null>(null);
+  // Optimaliseren gebeurt per hoofdstuk (behalve preset 'hiaten', zie generate()):
+  // status en foutmelding per hoofdstuk, voor de voortgang en "opnieuw proberen".
+  const [chapterStatus, setChapterStatus] = useState<Record<string, BatchItemStatus>>({});
+  const [chapterErrors, setChapterErrors] = useState<Record<string, string>>({});
   const ctrlRef = useRef<AbortController | null>(null);
 
   // Sluiten (Escape, backdrop, ✕) tijdens het genereren moet de aanvraag
@@ -134,6 +145,71 @@ export function CourseAIModal({
     : mode === 'rework' || mode === 'optimize' ? Boolean(course)
     : Boolean(course && section);
 
+  /** Eén AI-aanroep voor precies één hoofdstuk — de bouwsteen voor het per-hoofdstuk optimaliseren. */
+  const optimizeOneChapter = async (
+    baseCourse: Course, chapterId: string, signal: AbortSignal
+  ): Promise<{ chapter: CourseChapter; warnings: string[] }> => {
+    const idx = baseCourse.chapters.findIndex((ch) => ch.id === chapterId);
+    const chapter = baseCourse.chapters[idx];
+    const p = buildOptimizeChapterPrompt({
+      course: baseCourse, chapter, chapterIndex: idx + 1, chapterCount: baseCourse.chapters.length,
+      presets: [preset as Exclude<OptimizePreset, 'hiaten'>], wishes, curriculumGoals: curriculum?.goals,
+    });
+    const full = await askAI({ ...p, task: 'cursus optimaliseren', maxTokens: 16000, signal });
+    const res = sanitizeAIChapter(extractJson(full), {
+      base: baseCourse, chapterId, allowedGoalCodes: curriculum?.goals.map((g) => g.code),
+    });
+    if (!res.chapter) throw new AIError(res.warnings.join(' ') || 'Geen bruikbaar hoofdstuk teruggekregen. Probeer het opnieuw.');
+    return { chapter: res.chapter, warnings: res.warnings };
+  };
+
+  /** Optimaliseert elk hoofdstuk apart (hoogstens 2 tegelijk) en bouwt daaruit de voorvertoning op. */
+  const runChapterOptimize = async (baseCourse: Course, signal: AbortSignal) => {
+    const chapters = baseCourse.chapters;
+    const initial: Record<string, BatchItemStatus> = {};
+    chapters.forEach((ch) => { initial[ch.id] = 'wachten'; });
+    setChapterStatus(initial);
+    setChapterErrors({});
+    const outcome = await runBatch<string, { chapter: CourseChapter; warnings: string[] }>({
+      ids: chapters.map((ch) => ch.id),
+      concurrency: CHAPTER_BATCH_CONCURRENCY,
+      signal,
+      run: (chapterId, sig) => optimizeOneChapter(baseCourse, chapterId, sig),
+      onProgress: ({ id, status }) => setChapterStatus((s) => ({ ...s, [id]: status })),
+    });
+    // Volledig geannuleerd vóór er ook maar één hoofdstuk klaar was: terug naar
+    // het formulier (zoals annuleren bij de andere modi), geen lege voorvertoning.
+    if (outcome.canceled && outcome.results.length === 0) return;
+    const byId = new Map(outcome.results.map((r) => [r.id, r.value]));
+    const newErrors: Record<string, string> = {};
+    for (const { id, error: e } of outcome.errors) {
+      if (e.name !== 'AbortError') newErrors[id] = e.message;
+    }
+    setChapterErrors(newErrors);
+    const mergedChapters = chapters.map((ch) => byId.get(ch.id)?.chapter ?? ch);
+    const warnings = outcome.results.flatMap((r) => r.value.warnings);
+    setPreview({ course: { ...baseCourse, chapters: mergedChapters }, quizzes: [], warnings });
+  };
+
+  /** Eén mislukt hoofdstuk opnieuw proberen — de andere hoofdstukken in de voorvertoning blijven staan. */
+  const retryChapter = async (chapterId: string) => {
+    if (!course) return;
+    setChapterStatus((s) => ({ ...s, [chapterId]: 'bezig' }));
+    setChapterErrors((e) => {
+      const next = { ...e };
+      delete next[chapterId];
+      return next;
+    });
+    try {
+      const res = await optimizeOneChapter(course, chapterId, new AbortController().signal);
+      setChapterStatus((s) => ({ ...s, [chapterId]: 'klaar' }));
+      setPreview((p) => (p ? { ...p, course: { ...p.course, chapters: p.course.chapters.map((ch) => (ch.id === chapterId ? res.chapter : ch)) } } : p));
+    } catch (e) {
+      setChapterStatus((s) => ({ ...s, [chapterId]: 'mislukt' }));
+      setChapterErrors((er) => ({ ...er, [chapterId]: (e as Error).message }));
+    }
+  };
+
   const generate = async () => {
     setError('');
     setPreview(null);
@@ -154,8 +230,30 @@ export function CourseAIModal({
           curriculumId: selection.curriculumId,
           allowedGoalCodes: selection.goalCodes,
         });
-        setPreview({ ...res, warnings: res.warnings });
+        // Zachte controle: mist de gegenereerde cursus een kernwoord uit de titel
+        // of de opdracht? (bv. "massadichtheid" in een cursus over "Massa, volume
+        // en massadichtheid" waarvan de brontekst dat deel niet bevatte.)
+        const topicCheck = checkMissingTopics(
+          [title, subject, extraWishes].filter((s) => s.trim()).join(' '),
+          res.course
+        );
+        const warnings = topicCheck.missing.length
+          ? [
+            ...res.warnings,
+            `Kwam mogelijk niet aan bod in de gegenereerde cursus: ${topicCheck.missing.join(', ')}. Controleer of de brontekst (of de opdracht) dit onderdeel wel bevatte.`,
+          ]
+          : res.warnings;
+        setPreview({ ...res, warnings });
+      } else if (mode === 'optimize' && course && preset !== 'hiaten') {
+        // Per hoofdstuk optimaliseren (zie runChapterOptimize): één aanroep per
+        // hoofdstuk houdt elk antwoord klein genoeg, ook bij een lange cursus.
+        await runChapterOptimize(course, ctrl.signal);
       } else if ((mode === 'rework' || mode === 'optimize') && course) {
+        // 'rework', of 'optimize' met preset 'hiaten': de hiaten-preset kijkt
+        // welk BESTAAND hoofdstuk het best bij elk onbedekt doel past en mag
+        // hetzelfde doel niet in meerdere hoofdstukken tegelijk dekken — dat
+        // vraagt precies het coursebrede overzicht dat per-hoofdstuk-aanroepen
+        // niet hebben, dus blijft dit één aanroep voor de hele cursus.
         const p = mode === 'optimize'
           ? buildOptimizePrompt({
             course, presets: [preset], wishes,
@@ -508,7 +606,13 @@ export function CourseAIModal({
           </div>
         )}
 
-        {busy && (
+        {busy && mode === 'optimize' && preset !== 'hiaten' && course ? (
+          <ChapterOptimizeProgress
+            chapters={course.chapters}
+            status={chapterStatus}
+            onCancel={() => ctrlRef.current?.abort()}
+          />
+        ) : busy && (
           <AIWorkingBox
             streamText={stream}
             label={
@@ -527,6 +631,28 @@ export function CourseAIModal({
               <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--warn)', fontSize: '0.88rem' }}>
                 {preview.warnings.map((w, i) => <li key={i}>{w}</li>)}
               </ul>
+            )}
+            {mode === 'optimize' && preset !== 'hiaten' && Object.keys(chapterErrors).length > 0 && (
+              <div style={{ display: 'grid', gap: 8 }}>
+                {Object.entries(chapterErrors).map(([chId, msg]) => {
+                  const ch = preview.course.chapters.find((c) => c.id === chId);
+                  const retrying = chapterStatus[chId] === 'bezig';
+                  return (
+                    <div key={chId} className="card" style={{ padding: 12, display: 'flex', gap: 10, alignItems: 'center', borderColor: 'var(--err)' }}>
+                      <WarningIcon size={18} aria-hidden style={{ color: 'var(--err)', flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 160 }}>
+                        <strong>{ch?.emoji} {ch?.title ?? 'Hoofdstuk'}</strong>
+                        <span className="hint" style={{ display: 'block' }}>
+                          {retrying ? 'Wordt opnieuw geprobeerd…' : msg}
+                        </span>
+                      </div>
+                      <button className="btn btn-sm" onClick={() => retryChapter(chId)} disabled={retrying}>
+                        <RetryIcon size={16} aria-hidden /> Opnieuw proberen
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             )}
             {mode === 'exercises' && preview.exercises ? (
               <div className="card" style={{ padding: 14 }}>
@@ -654,6 +780,43 @@ export function CourseAIModal({
         )}
       </AIGate>
     </Modal>
+  );
+}
+
+/** Voortgang tijdens het per-hoofdstuk optimaliseren: "hoofdstuk X van Y" + status per hoofdstuk. */
+function ChapterOptimizeProgress({
+  chapters, status, onCancel,
+}: {
+  chapters: CourseChapter[];
+  status: Record<string, BatchItemStatus>;
+  onCancel: () => void;
+}) {
+  const done = chapters.filter((ch) => {
+    const s = status[ch.id];
+    return s === 'klaar' || s === 'mislukt' || s === 'geannuleerd';
+  }).length;
+  return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span className="ai-pulse" aria-hidden><AIIcon size={18} /></span>
+        <strong aria-live="polite">Hoofdstuk {Math.min(done + 1, chapters.length)} van {chapters.length}…</strong>
+        <span style={{ flex: 1 }} />
+        <button className="btn btn-sm btn-ghost" onClick={onCancel}>Annuleren</button>
+      </div>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6 }}>
+        {chapters.map((ch) => {
+          const st = status[ch.id] ?? 'wachten';
+          return (
+            <li key={ch.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ flex: 1 }}>{ch.emoji} {ch.title}</span>
+              {st === 'klaar' && <CheckIcon size={16} aria-hidden style={{ color: 'var(--ok)' }} />}
+              {st === 'mislukt' && <WarningIcon size={16} aria-hidden style={{ color: 'var(--err)' }} />}
+              <span className="hint">{st}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
