@@ -222,7 +222,7 @@ export function ResultsPage() {
           <div style={{ fontSize: '1.9rem', fontWeight: 800, color: subs.some((s) => s.status === 'submitted') ? 'var(--warn)' : 'var(--ok)' }}>
             {subs.filter((s) => s.status === 'submitted').length}
           </div>
-          <div className="hint">nog te beoordelen</div>
+          <div className="hint">nog na te kijken</div>
         </div>
         <div className="card card-pad" style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '1.9rem', fontWeight: 800 }}>
@@ -302,7 +302,7 @@ export function ResultsPage() {
                         </td>
                         <td>
                           {s.status === 'submitted'
-                            ? <span className="badge badge-warn"><ClipboardCheck size={14} className="icon-inline" /> beoordelen</span>
+                            ? <span className="badge badge-warn"><ClipboardCheck size={14} className="icon-inline" /> na te kijken</span>
                             : <span className="badge badge-ok"><OkMark /> verbeterd</span>}
                         </td>
                         <td onClick={(e) => e.stopPropagation()}>
@@ -731,7 +731,7 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
       status: hasPending ? 'submitted' : 'graded',
       teacherFeedback: feedback,
     });
-    toast('Beoordeling opgeslagen', 'ok');
+    toast('Beoordeling bewaard', 'ok');
     onClose();
   };
 
@@ -742,7 +742,7 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
       footer={
         <>
           <button className="btn btn-ghost" onClick={onClose}>Sluiten</button>
-          <button className="btn btn-primary" onClick={save}>Beoordeling opslaan</button>
+          <button className="btn btn-primary" onClick={save}>Beoordeling bewaren</button>
         </>
       }
     >
@@ -865,7 +865,7 @@ function SubmissionModal({ widget, submission, onClose }: { widget: Widget; subm
                     </span>
                   )}
                   <span className={`badge ${score.mode === 'pending' ? 'badge-warn' : score.earned >= score.max ? 'badge-ok' : score.earned > 0 ? 'badge-warn' : 'badge-err'}`}>
-                    {score.mode === 'pending' ? 'te beoordelen' : `${score.earned}/${score.max}`}
+                    {score.mode === 'pending' ? 'na te kijken' : `${score.earned}/${score.max}`}
                   </span>
                 </div>
                 {RICH_TYPES.has(q.type) ? (
@@ -1367,7 +1367,7 @@ function QuestionStats({ widget, subs }: { widget: Widget; subs: Submission[] })
               <span className={`badge ${okPct >= 70 ? 'badge-ok' : okPct >= 40 ? 'badge-warn' : 'badge-err'}`}>{okPct}% helemaal juist</span>
             </div>
             <div style={{ display: 'flex', height: 10, borderRadius: 99, overflow: 'hidden', marginTop: 10, background: 'var(--bg-sunken)' }}
-              role="img" aria-label={`${full} juist, ${partial} deels, ${zero} fout, ${pending} nog te beoordelen`}>
+              role="img" aria-label={`${full} juist, ${partial} deels, ${zero} fout, ${pending} nog na te kijken`}>
               <div style={{ width: `${(full / total) * 100}%`, background: 'var(--ok)' }} />
               <div style={{ width: `${(partial / total) * 100}%`, background: 'var(--warn)' }} />
               <div style={{ width: `${(zero / total) * 100}%`, background: 'var(--err)' }} />
@@ -1375,7 +1375,7 @@ function QuestionStats({ widget, subs }: { widget: Widget; subs: Submission[] })
             </div>
             <div className="hint" style={{ marginTop: 6, display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
               <OkMark /> {full} juist · ◐ {partial} deels · <ErrMark /> {zero} fout
-              {pending > 0 && <>· <ClipboardCheck size={14} className="icon-inline" /> {pending} te beoordelen</>}
+              {pending > 0 && <>· <ClipboardCheck size={14} className="icon-inline" /> {pending} na te kijken</>}
               {got < subs.length ? ` · (${got} van ${subs.length} leerlingen kreeg deze vraag)` : ''}
             </div>
             <DistractorBars q={q} subs={subs} />
@@ -1483,7 +1483,7 @@ function GradingCockpit({ widget, subs }: { widget: Widget; subs: Submission[] }
               saveFeedbackbank(next);
               toast('Toegevoegd aan je feedbackbank', 'ok');
             }}
-            onSaved={() => toast('Beoordeling opgeslagen', 'ok')}
+            onSaved={() => toast('Beoordeling bewaard', 'ok')}
           />
         ))
       )}
@@ -1524,7 +1524,7 @@ function CockpitRow({
     <div className="card" style={{ padding: '13px 16px', marginBottom: 10, borderLeft: graded ? '4px solid var(--ok)' : '4px solid var(--warn)' }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', marginBottom: 6 }}>
         <strong>{submission.studentName}</strong>
-        {graded ? <span className="badge badge-ok"><OkMark /> {existing.earned}/{question.points}</span> : <span className="badge badge-warn">te beoordelen</span>}
+        {graded ? <span className="badge badge-ok"><OkMark /> {existing.earned}/{question.points}</span> : <span className="badge badge-warn">na te kijken</span>}
       </div>
       <div style={{ background: 'var(--bg-sunken)', borderRadius: 8, padding: '8px 12px', marginBottom: 8 }}>
         {(() => {
@@ -1600,7 +1600,7 @@ function CockpitRow({
           </div>
         </div>
         <button className="btn btn-primary btn-sm" disabled={points === null} onClick={save}>
-          <CheckIcon size={16} /> Opslaan
+          <CheckIcon size={16} /> Bewaren
         </button>
       </div>
     </div>

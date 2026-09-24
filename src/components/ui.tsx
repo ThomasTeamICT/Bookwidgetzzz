@@ -173,11 +173,14 @@ export function CheckRow({
   );
 }
 
-export function EmptyState({ icon, title, children }: { icon: React.ReactNode; title: string; children?: React.ReactNode }) {
+export function EmptyState({
+  icon, title, children, level = 2,
+}: { icon: React.ReactNode; title: string; children?: React.ReactNode; level?: 2 | 3 }) {
+  const Heading = level === 3 ? 'h3' : 'h2';
   return (
     <div className="empty-state">
       <div className="big" aria-hidden>{icon}</div>
-      <h3>{title}</h3>
+      <Heading>{title}</Heading>
       {children}
     </div>
   );

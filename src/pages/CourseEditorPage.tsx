@@ -196,8 +196,8 @@ export function CourseEditorPage() {
 
   return (
     <div className="appshell">
-      <h1 className="sr-only">Cursus bewerken: {course.title.trim() || 'naamloze cursus'}</h1>
       <header className="topbar" style={{ flexWrap: 'wrap', rowGap: 6 }}>
+        <h1 className="sr-only">Cursus bewerken: {course.title.trim() || 'naamloze cursus'}</h1>
         <button className="btn btn-quiet btn-sm" onClick={() => navigate('/cursussen')} aria-label="Terug naar mijn cursussen">
           <BackIcon size={16} /> Terug
         </button>

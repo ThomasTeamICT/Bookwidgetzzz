@@ -88,6 +88,7 @@ export function EditorPage() {
   return (
     <div className="appshell">
       <header className="topbar editor-topbar">
+        <h1 className="sr-only">Widget bewerken: {widget.title}</h1>
         <button className="btn btn-quiet btn-sm" onClick={() => navigate('/widgets')}>
           <BackIcon size={18} aria-hidden /> Terug
         </button>
@@ -103,7 +104,7 @@ export function EditorPage() {
           {savedFlash && <><CheckIcon size={16} aria-hidden /> Bewaard</>}
         </span>
         <div className="topbar-spacer" />
-        <span className="badge" title="Klascode" style={{ fontFamily: 'monospace', letterSpacing: '0.15em' }}>{widget.code}</span>
+        <span className="badge" title="Code van deze widget" style={{ fontFamily: 'monospace', letterSpacing: '0.15em' }}>{widget.code}</span>
         {def.hasSubmissions && (
           <Link to={`/resultaten/${widget.id}`} className="btn btn-sm btn-ghost"><ResultsIcon size={18} aria-hidden /> Resultaten ({subCount})</Link>
         )}
@@ -197,7 +198,7 @@ export function EditorPage() {
               )}
             </div>
             <aside className="card card-pad" style={{ position: 'sticky', top: 76 }}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: 10 }}><TypeTile type={def} size="sm" /> {def.name}</h3>
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '1.08rem' }}><TypeTile type={def} size="sm" /> {def.name}</h2>
               <p style={{ color: 'var(--text-soft)', fontSize: '0.9rem' }}>{def.tagline}</p>
               <hr className="divider" />
               <p style={{ fontSize: '0.9rem', color: 'var(--text-soft)', marginBottom: 8 }}>
@@ -300,7 +301,7 @@ function SettingsPanel({ widget, onChange }: { widget: Widget; onChange: (w: Wid
 
   return (
     <div className="card card-pad">
-      <h3>Weergave</h3>
+      <h2 style={{ fontSize: '1.08rem' }}>Weergave</h2>
       <Field label="Accentkleur voor de leerling">
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <input type="color" value={s.accentColor} onChange={(e) => set({ accentColor: e.target.value })} aria-label="Accentkleur" />
@@ -314,7 +315,7 @@ function SettingsPanel({ widget, onChange }: { widget: Widget; onChange: (w: Wid
       <CurriculumField widget={widget} onChange={onChange} />
 
       <hr className="divider" />
-      <h3>Gedrag</h3>
+      <h2 style={{ fontSize: '1.08rem' }}>Gedrag</h2>
       <CheckRow checked={s.shuffle} onChange={(v) => set({ shuffle: v })} label="Vragen/kaarten in willekeurige volgorde" />
       {def.hasScore && (
         <>
@@ -327,7 +328,7 @@ function SettingsPanel({ widget, onChange }: { widget: Widget; onChange: (w: Wid
       )}
 
       <hr className="divider" />
-      <h3>Beperkingen</h3>
+      <h2 style={{ fontSize: '1.08rem' }}>Beperkingen</h2>
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
         <Field label="Tijdslimiet (minuten)" hint="0 = geen limiet">
           <input className="input input-sm" type="number" min={0} max={240} style={{ maxWidth: 110 }}
@@ -342,7 +343,7 @@ function SettingsPanel({ widget, onChange }: { widget: Widget; onChange: (w: Wid
       </div>
 
       <hr className="divider" />
-      <h3>Toets &amp; deadline</h3>
+      <h2 style={{ fontSize: '1.08rem' }}>Toets &amp; deadline</h2>
       <CheckRow
         checked={s.examMode ?? false}
         onChange={(v) => set({ examMode: v })}
@@ -352,6 +353,7 @@ function SettingsPanel({ widget, onChange }: { widget: Widget; onChange: (w: Wid
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <input
             className="input input-sm" type="datetime-local" style={{ maxWidth: 230 }}
+            aria-label="Afsluiten na (deadline, optioneel)"
             value={s.expiresAt ?? ''}
             onChange={(e) => set({ expiresAt: e.target.value || undefined })}
           />

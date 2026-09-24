@@ -70,7 +70,7 @@ export function ResultsOverviewPage() {
                   <th>Widget</th>
                   <th>Inzendingen</th>
                   <th>Gemiddelde score</th>
-                  <th>Te beoordelen</th>
+                  <th>Na te kijken</th>
                   <th>Laatste inzending</th>
                 </tr>
               </thead>
@@ -250,7 +250,7 @@ function CrossWidgetGoals({ items }: { items: { widget: Widget; subs: Submission
                 {agg.code && <span className="badge badge-brand" style={{ marginRight: 6 }}>leerplan</span>}
                 {agg.label}
               </span>
-              <span style={{ color: cellText(p) }}>{p === null ? '— nog te beoordelen' : `${p}%`}</span>
+              <span style={{ color: cellText(p) }}>{p === null ? '— nog na te kijken' : `${p}%`}</span>
             </div>
             <div
               className="progressbar"
