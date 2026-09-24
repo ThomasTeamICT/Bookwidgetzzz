@@ -338,7 +338,7 @@ async function askOpenAICompatible(s: AISettings, opts: AskAIOptions): Promise<s
 }
 
 /** Leest een SSE-stroom en roept onData aan per "data:"-regel. */
-async function readSSE(res: Response, onData: (data: string) => void): Promise<void> {
+export async function readSSE(res: Response, onData: (data: string) => void): Promise<void> {
   const reader = res.body?.getReader();
   if (!reader) throw new AIError('De AI-dienst gaf een leeg antwoord.');
   const decoder = new TextDecoder();
@@ -354,6 +354,10 @@ async function readSSE(res: Response, onData: (data: string) => void): Promise<v
       if (t.startsWith('data:')) onData(t.slice(5).trim());
     }
   }
+  // Een stroom die eindigt zonder afsluitend regeleinde: de laatste regel
+  // (vaak het tokenverbruik of het slot van de tekst) niet laten vallen.
+  const rest = (buffer + decoder.decode()).trim();
+  if (rest.startsWith('data:')) onData(rest.slice(5).trim());
 }
 
 // ── JSON uit modeluitvoer halen ─────────────────────────────────────────────

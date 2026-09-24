@@ -164,7 +164,13 @@ export function CurriculaPage() {
             if (aiTarget.mode === 'add') {
               const merged = mergeGoals(aiTarget.curriculum.goals, goals);
               save({ ...aiTarget.curriculum, goals: merged });
-              toast(`${goals.length} doel(en) toegevoegd — kijk ze na`, 'ok');
+              // Dubbele codes slaat mergeGoals over: tel wat er echt bij kwam.
+              const added = merged.length - aiTarget.curriculum.goals.length;
+              const skipped = goals.length - added;
+              toast(
+                `${added} doel(en) toegevoegd${skipped > 0 ? `, ${skipped} overgeslagen omdat de code al bestond` : ''} — kijk ze na`,
+                'ok'
+              );
             } else {
               const cur = createCurriculum({
                 title: meta.title || `Doelenlijst ${meta.subject || ''}`.trim(),

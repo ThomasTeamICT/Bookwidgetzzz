@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { getAISettings, PROVIDER_INFO, saveAISettings } from './ai';
+import { getAISettings, PROVIDER_INFO, readSSE, saveAISettings } from './ai';
 
 function memoryStorage(): Storage {
   const data = new Map<string, string>();
@@ -32,5 +32,26 @@ describe('AI-instellingen: modellen', () => {
   it('laat een geldig bewaard model met rust', () => {
     saveAISettings({ provider: 'gemini', apiKey: 'x', model: 'gemini-3.7-flash' });
     expect(getAISettings().model).toBe('gemini-3.7-flash');
+  });
+});
+
+describe('readSSE', () => {
+  function streamOf(chunks: string[]): Response {
+    const enc = new TextEncoder();
+    return new Response(new ReadableStream({
+      start(c) { for (const ch of chunks) c.enqueue(enc.encode(ch)); c.close(); },
+    }));
+  }
+
+  it('leest data-regels, ook over stukgeknipte chunks heen', async () => {
+    const got: string[] = [];
+    await readSSE(streamOf(['data: {"a":', '1}\n\nda', 'ta: [DONE]\n']), (d) => got.push(d));
+    expect(got).toEqual(['{"a":1}', '[DONE]']);
+  });
+
+  it('verliest de laatste regel niet als de stroom zonder regeleinde stopt', async () => {
+    const got: string[] = [];
+    await readSSE(streamOf(['data: {"x":1}\n\n', 'data: {"usage":{"prompt_tokens":5}}']), (d) => got.push(d));
+    expect(got).toEqual(['{"x":1}', '{"usage":{"prompt_tokens":5}}']);
   });
 });
