@@ -165,6 +165,29 @@
 .lib-date { margin-left: auto; }
 .lib-card-menu { grid-area: menu; margin: -6px 0; }
 
+/*
+ * Cursusweergave: hoofdstukken inklapbaar, enkel het eerste standaard open
+ * (zie P3-oordeel van de rechter). Dat houdt de eerste opbouw van een grote
+ * cursus klein, in plaats van meteen alle hoofdstukken vol kaarten te tonen.
+ */
+.lib-chapter { border: 1px solid var(--line); border-radius: var(--radius-m); margin-bottom: 12px; overflow: hidden; }
+.lib-chapter-summary {
+  cursor: pointer; list-style: none;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  min-height: 44px; padding: 12px 14px;
+  font-family: var(--font-display); font-weight: 700;
+}
+.lib-chapter-summary::-webkit-details-marker { display: none; }
+.lib-chapter-summary:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.lib-chapter-chevron { flex: none; margin-left: auto; color: var(--text-faint); transition: transform 0.15s; }
+.lib-chapter[open] > .lib-chapter-summary .lib-chapter-chevron { transform: rotate(180deg); }
+.lib-chapter[open] > .lib-chapter-summary { border-bottom: 1px solid var(--line); }
+.lib-chapter-summary .lib-count { margin-left: 0; }
+.lib-chapter-grid { padding: 12px 14px 14px; margin: 0; }
+
+/* Knop "Toon alle" onder een afgetopte kaartenlijst */
+.lib-more { display: flex; justify-content: center; margin: 20px 0 4px; }
+
 /* Keuzes in de vensters (omzetten, naar map) */
 .lib-choices { display: grid; gap: 8px; }
 .lib-choice {

@@ -24,7 +24,7 @@ import {
 } from '../components/icons';
 import {
   buildLibraryIndex, buildLibraryView, CATEGORY_CHIPS, deleteWarning, EXAMPLE_FOLDER_ID, libraryCounts, parseScope,
-  sameScope, scopeSearch, typeDefOf, type GroupRow, type LibraryIndex, type LibraryScope,
+  sameScope, scopeSearch, typeDefOf, type CardSection, type GroupRow, type LibraryIndex, type LibraryScope,
 } from '../lib/library';
 import '../styles/materiaal.css';
 
@@ -39,6 +39,17 @@ const FOLDER_COLORS: { color: string; name: string }[] = [
 
 /** Soorten die je in elkaar kan omzetten: dezelfde vragen, andere weergave. */
 const CONVERTIBLE: WidgetTypeId[] = ['quiz', 'worksheet', 'exitticket'];
+
+/**
+ * Plafond op het aantal kaarten dat in één keer opgebouwd wordt. Zonder dit
+ * plafond groeit de DOM bij een grote bibliotheek in één klap met honderden
+ * kaarten (elk met een SVG-icoon), wat de eerste toetsaanslag in het
+ * zoekveld traag maakt. Een knop "Toon alle" ontgrendelt de rest.
+ */
+const CARD_PAGE_SIZE = 60;
+
+/** Hoe lang we wachten na de laatste toetsaanslag voor we filteren en de URL bijwerken. */
+const SEARCH_DEBOUNCE_MS = 150;
 
 interface LibraryData {
   widgets: Widget[];
@@ -75,12 +86,10 @@ function parseCategory(v: string | null): WidgetCategory | null {
 }
 
 export function TeacherDashboard() {
+  // Eén keer geladen bij het openen (useState-initializer); daarna alleen
+  // nog bij een echte opslagwijziging, niet nog eens meteen bij het openen.
   const [data, setData] = useState<LibraryData>(loadData);
-  useEffect(() => {
-    const reload = () => setData(loadData());
-    reload();
-    return onStorageChange(reload);
-  }, []);
+  useEffect(() => onStorageChange(() => setData(loadData())), []);
 
   const index = useMemo(() => buildLibraryIndex(data.widgets, data.courses, data.folders), [data]);
   const counts = useMemo(() => libraryCounts(index), [index]);
@@ -90,8 +99,44 @@ export function TeacherDashboard() {
   const [params, setParams] = useSearchParams();
   const scope = parseScope(params, index);
   const scopeKey = scopeSearch(scope);
-  const query = params.get('q') ?? '';
+  const urlQuery = params.get('q') ?? '';
   const category = parseCategory(params.get('soort'));
+
+  const setParam = (key: string, value: string | null) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      return next;
+    }, { replace: true });
+  };
+
+  // Het zoekveld typt lokaal en meteen zichtbaar; de echte filtering (en de
+  // URL) volgt pas na een korte stilte, zodat je niet bij elke toetsaanslag
+  // honderden kaarten opnieuw opbouwt. Een zoekterm die al in de URL staat
+  // bij het laden (bv. terug uit de editor) staat meteen goed.
+  const [searchInput, setSearchInput] = useState(urlQuery);
+  const [query, setQuery] = useState(urlQuery);
+
+  // Externe wijziging van de URL (terugknop, "Filters wissen", een link met
+  // ?q= erin): het zoekveld en de filtering volgen mee.
+  useEffect(() => {
+    setSearchInput(urlQuery);
+    setQuery(urlQuery);
+  }, [urlQuery]);
+
+  // Debounce: pas na SEARCH_DEBOUNCE_MS stilte filteren we echt en schrijven
+  // we naar de URL (met replace, zodat elke letter geen historiekstap wordt).
+  useEffect(() => {
+    if (searchInput === query) return undefined;
+    const timer = window.setTimeout(() => {
+      setQuery(searchInput);
+      setParam('q', searchInput || null);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
+
   const view = useMemo(
     () => buildLibraryView(index, parseScope(new URLSearchParams(scopeKey), index), { query, category }),
     [index, scopeKey, query, category]
@@ -102,14 +147,46 @@ export function TeacherDashboard() {
     [index, scope.kind, query, category]
   );
 
-  const setParam = (key: string, value: string | null) => {
-    setParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (value) next.set(key, value);
-      else next.delete(key);
+  // Cursusweergave (per hoofdstuk): hoofdstukken inklapbaar, enkel het
+  // eerste standaard open. Elders (alle widgets, een map, zoeken): een plat
+  // plafond van CARD_PAGE_SIZE kaarten met een knop "Toon alle". Zoeken
+  // binnen een cursus toont sowieso een platte lijst (view.flat), dus dat
+  // valt terug op het plafond.
+  const isChapterView = scope.kind === 'course' && !view.flat;
+
+  const [openChapters, setOpenChapters] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    if (!isChapterView) return;
+    setOpenChapters(new Set(view.sections[0] ? [view.sections[0].key] : []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopeKey, isChapterView]);
+  const toggleChapter = (key: string, open: boolean) => {
+    setOpenChapters((prev) => {
+      const next = new Set(prev);
+      if (open) next.add(key); else next.delete(key);
       return next;
-    }, { replace: true });
+    });
   };
+
+  const [showAll, setShowAll] = useState(false);
+  useEffect(() => { setShowAll(false); }, [scopeKey, query, category]);
+  const totalCards = useMemo(() => view.sections.reduce((sum, s) => sum + s.widgets.length, 0), [view]);
+  const visibleSections = useMemo(() => {
+    if (isChapterView || showAll) return view.sections;
+    let remaining = CARD_PAGE_SIZE;
+    const out: CardSection[] = [];
+    for (const s of view.sections) {
+      if (remaining <= 0) break;
+      if (s.widgets.length <= remaining) {
+        out.push(s);
+        remaining -= s.widgets.length;
+      } else {
+        out.push({ ...s, widgets: s.widgets.slice(0, remaining) });
+        remaining = 0;
+      }
+    }
+    return out;
+  }, [view, showAll, isChapterView]);
 
   /** Link naar een filter; zoekterm en soort blijven staan. */
   const hrefFor = (s: LibraryScope): string => {
@@ -337,8 +414,8 @@ export function TeacherDashboard() {
                 ref={searchRef}
                 id="lib-zoek"
                 className="input" type="search" placeholder="Zoek op titel, soort of code"
-                value={query}
-                onChange={(e) => setParam('q', e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
               />
             </div>
             <div className="lib-chips" role="group" aria-label="Soort">
@@ -407,23 +484,62 @@ export function TeacherDashboard() {
             </ul>
           )}
 
-          {view.sections.map((s) => s.widgets.length > 0 && (
-            <section key={s.key} aria-label={s.title}>
-              {s.title && <h3 className="lib-section-title">{s.title}</h3>}
-              <ul className="lib-grid">
-                {s.widgets.map((w) => (
-                  <li key={w.id}>
-                    <WidgetCard
-                      widget={w}
-                      subCount={data.subCounts.get(w.id) ?? 0}
-                      items={widgetMenu(w)}
-                      level={s.title ? 4 : 3}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+          {isChapterView ? (
+            view.sections.map((s) => s.widgets.length > 0 && (
+              <details
+                key={s.key}
+                className="lib-chapter"
+                open={openChapters.has(s.key)}
+                onToggle={(e) => toggleChapter(s.key, (e.target as HTMLDetailsElement).open)}
+              >
+                <summary className="lib-chapter-summary">
+                  <span>{s.title}</span>
+                  <span className="lib-count">{n(s.widgets.length, 'oefening', 'oefeningen')}</span>
+                  <ChevronDown size={18} className="lib-chapter-chevron" />
+                </summary>
+                {/* Kaarten van een dichtgeklapt hoofdstuk bouwen we niet op: dat
+                    zou de winst van het inklappen meteen weer tenietdoen. */}
+                {openChapters.has(s.key) && (
+                  <ul className="lib-grid lib-chapter-grid">
+                    {s.widgets.map((w) => (
+                      <li key={w.id}>
+                        <WidgetCard widget={w} subCount={data.subCounts.get(w.id) ?? 0} items={widgetMenu(w)} level={4} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </details>
+            ))
+          ) : (
+            <>
+              {visibleSections.map((s) => s.widgets.length > 0 && (
+                <section key={s.key} aria-label={s.title}>
+                  {s.title && <h3 className="lib-section-title">{s.title}</h3>}
+                  <ul className="lib-grid">
+                    {s.widgets.map((w) => (
+                      <li key={w.id}>
+                        <WidgetCard
+                          widget={w}
+                          subCount={data.subCounts.get(w.id) ?? 0}
+                          items={widgetMenu(w)}
+                          level={s.title ? 4 : 3}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+              {totalCards > CARD_PAGE_SIZE && (
+                // Dezelfde knop blijft staan (enkel de tekst wisselt), zodat de
+                // toetsenbordfocus niet verdwijnt na het tonen van alle kaarten.
+                <div className="lib-more">
+                  <button type="button" className="btn btn-ghost" onClick={() => setShowAll((v) => !v)}>
+                    {showAll ? `Toon minder (eerste ${CARD_PAGE_SIZE})` : `Toon alle (${totalCards})`}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
 
           {isEmpty && (
             data.widgets.length === 0 ? (
@@ -905,7 +1021,7 @@ function FolderModal({ folder, onClose, onSaved }: {
       footer={
         <>
           <button className="btn btn-ghost" onClick={onClose}>Annuleren</button>
-          <button className="btn btn-primary" disabled={!name.trim()} onClick={save}>Opslaan</button>
+          <button className="btn btn-primary" disabled={!name.trim()} onClick={save}>Bewaren</button>
         </>
       }
     >
