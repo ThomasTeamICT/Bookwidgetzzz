@@ -172,7 +172,6 @@ a { color: var(--brand); }
 
 .btn-primary { background: var(--brand-fill); color: #fff; }
 .btn-primary:hover { background: var(--brand-fill-strong); }
-[data-theme='dark'] .btn-primary { color: #100e1f; }
 
 .btn-danger { background: var(--err-soft); color: var(--err-text); }
 .btn-danger:hover { background: var(--err-strong); color: #fff; }

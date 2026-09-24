@@ -93,3 +93,12 @@ describe('kleurtokens', () => {
     }
   });
 });
+
+describe('knoppen', () => {
+  it('geen donkere tekst op de primaire knop in het donkere thema', () => {
+    // --brand-fill is in beide thema's donker genoeg voor witte tekst; een
+    // regel die de tekst in het donkere thema donker maakt, gaf 3,1 : 1.
+    const css = readFileSync(new URL('../styles/global.css', import.meta.url), 'utf8');
+    expect(css).not.toMatch(/\[data-theme='dark'\]\s*\.btn-primary\s*\{[^}]*color:\s*#(?!fff)/);
+  });
+});
