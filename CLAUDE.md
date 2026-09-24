@@ -15,9 +15,20 @@ npx vitest run
 npm run build       # bewaakt het bundelbudget
 node node_modules/vite/bin/vite.js preview --port 4173 --strictPort &   # in de cloud per beurt opnieuw starten
 PW_CHROMIUM=/opt/pw-browsers/chromium node tests/smoke.mjs
+PW_CHROMIUM=/opt/pw-browsers/chromium node tests/ai/mock-studio.mjs [fout]   # AI-studio met nagebootste AI, zonder sleutel
 ```
 
-De deploy-workflow draait lint, typecheck, unit tests en build. Een lintfout blokkeert de uitrol. De mappen `tests/` en `tools/` vallen buiten ESLint.
+De deploy-workflow draait lint, typecheck, unit tests en build. Een lintfout blokkeert de uitrol. De mappen `tests/` en `tools/` vallen buiten ESLint. Een andere poort geef je mee met `SMOKE_BASE=http://localhost:<poort>`.
+
+- **Bundel.** Het kritieke leerlingpad is de hoofdbundel plus `vendor` (budget in `vite.config.ts`). Gebruik je een nieuw Lucide-icoon op het leerlingpad (`PlayerPage`, `JoinPage`, `OpenSharedPage`, `ui.tsx`, `registry.tsx`, `A11yMenu`), zet de naam dan in `EAGER_ICON_NAMES`, anders faalt de build. Iconen van lui geladen pagina's komen vanzelf in `widget-icons`.
+- **Service worker.** `dist/sw.js` wordt bij elke build gemaakt uit `src/offline/serviceWorker.js`. Hernoem of verplaats `sw.js` niet. Uitschakelen kan alleen met een `sw.js` die zichzelf afmeldt; zie het commentaar in `src/offline/`.
+
+## Ontwerp en taal
+
+- Iconen, maten, kleuren en de emoji-regel staan in `docs/ontwerp/ICONEN.md`. Eén iconenset (Lucide), vaste iconen per actie in `src/components/icons.ts`, een tegel per widgetsoort met `TypeTile`. `src/lib/color.test.ts` bewaakt het contrast van de tokens in `global.css`.
+- Nieuwe css per scherm in een eigen bestand in `src/styles/`, met de tokens. Nooit witte tekst op `--brand`: gebruik `--brand-fill`. Tekst in de accentkleur van een widget via `color-mix(in srgb, var(--player-accent, var(--brand-fill)) 60%, var(--text))`.
+- Termen: "widget" in de leerkrachtschil (met als uitleg "oefening, spel of hulpmiddel"), "oefening" op leerlingschermen, nooit "widget". Verder altijd "leerplan", "nakijken", "toewijzen", "bewaren" en "uitproberen".
+- Elk scherm heeft één `main` en één `h1`, tikdoelen van 44 pixels op leerlingschermen, en werkt op 390 pixels breed zonder horizontaal te scrollen.
 
 ## Voorbeeldcursus natuurwetenschappen
 
