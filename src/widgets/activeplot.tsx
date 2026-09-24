@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { ChartLine } from 'lucide-react';
 import type { ActivePlotConfig, PlotParam } from '../lib/types';
 import { clamp, uid } from '../lib/utils';
 import { Field } from '../components/ui';
+import { CheckIcon, CloseIcon, RetryIcon, WarningIcon } from '../components/icons';
 import { EditorProps, ItemHeader, moveItem, PlayerProps } from './shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -344,7 +346,7 @@ export function ActivePlotEditor({ config, onChange }: EditorProps<ActivePlotCon
   return (
     <div>
       <div className="callout">
-        <span aria-hidden>📈</span>
+        <ChartLine aria-hidden />
         <div>
           Schrijf uitdrukkingen in de variabele <code>x</code> en je eigen parameternamen, bv. <code>a*x^2 + b</code>.
           Beschikbaar: <code>sin cos tan sqrt abs log ln exp</code> (haakjes verplicht), constanten <code>pi</code> en{' '}
@@ -365,18 +367,18 @@ export function ActivePlotEditor({ config, onChange }: EditorProps<ActivePlotCon
           const res = parseExpression(f.expression);
           if (!res.ok) {
             tone = 'err';
-            message = `✗ ${res.error}`;
+            message = <><CloseIcon size={14} className="icon-inline" aria-hidden /> {res.error}</>;
           } else {
             const missing = res.variables.filter((v) => !paramNames.includes(v));
             if (missing.length > 0) {
               tone = 'warn';
               quickAdd = missing;
-              message = `⚠ Onbekende ${missing.length === 1 ? 'naam' : 'namen'}: ${missing.join(', ')}. Voeg ${missing.length === 1 ? 'die' : 'ze'} als parameter toe:`;
+              message = <><WarningIcon size={14} className="icon-inline" aria-hidden /> Onbekende {missing.length === 1 ? 'naam' : 'namen'}: {missing.join(', ')}. Voeg {missing.length === 1 ? 'die' : 'ze'} als parameter toe:</>;
             } else {
               tone = 'ok';
               message = res.variables.length > 0
-                ? `✓ Geldige functie met parameter${res.variables.length > 1 ? 's' : ''} ${res.variables.join(', ')}`
-                : '✓ Geldige functie';
+                ? <><CheckIcon size={14} className="icon-inline" aria-hidden /> Geldige functie met parameter{res.variables.length > 1 ? 's' : ''} {res.variables.join(', ')}</>
+                : <><CheckIcon size={14} className="icon-inline" aria-hidden /> Geldige functie</>;
             }
           }
         }
@@ -410,7 +412,7 @@ export function ActivePlotEditor({ config, onChange }: EditorProps<ActivePlotCon
                   style={{ color: 'var(--err)' }}
                   onClick={() => onChange({ ...config, functions: functions.filter((_, j) => j !== i) })}
                 >
-                  ✕
+                  <CloseIcon size={16} aria-hidden />
                 </button>
               </div>
               <div
@@ -525,7 +527,7 @@ export function ActivePlotEditor({ config, onChange }: EditorProps<ActivePlotCon
       </div>
       {(!(xMin < xMax) || !(yMin < yMax)) && (
         <div className="callout warn" role="alert">
-          <span aria-hidden>⚠️</span>
+          <WarningIcon aria-hidden />
           <div>Het assenbereik klopt niet: min moet telkens kleiner zijn dan max, anders kan de grafiek niet getekend worden.</div>
         </div>
       )}
@@ -676,7 +678,7 @@ export function ActivePlotPlayer({ widget }: PlayerProps<ActivePlotConfig>) {
     <div>
       {broken.length > 0 && (
         <div className="callout warn" role="note">
-          <span aria-hidden>⚠️</span>
+          <WarningIcon aria-hidden />
           <div>
             {broken.length === 1 ? 'Eén functie kan niet getekend worden' : `${broken.length} functies kunnen niet getekend worden`}:{' '}
             {broken.map((b, i) => (
@@ -791,7 +793,7 @@ export function ActivePlotPlayer({ widget }: PlayerProps<ActivePlotConfig>) {
                 onClick={() => setMoved({})}
                 aria-label="Alle parameters terug naar hun beginwaarden"
               >
-                ↺ Beginwaarden
+                <RetryIcon size={16} aria-hidden /> Beginwaarden
               </button>
             )}
           </div>

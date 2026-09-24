@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
+import { ArrowRight, Heart } from 'lucide-react';
 import type { HangmanConfig } from '../lib/types';
 import { shuffled } from '../lib/utils';
 import { Field } from '../components/ui';
+import { CheckIcon, CloseIcon, RetryIcon, TipIcon } from '../components/icons';
 import { EditorProps, GameStatus, PlayerProps, ResultHero } from './shared';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -35,12 +37,18 @@ export function HangmanEditor({ config, onChange }: EditorProps<HangmanConfig>) 
   );
 }
 
-/** Eenvoudige, vriendelijke visual: ballonnen die één voor één wegvliegen. */
+/** Eenvoudige, vriendelijke visual: hartjes die één voor één doven. */
 function BalloonMeter({ left, total }: { left: number; total: number }) {
   return (
-    <div style={{ display: 'flex', gap: 6, justifyContent: 'center', fontSize: '1.7rem' }} aria-label={`Nog ${left} van ${total} kansen`}>
+    <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }} aria-label={`Nog ${left} van ${total} kansen`}>
       {Array.from({ length: total }, (_, i) => (
-        <span key={i} style={{ opacity: i < left ? 1 : 0.15, transition: 'opacity 0.3s' }} aria-hidden>🎈</span>
+        <Heart
+          key={i}
+          size={26}
+          aria-hidden
+          style={{ opacity: i < left ? 1 : 0.15, transition: 'opacity 0.3s', color: 'var(--err)' }}
+          fill={i < left ? 'currentColor' : 'none'}
+        />
       ))}
     </div>
   );
@@ -117,7 +125,7 @@ export function HangmanPlayer({ widget, onComplete }: PlayerProps<HangmanConfig>
       >
         <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => {
           setRound(0); setGuessed(new Set()); setErrors(0); setSolved(0); setRoundOver(null); setDone(false);
-        }}>🔁 Opnieuw spelen</button>
+        }}><RetryIcon size={16} aria-hidden /> Opnieuw spelen</button>
       </ResultHero>
     );
   }
@@ -126,11 +134,11 @@ export function HangmanPlayer({ widget, onComplete }: PlayerProps<HangmanConfig>
     <div style={{ textAlign: 'center' }}>
       <GameStatus>
         <span>Woord {round + 1} / {words.length}</span>
-        <span className="badge badge-ok">✓ {solved} geraden</span>
+        <span className="badge badge-ok"><CheckIcon size={14} className="icon-inline" aria-hidden /> {solved} geraden</span>
       </GameStatus>
       <BalloonMeter left={maxErrors - errors} total={maxErrors} />
       {entry.hint && (
-        <p style={{ marginTop: 14, color: 'var(--text-soft)' }}>💡 Hint: <strong>{entry.hint}</strong></p>
+        <p style={{ marginTop: 14, color: 'var(--text-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><TipIcon size={16} aria-hidden /> Hint: <strong>{entry.hint}</strong></p>
       )}
       <p
         style={{ fontSize: 'clamp(1.6rem, 6vw, 2.6rem)', fontWeight: 800, letterSpacing: '0.35em', margin: '22px 0', fontFamily: 'monospace' }}
@@ -140,11 +148,13 @@ export function HangmanPlayer({ widget, onComplete }: PlayerProps<HangmanConfig>
       </p>
       {roundOver ? (
         <div>
-          <p style={{ fontSize: '1.25rem', fontWeight: 700, color: roundOver === 'won' ? 'var(--ok)' : 'var(--err)' }}>
-            {roundOver === 'won' ? '🎉 Geraden!' : `😢 Helaas! Het woord was “${target}”.`}
+          <p style={{ fontSize: '1.25rem', fontWeight: 700, color: roundOver === 'won' ? 'var(--ok)' : 'var(--err)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            {roundOver === 'won'
+              ? <><CheckIcon aria-hidden /> Geraden!</>
+              : <><CloseIcon aria-hidden /> Helaas! Het woord was “{target}”.</>}
           </p>
           <button className="btn btn-primary btn-lg" onClick={nextRound}>
-            {round + 1 >= words.length ? 'Bekijk resultaat →' : 'Volgend woord →'}
+            {round + 1 >= words.length ? <>Bekijk resultaat <ArrowRight size={18} aria-hidden /></> : <>Volgend woord <ArrowRight size={18} aria-hidden /></>}
           </button>
         </div>
       ) : (

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ArrowRight, Paperclip, Star } from 'lucide-react';
 import { getWidget } from '../lib/storage';
 import type { GapQuestion, Question, QuizConfig } from '../lib/types';
 import { extractGaps, gapPreview, quizMaxScore } from '../lib/grading';
 import { CheckRow } from '../components/ui';
+import { BackIcon, CheckIcon, PrintIcon } from '../components/icons';
 import { markTokens as playerMarkTokens, ZoneCircle } from '../widgets/qtypes/interactTypes';
 
 /** Afdrukbare versie van quiz/werkblad/exit-ticket, met of zonder correctiesleutel. */
@@ -17,7 +19,7 @@ export function PrintPage() {
       <div className="page" style={{ textAlign: 'center', paddingTop: 60 }}>
         <h1>Niet afdrukbaar</h1>
         <p style={{ color: 'var(--text-soft)' }}>Deze widget bestaat niet of heeft geen afdrukbare versie.</p>
-        <Link to="/widgets" className="btn btn-primary">← Naar mijn widgets</Link>
+        <Link to="/widgets" className="btn btn-primary"><BackIcon size={18} aria-hidden /> Naar mijn widgets</Link>
       </div>
     );
   }
@@ -29,10 +31,10 @@ export function PrintPage() {
   return (
     <div style={{ background: '#fff', color: '#111', minHeight: '100vh' }}>
       <div className="topbar" style={{ position: 'static' }}>
-        <Link to={`/bewerk/${widget.id}`} className="btn btn-sm btn-quiet">← Terug naar de editor</Link>
+        <Link to={`/bewerk/${widget.id}`} className="btn btn-sm btn-quiet"><BackIcon size={16} aria-hidden /> Terug naar de editor</Link>
         <div className="topbar-spacer" />
         <CheckRow checked={withKey} onChange={setWithKey} label="Correctiesleutel tonen" />
-        <button className="btn btn-sm btn-primary" onClick={() => window.print()}>🖨 Afdrukken / PDF</button>
+        <button className="btn btn-sm btn-primary" onClick={() => window.print()}><PrintIcon size={16} aria-hidden /> Afdrukken / PDF</button>
       </div>
 
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '28px 24px 60px', fontSize: '15px', lineHeight: 1.6 }}>
@@ -98,18 +100,20 @@ function PrintAnswerArea({ q, withKey }: { q: Question; withKey: boolean }) {
             return (
               <li key={i} style={{ margin: '4px 0' }}>
                 <span style={{ display: 'inline-block', width: 15, height: 15, border: '1.5px solid #111', borderRadius: q.type === 'mc' ? '50%' : 3, marginRight: 9, verticalAlign: '-2px', background: withKey && correct ? '#111' : 'transparent' }} />
-                {String.fromCharCode(65 + i)}. {o} {withKey && correct && <Key>✓</Key>}
+                {String.fromCharCode(65 + i)}. {o} {withKey && correct && <Key><CheckIcon size={14} className="icon-inline" aria-hidden /></Key>}
               </li>
             );
           })}
         </ul>
       );
-    case 'tf':
+    case 'tf': {
+      const box = <span style={{ display: 'inline-block', width: 15, height: 15, border: '1.5px solid #111', borderRadius: 3, marginRight: 6, verticalAlign: '-2px' }} />;
       return (
         <p style={{ margin: '4px 0' }}>
-          ⬜ Juist {withKey && q.answer && <Key>✓</Key>} &nbsp;&nbsp; ⬜ Onjuist {withKey && !q.answer && <Key>✓</Key>}
+          {box} Juist {withKey && q.answer && <Key><CheckIcon size={14} className="icon-inline" aria-hidden /></Key>} &nbsp;&nbsp; {box} Onjuist {withKey && !q.answer && <Key><CheckIcon size={14} className="icon-inline" aria-hidden /></Key>}
         </p>
       );
+    }
     case 'short':
     case 'number':
       return withKey
@@ -136,7 +140,7 @@ function PrintAnswerArea({ q, withKey }: { q: Question; withKey: boolean }) {
       return (
         <div style={{ display: 'flex', gap: 40 }}>
           <ol style={{ margin: 0, paddingLeft: 20 }}>
-            {q.pairs.map((p, i) => <li key={i}>{p.left} → ____ {withKey && <Key>({String.fromCharCode(97 + i)})</Key>}</li>)}
+            {q.pairs.map((p, i) => <li key={i}>{p.left} <ArrowRight size={14} className="icon-inline" aria-hidden /> ____ {withKey && <Key>({String.fromCharCode(97 + i)})</Key>}</li>)}
           </ol>
           <ol style={{ margin: 0, paddingLeft: 20, listStyleType: 'lower-alpha' }}>
             {q.pairs.map((p, i) => <li key={i}>{p.right}</li>)}
@@ -305,7 +309,9 @@ function PrintAnswerArea({ q, withKey }: { q: Question; withKey: boolean }) {
       return (
         <p style={{ margin: '4px 0' }}>
           {q.labelLow && <span style={{ fontSize: '0.85rem', marginRight: 8 }}>{q.labelLow}</span>}
-          <span style={{ fontSize: '1.35rem', letterSpacing: 5 }}>{'☆'.repeat(scale)}</span>
+          <span style={{ display: 'inline-flex', gap: 4, verticalAlign: 'middle' }} aria-hidden>
+            {Array.from({ length: scale }, (_, i) => <Star key={i} size={20} />)}
+          </span>
           {q.labelHigh && <span style={{ fontSize: '0.85rem', marginLeft: 8 }}>{q.labelHigh}</span>}
           {withKey && <span style={{ fontSize: '0.8rem', color: '#6b7280' }}> (meningsvraag — geen sleutel)</span>}
         </p>
@@ -314,7 +320,7 @@ function PrintAnswerArea({ q, withKey }: { q: Question; withKey: boolean }) {
     case 'upload':
       return (
         <p style={{ margin: '4px 0', fontStyle: 'italic' }}>
-          📎 In te leveren: {q.accept?.trim() ? `bestand (${q.accept.trim()})` : 'bestand'}
+          <Paperclip size={14} className="icon-inline" aria-hidden /> In te leveren: {q.accept?.trim() ? `bestand (${q.accept.trim()})` : 'bestand'}
           {q.maxMb ? `, max. ${q.maxMb} MB` : ''} — digitaal via de widget, niet op papier.
         </p>
       );

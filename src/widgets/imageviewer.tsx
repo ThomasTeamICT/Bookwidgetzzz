@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Minus } from 'lucide-react';
 import type { ImageViewerConfig } from '../lib/types';
 import { clamp } from '../lib/utils';
 import { Field, ImagePicker } from '../components/ui';
+import { AddIcon, RetryIcon, SearchIcon } from '../components/icons';
 import { EditorProps, PlayerProps } from './shared';
 
 // ── Editor ──────────────────────────────────────────────────────────────────
@@ -340,19 +342,19 @@ function ViewerStage({
             onClick={() => zoomBy(1.5)}
             disabled={view.scale >= MAX_ZOOM - 0.001}
             aria-label="Inzoomen" title="Inzoomen (+)"
-          >+</button>
+          ><AddIcon size={18} aria-hidden /></button>
           <button
             className="btn btn-icon" style={ctrlStyle}
             onClick={() => zoomBy(1 / 1.5)}
             disabled={view.scale <= MIN_ZOOM + 0.001}
             aria-label="Uitzoomen" title="Uitzoomen (−)"
-          >−</button>
+          ><Minus size={18} aria-hidden /></button>
           <button
             className="btn btn-icon" style={ctrlStyle}
             onClick={reset}
             disabled={atStart}
             aria-label="Zoom herstellen" title="Zoom herstellen (0)"
-          >⤾</button>
+          ><RetryIcon size={18} aria-hidden /></button>
         </div>
 
         <span
@@ -366,7 +368,7 @@ function ViewerStage({
             color: 'var(--player-accent, var(--brand))',
           }}
         >
-          <span aria-hidden>🔍</span> Zoom: {Math.round(view.scale * 100)}%
+          <SearchIcon size={14} className="icon-inline" aria-hidden /> Zoom: {Math.round(view.scale * 100)}%
         </span>
       </div>
 

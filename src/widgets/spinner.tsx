@@ -1,6 +1,8 @@
 import React, { useMemo, useRef, useState } from 'react';
+import { RotateCw } from 'lucide-react';
 import type { SpinnerConfig } from '../lib/types';
 import { CheckRow, Field } from '../components/ui';
+import { GoalIcon, RetryIcon } from '../components/icons';
 import { EditorProps, PlayerProps } from './shared';
 
 export function SpinnerEditor({ config, onChange }: EditorProps<SpinnerConfig>) {
@@ -108,18 +110,18 @@ export function SpinnerPlayer({ widget }: PlayerProps<SpinnerConfig>) {
 
       <div aria-live="assertive" style={{ minHeight: 54, textAlign: 'center' }}>
         {winner && !spinning && (
-          <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>
-            🎯 <span style={{ color: 'var(--player-accent, var(--brand))' }}>{winner}</span>
+          <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <GoalIcon aria-hidden /> <span style={{ color: 'var(--player-accent, var(--brand))' }}>{winner}</span>
           </p>
         )}
       </div>
 
       <button className="btn btn-primary btn-lg" onClick={spin} disabled={spinning || n === 0}>
-        {spinning ? 'Het rad draait…' : n === 0 ? 'Alles is geweest!' : '🎡 Draai aan het rad'}
+        {spinning ? 'Het rad draait…' : n === 0 ? 'Alles is geweest!' : <><RotateCw size={18} aria-hidden /> Draai aan het rad</>}
       </button>
       {n === 0 && (
         <button className="btn btn-ghost" onClick={() => { setItems(initial); setHistory([]); setWinner(null); }}>
-          🔁 Alles terugzetten
+          <RetryIcon size={16} aria-hidden /> Alles terugzetten
         </button>
       )}
 

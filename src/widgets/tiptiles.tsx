@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
 import type { TipTile, TipTilesConfig } from '../lib/types';
 import { uid } from '../lib/utils';
 import { EmptyState, Field, ImagePicker, Modal } from '../components/ui';
+import { CheckIcon, PreviewIcon, TipIcon } from '../components/icons';
 import { EditorProps, GameStatus, ItemHeader, moveItem, PlayerProps } from './shared';
 
 const DEFAULT_TILE_COLOR = '#4f46e5';
@@ -27,7 +29,7 @@ export function TipTilesEditor({ config, onChange }: EditorProps<TipTilesConfig>
         Zodra alle tegels bekeken zijn, is de opdracht klaar.
       </p>
       {tiles.length === 0 && (
-        <EmptyState icon="💡" title="Nog geen tegels">
+        <EmptyState icon={<TipIcon size={40} aria-hidden />} title="Nog geen tegels">
           <p>Voeg je eerste tip-tegel toe, bv. een studietip of een stappenplan.</p>
         </EmptyState>
       )}
@@ -152,8 +154,8 @@ export function TipTilesPlayer({ widget, timeUp, onComplete }: PlayerProps<TipTi
   return (
     <div>
       <GameStatus>
-        <span className="badge badge-brand">👀 {viewed.size} van {total} bekeken</span>
-        {allViewed && <span className="badge badge-ok">✓ Alle tips gelezen — goed bezig!</span>}
+        <span className="badge badge-brand"><PreviewIcon size={14} className="icon-inline" aria-hidden /> {viewed.size} van {total} bekeken</span>
+        {allViewed && <span className="badge badge-ok"><CheckIcon size={14} className="icon-inline" aria-hidden /> Alle tips gelezen — goed bezig!</span>}
       </GameStatus>
       <div className="progressbar" style={{ maxWidth: 420, margin: '0 auto 20px' }} aria-hidden>
         <div style={{ width: `${Math.round((viewed.size / total) * 100)}%` }} />
@@ -203,10 +205,10 @@ export function TipTilesPlayer({ widget, timeUp, onComplete }: PlayerProps<TipTi
               <span style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 14px 14px', flex: 1 }}>
                 <span style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   <strong style={{ flex: 1, lineHeight: 1.3 }}>{tileTitle(t, i)}</strong>
-                  {seen && <span className="badge badge-ok" aria-hidden>✓ Bekeken</span>}
+                  {seen && <span className="badge badge-ok" aria-hidden><CheckIcon size={14} className="icon-inline" /> Bekeken</span>}
                 </span>
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-faint)', marginTop: 'auto' }}>
-                  {seen ? 'Opnieuw lezen' : 'Lees de tip'} →
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-faint)', marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {seen ? 'Opnieuw lezen' : 'Lees de tip'} <ArrowRight size={14} aria-hidden />
                 </span>
               </span>
             </button>
@@ -227,7 +229,7 @@ export function TipTilesPlayer({ widget, timeUp, onComplete }: PlayerProps<TipTi
                   onClick={() => openTile(nextUnread)}
                   aria-label={`Volgende tip openen: ${tileTitle(nextUnread, tiles.indexOf(nextUnread))}`}
                 >
-                  Volgende tip →
+                  Volgende tip <ArrowRight size={16} aria-hidden />
                 </button>
               )}
             </>

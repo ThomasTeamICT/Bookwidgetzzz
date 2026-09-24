@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Brush, CalendarClock, Save } from 'lucide-react';
 import { cleanupStudentFiles, collectFileIds, getSubmissions, getWidgets, onStorageChange } from '../lib/storage';
 import { ConfirmModal, useToast } from '../components/ui';
+import {
+  CheckIcon, DeleteIcon, ExportIcon, PrintIcon, PrivacyIcon, WarningIcon,
+} from '../components/icons';
 import { clearAllFiles, collectMediaRefs, mediaStats, pruneOrphanMedia } from '../lib/mediaStore';
 import {
   formatBytes, formatPct, LOCALSTORAGE_BUDGET_BYTES, readStorageHealth,
@@ -110,11 +114,11 @@ export function PrivacyPage() {
     <div className="page page-narrow">
       <div className="page-head">
         <div>
-          <h1>🔒 Privacy &amp; gegevens</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}><PrivacyIcon aria-hidden /> Privacy &amp; gegevens</h1>
           <p className="sub">Transparant over wat deze app bewaart — en hoe je het opruimt.</p>
         </div>
         <div className="page-head-actions">
-          <button className="btn btn-ghost" onClick={() => window.print()}>🖨 Afdrukken voor directie/ouders</button>
+          <button className="btn btn-ghost" onClick={() => window.print()}><PrintIcon size={18} aria-hidden /> Afdrukken voor directie/ouders</button>
         </div>
       </div>
 
@@ -157,7 +161,7 @@ export function PrivacyPage() {
       </div>
 
       <div className="card card-pad" style={{ marginBottom: 16 }}>
-        <h3>💾 Opslag op dit toestel</h3>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Save size={20} aria-hidden /> Opslag op dit toestel</h3>
         {!health ? (
           <p style={{ color: 'var(--text-soft)' }}>Het opslaggebruik wordt gemeten…</p>
         ) : (
@@ -203,7 +207,7 @@ export function PrivacyPage() {
             <h4 style={{ marginBottom: 6 }}>Beveiligd tegen automatisch wissen?</h4>
             <p style={{ margin: '0 0 10px' }}>
               <span className={`badge ${health.persisted ? 'badge-ok' : 'badge-warn'}`}>
-                {health.persisted ? '✓ Ja — persistente opslag' : '⚠ Nee — niet beveiligd'}
+                {health.persisted ? <><CheckIcon size={14} className="icon-inline" aria-hidden /> Ja — persistente opslag</> : <><WarningIcon size={14} className="icon-inline" aria-hidden /> Nee — niet beveiligd</>}
               </span>
             </p>
             {health.persisted ? (
@@ -221,20 +225,20 @@ export function PrivacyPage() {
                   stelt een vraag, sommige browsers kennen dit niet).
                 </p>
                 <button className="btn btn-primary" onClick={() => { void protectStorage(); }} disabled={asking}>
-                  {asking ? 'Bezig…' : '🔒 Opslag beveiligen tegen automatisch wissen'}
+                  {asking ? 'Bezig…' : <><PrivacyIcon size={16} aria-hidden /> Opslag beveiligen tegen automatisch wissen</>}
                 </button>
               </>
             )}
 
             <div className="callout warn" style={{ marginTop: 16, marginBottom: 0 }}>
-              <span aria-hidden>📆</span>
+              <CalendarClock aria-hidden />
               <div>
                 <strong>Let op — er is geen back-up.</strong> Safari op iPad en iPhone (en op de Mac) wist de
                 volledige opslag van een website na ongeveer zeven dagen zonder bezoek: één vakantieweek
                 volstaat om een cursus of het werk van leerlingen kwijt te spelen. Ook "browsergegevens
                 wissen", een ander gebruikersprofiel of een toestel met weinig vrije ruimte doet dat.
                 Exporteer daarom wat je niet wil verliezen: <a href="#/widgets">widgets en mappen</a> als
-                pakketbestand, <a href="#/cursussen">cursussen</a> met 💾 Exporteren, en resultaten als CSV.
+                pakketbestand, <a href="#/cursussen">cursussen</a> met <ExportIcon size={14} className="icon-inline" aria-hidden /> Exporteren, en resultaten als CSV.
                 Zet die bestanden op de schoolschijf — dát is je back-up.
               </div>
             </div>
@@ -243,7 +247,7 @@ export function PrivacyPage() {
       </div>
 
       <div className="card card-pad">
-        <h3>🧹 Gegevens opruimen</h3>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Brush size={20} aria-hidden /> Gegevens opruimen</h3>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button className="btn btn-danger" onClick={() => setConfirm('subs')} disabled={subs.length === 0}>
             Alle inzendingen &amp; leerlinggegevens wissen ({subs.length})
@@ -253,7 +257,7 @@ export function PrivacyPage() {
           </button>
         </div>
         <p className="hint" style={{ marginTop: 10 }}>
-          Individuele inzendingen wis je bij de resultaten van elke widget (🗑 naast de rij).
+          Individuele inzendingen wis je bij de resultaten van elke widget (<DeleteIcon size={14} className="icon-inline" aria-hidden /> naast de rij).
         </p>
       </div>
 

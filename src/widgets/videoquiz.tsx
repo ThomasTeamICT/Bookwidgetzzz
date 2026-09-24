@@ -1,10 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  CircleDot, Clock, type LucideIcon, Pause, PenLine, Scale,
+} from 'lucide-react';
 import type {
   MCQuestion, Question, ShortQuestion, TFQuestion, VideoCheckpoint, VideoQuizConfig,
 } from '../lib/types';
 import { gradeQuiz } from '../lib/grading';
 import { uid } from '../lib/utils';
 import { CheckRow, Field, ImagePicker } from '../components/ui';
+import {
+  CheckIcon, CloseIcon, DeleteIcon, InfoIcon, TryIcon, WarningIcon,
+} from '../components/icons';
 import { EditorProps, GameStatus, PlayerProps, ResultHero } from './shared';
 import { QuestionView, makeQuestion } from './quiz';
 
@@ -93,15 +99,15 @@ function sortCheckpoints(list: VideoCheckpoint[]): VideoCheckpoint[] {
   return list.slice().sort((a, b) => a.timeSec - b.timeSec);
 }
 
-const VQ_TYPES: { type: 'mc' | 'tf' | 'short'; name: string; icon: string }[] = [
-  { type: 'mc', name: 'Meerkeuze', icon: '🔘' },
-  { type: 'tf', name: 'Juist of onjuist', icon: '⚖️' },
-  { type: 'short', name: 'Kort antwoord', icon: '✏️' },
+const VQ_TYPES: { type: 'mc' | 'tf' | 'short'; name: string; icon: LucideIcon }[] = [
+  { type: 'mc', name: 'Meerkeuze', icon: CircleDot },
+  { type: 'tf', name: 'Juist of onjuist', icon: Scale },
+  { type: 'short', name: 'Kort antwoord', icon: PenLine },
 ];
 
 function vqLabel(q: Question): string {
   const meta = VQ_TYPES.find((t) => t.type === q.type);
-  const name = meta ? `${meta.icon} ${meta.name}` : 'Vraag';
+  const name = meta ? meta.name : 'Vraag';
   return q.prompt.trim() ? `${name} — ${q.prompt.slice(0, 48)}` : name;
 }
 
@@ -169,7 +175,7 @@ function McCompact({ q, onChange }: { q: MCQuestion; onChange: (q: Question) => 
               const correctIndex = q.correctIndex === i ? 0 : q.correctIndex > i ? q.correctIndex - 1 : q.correctIndex;
               onChange({ ...q, options, correctIndex });
             }}
-          >✕</button>
+          ><CloseIcon size={16} aria-hidden /></button>
         </div>
       ))}
       <button className="btn btn-sm btn-ghost" onClick={() => onChange({ ...q, options: [...q.options, ''] })}>
@@ -278,7 +284,7 @@ export function VideoQuizEditor({ config, onChange }: EditorProps<VideoQuizConfi
         </div>
       ) : videoUrl.trim() !== '' ? (
         <div className="callout warn" role="status">
-          <span aria-hidden>⚠️</span>
+          <WarningIcon aria-hidden />
           <div>Dit lijkt geen geldige YouTube-link of video-id. Controleer de invoer.</div>
         </div>
       ) : null}
@@ -292,7 +298,7 @@ export function VideoQuizEditor({ config, onChange }: EditorProps<VideoQuizConfi
 
       {cps.length === 0 && (
         <p style={{ color: 'var(--text-soft)', textAlign: 'center', padding: '14px 0' }}>
-          Nog geen checkpoints. Voeg je eerste vraag toe. 👇
+          Nog geen checkpoints. Voeg je eerste vraag toe.
         </p>
       )}
 
@@ -300,7 +306,7 @@ export function VideoQuizEditor({ config, onChange }: EditorProps<VideoQuizConfi
         <div className="editor-item" key={cp.id}>
           <div className="editor-item-head">
             <span className="badge badge-brand">{i + 1}</span>
-            <span aria-hidden title="Tijdstip in de video">⏱</span>
+            <span title="Tijdstip in de video" style={{ display: 'inline-flex' }}><Clock size={16} aria-hidden /></span>
             <TimeInput
               valueSec={cp.timeSec}
               onCommit={(sec) => commitTime(i, sec)}
@@ -315,7 +321,7 @@ export function VideoQuizEditor({ config, onChange }: EditorProps<VideoQuizConfi
               title="Verwijderen"
               style={{ color: 'var(--err)' }}
               onClick={() => onChange({ ...config, checkpoints: cps.filter((_, j) => j !== i) })}
-            >🗑</button>
+            ><DeleteIcon size={16} aria-hidden /></button>
           </div>
           <div className="editor-item-body">
             <Field label="Vraagtype">
@@ -327,7 +333,7 @@ export function VideoQuizEditor({ config, onChange }: EditorProps<VideoQuizConfi
                     aria-pressed={cp.question.type === t.type}
                     onClick={() => switchType(i, t.type)}
                   >
-                    <span aria-hidden>{t.icon}</span> {t.name}
+                    <t.icon size={16} aria-hidden /> {t.name}
                   </button>
                 ))}
               </div>
@@ -592,7 +598,7 @@ export function VideoQuizPlayer({ widget, timeUp, onComplete }: PlayerProps<Vide
             {checkpoints.map((cp, i) => (
               <div key={cp.id}>
                 <p style={{ margin: '16px 0 6px', fontWeight: 800, fontSize: '0.82rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--player-accent, var(--brand))' }}>
-                  ⏱ Vraag bij {fmtTime(cp.timeSec)}
+                  <Clock size={14} className="icon-inline" aria-hidden /> Vraag bij {fmtTime(cp.timeSec)}
                 </p>
                 <QuestionView
                   q={cp.question} index={i} total={checkpoints.length}
@@ -614,7 +620,7 @@ export function VideoQuizPlayer({ widget, timeUp, onComplete }: PlayerProps<Vide
     return (
       <div>
         <div className="callout warn" role="status">
-          <span aria-hidden>⚠️</span>
+          <WarningIcon aria-hidden />
           <div>
             De interactieve videospeler kon niet geladen worden. Je kunt de video hieronder gewoon bekijken,
             maar hij pauzeert <strong>niet automatisch</strong>. Beantwoord daarna zelf de vragen —
@@ -640,7 +646,7 @@ export function VideoQuizPlayer({ widget, timeUp, onComplete }: PlayerProps<Vide
         {checkpoints.map((cp, i) => (
           <div key={cp.id}>
             <p style={{ margin: '16px 0 6px', fontWeight: 800, fontSize: '0.82rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--player-accent, var(--brand))' }}>
-              ⏱ Vraag bij {fmtTime(cp.timeSec)}
+              <Clock size={14} className="icon-inline" aria-hidden /> Vraag bij {fmtTime(cp.timeSec)}
             </p>
             <QuestionView
               q={cp.question} index={i} total={checkpoints.length}
@@ -654,7 +660,7 @@ export function VideoQuizPlayer({ widget, timeUp, onComplete }: PlayerProps<Vide
           <span style={{ color: 'var(--text-soft)', fontWeight: 600 }}>
             {filledCount} van {checkpoints.length} beantwoord
           </span>
-          <button className="btn btn-primary btn-lg" onClick={() => submitRef.current()}>Afronden ✓</button>
+          <button className="btn btn-primary btn-lg" onClick={() => submitRef.current()}><CheckIcon size={18} aria-hidden /> Afronden</button>
         </div>
       </div>
     );
@@ -669,13 +675,13 @@ export function VideoQuizPlayer({ widget, timeUp, onComplete }: PlayerProps<Vide
   return (
     <div>
       <GameStatus>
-        <span className="badge badge-brand">✅ {answeredIds.size} / {checkpoints.length} vragen beantwoord</span>
+        <span className="badge badge-brand" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><CheckIcon size={14} aria-hidden /> {answeredIds.size} / {checkpoints.length} vragen beantwoord</span>
         {activeCp ? (
-          <span>⏸ Video gepauzeerd — beantwoord de vraag hieronder</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Pause size={16} className="icon-inline" aria-hidden /> Video gepauzeerd — beantwoord de vraag hieronder</span>
         ) : apiState === 'loading' ? (
           <span>Videospeler laden…</span>
         ) : nextCp ? (
-          <span>▶ Kijk verder — volgende vraag bij {fmtTime(nextCp.timeSec)}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><TryIcon size={16} className="icon-inline" aria-hidden /> Kijk verder — volgende vraag bij {fmtTime(nextCp.timeSec)}</span>
         ) : (
           <span>Alle vragen beantwoord — kijk de video uit of rond af</span>
         )}
@@ -687,7 +693,7 @@ export function VideoQuizPlayer({ widget, timeUp, onComplete }: PlayerProps<Vide
 
       {checkpoints.length === 0 && (
         <div className="callout">
-          <span aria-hidden>ℹ️</span>
+          <InfoIcon aria-hidden />
           <div>Deze video-quiz bevat nog geen vragen. Bekijk de video en klik daarna op “Afronden”.</div>
         </div>
       )}
@@ -705,7 +711,7 @@ export function VideoQuizPlayer({ widget, timeUp, onComplete }: PlayerProps<Vide
           <div className="player-nav">
             <span />
             <button className="btn btn-primary btn-lg" onClick={handleContinue}>
-              {finishesAfterThis ? 'Afronden ✓' : 'Verder kijken ▶'}
+              {finishesAfterThis ? <><CheckIcon size={18} aria-hidden /> Afronden</> : <>Verder kijken <TryIcon size={16} aria-hidden /></>}
             </button>
           </div>
         </div>
@@ -718,7 +724,7 @@ export function VideoQuizPlayer({ widget, timeUp, onComplete }: PlayerProps<Vide
             className={`btn ${allAnswered ? 'btn-primary btn-lg' : 'btn-ghost'}`}
             onClick={() => submitRef.current()}
           >
-            Afronden ✓
+            <CheckIcon size={18} aria-hidden /> Afronden
           </button>
         </div>
       )}

@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { AlarmClock, EyeOff, Puzzle } from 'lucide-react';
 import type { JigsawConfig } from '../lib/types';
 import { clamp, shuffled } from '../lib/utils';
 import { Field, ImagePicker } from '../components/ui';
+import { PreviewIcon, RetryIcon } from '../components/icons';
 import { EditorProps, GameStatus, PlayerProps } from './shared';
 
 // ── Hulpjes ─────────────────────────────────────────────────────────────────
@@ -230,7 +232,7 @@ export function JigsawPlayer({ widget, timeUp, onComplete }: PlayerProps<JigsawC
   return (
     <div>
       <GameStatus>
-        <span className="badge badge-brand">🧩 {moves} {moves === 1 ? 'zet' : 'zetten'}</span>
+        <span className="badge badge-brand"><Puzzle size={14} className="icon-inline" aria-hidden /> {moves} {moves === 1 ? 'zet' : 'zetten'}</span>
         <span className="badge">{cols} × {rows} — {total} stukjes</span>
       </GameStatus>
       <p style={{ textAlign: 'center', color: 'var(--text-faint)', marginBottom: 10, fontSize: '0.9rem' }}>
@@ -242,7 +244,7 @@ export function JigsawPlayer({ widget, timeUp, onComplete }: PlayerProps<JigsawC
           aria-pressed={showExample}
           onClick={() => setShowExample((v) => !v)}
         >
-          {showExample ? '🙈 Voorbeeld verbergen' : '👁️ Voorbeeld tonen'}
+          {showExample ? <><EyeOff size={16} aria-hidden /> Voorbeeld verbergen</> : <><PreviewIcon size={16} aria-hidden /> Voorbeeld tonen</>}
         </button>
       </div>
       {showExample && (
@@ -348,7 +350,7 @@ export function JigsawPlayer({ widget, timeUp, onComplete }: PlayerProps<JigsawC
               <div className="card" style={{ padding: '20px 28px', textAlign: 'center', boxShadow: 'var(--shadow-3)', maxWidth: '90%' }}>
                 {done ? (
                   <>
-                    <div style={{ fontSize: '2.3rem' }} aria-hidden>🧩</div>
+                    <Puzzle size={38} aria-hidden />
                     <h2 style={{ margin: '4px 0 6px' }}>Puzzel klaar!</h2>
                     <p style={{ margin: 0, color: 'var(--text-soft)' }}>
                       Je legde de puzzel in <strong>{moves}</strong> {moves === 1 ? 'zet' : 'zetten'}. Knap gedaan!
@@ -365,12 +367,12 @@ export function JigsawPlayer({ widget, timeUp, onComplete }: PlayerProps<JigsawC
                         setDragOver(null);
                       }}
                     >
-                      🔁 Nog eens leggen
+                      <RetryIcon size={16} aria-hidden /> Nog eens leggen
                     </button>
                   </>
                 ) : (
                   <>
-                    <div style={{ fontSize: '2.3rem' }} aria-hidden>⏰</div>
+                    <AlarmClock size={38} aria-hidden />
                     <h2 style={{ margin: '4px 0 6px' }}>De tijd is om</h2>
                     <p style={{ margin: 0, color: 'var(--text-soft)' }}>
                       Je stand is ingediend na {moves} {moves === 1 ? 'zet' : 'zetten'}.

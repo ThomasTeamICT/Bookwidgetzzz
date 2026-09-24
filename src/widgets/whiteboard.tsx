@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Eraser, Undo2 } from 'lucide-react';
 import type { WhiteboardConfig } from '../lib/types';
 import { Field, ImagePicker } from '../components/ui';
+import { CheckIcon, DeleteIcon } from '../components/icons';
 import { EditorProps, PlayerProps, ResultHero } from './shared';
 
 export function WhiteboardEditor({ config, onChange }: EditorProps<WhiteboardConfig>) {
@@ -95,7 +97,7 @@ export function WhiteboardPlayer({ widget, timeUp, onComplete }: PlayerProps<Whi
 
   if (done) {
     return (
-      <ResultHero earned={0} max={0} showScore={false} title="Tekening ingediend! 🎨"
+      <ResultHero earned={0} max={0} showScore={false} title="Tekening ingediend!"
         subtitle="Je leerkracht bekijkt en beoordeelt je werk." hasPending />
     );
   }
@@ -128,8 +130,8 @@ export function WhiteboardPlayer({ widget, timeUp, onComplete }: PlayerProps<Whi
           </button>
         ))}
         <span style={{ width: 1, height: 26, background: 'var(--line-strong)' }} aria-hidden />
-        <button className={`btn btn-sm ${eraser ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setEraser((v) => !v)} aria-pressed={eraser}>🧽 Gom</button>
-        <button className="btn btn-sm btn-ghost" onClick={undo}>↶ Ongedaan</button>
+        <button className={`btn btn-sm ${eraser ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setEraser((v) => !v)} aria-pressed={eraser}><Eraser size={16} aria-hidden /> Gom</button>
+        <button className="btn btn-sm btn-ghost" onClick={undo}><Undo2 size={16} aria-hidden /> Ongedaan</button>
         <button
           className="btn btn-sm btn-ghost"
           onClick={() => {
@@ -139,7 +141,7 @@ export function WhiteboardPlayer({ widget, timeUp, onComplete }: PlayerProps<Whi
             ctx.fillRect(0, 0, W, H);
           }}
         >
-          🗑 Alles wissen
+<DeleteIcon size={16} aria-hidden /> Alles wissen
         </button>
       </div>
       <div ref={wrapRef}>
@@ -188,7 +190,7 @@ export function WhiteboardPlayer({ widget, timeUp, onComplete }: PlayerProps<Whi
       </div>
       <div className="player-nav">
         <span />
-        <button className="btn btn-primary btn-lg" onClick={submit}>Tekening indienen ✓</button>
+        <button className="btn btn-primary btn-lg" onClick={submit}><CheckIcon size={18} aria-hidden /> Tekening indienen</button>
       </div>
     </div>
   );

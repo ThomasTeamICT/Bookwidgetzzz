@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Image as ImageIcon } from 'lucide-react';
 import type { CarouselConfig, CarouselSlide } from '../lib/types';
 import { uid } from '../lib/utils';
 import { EmptyState, Field, ImagePicker } from '../components/ui';
+import { CheckIcon } from '../components/icons';
 import { EditorProps, ItemHeader, moveItem, PlayerProps } from './shared';
 
 // ── Editor ──────────────────────────────────────────────────────────────────
@@ -25,7 +27,7 @@ export function CarouselEditor({ config, onChange }: EditorProps<CarouselConfig>
         Het bijschrift verschijnt onderaan over de foto.
       </p>
       {slides.length === 0 && (
-        <EmptyState icon="🖼️" title="Nog geen dia's">
+        <EmptyState icon={<ImageIcon size={40} aria-hidden />} title="Nog geen dia's">
           <p>Voeg je eerste foto toe om de carrousel te vullen.</p>
         </EmptyState>
       )}
@@ -292,8 +294,8 @@ export function CarouselPlayer({ widget, timeUp, onComplete }: PlayerProps<Carou
           Dia {idx + 1} van {total} · {viewed.size} van {total} bekeken
         </p>
         {allViewed ? (
-          <p role="status" style={{ textAlign: 'center', color: 'var(--ok)', fontWeight: 700, margin: '6px 0 0' }}>
-            ✓ Je hebt alle dia's bekeken — goed bezig!
+          <p role="status" style={{ textAlign: 'center', color: 'var(--ok)', fontWeight: 700, margin: '6px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <CheckIcon size={16} aria-hidden /> Je hebt alle dia's bekeken — goed bezig!
           </p>
         ) : (
           <p className="hint" style={{ textAlign: 'center', margin: '6px 0 0' }}>

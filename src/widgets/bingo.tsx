@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
+import { Star } from 'lucide-react';
 import type { BingoConfig } from '../lib/types';
 import { shuffled } from '../lib/utils';
 import { CheckRow, Field } from '../components/ui';
+import { WarningIcon } from '../components/icons';
 import { EditorProps, GameStatus, PlayerProps } from './shared';
 
 export function BingoEditor({ config, onChange }: EditorProps<BingoConfig>) {
@@ -30,7 +32,7 @@ export function BingoEditor({ config, onChange }: EditorProps<BingoConfig>) {
       )}
       {valid < needed && (
         <div className="callout warn">
-          <span aria-hidden>⚠️</span>
+          <WarningIcon aria-hidden />
           <div>Je hebt {valid} begrippen; voeg er nog {needed - valid} toe voor een volledige kaart.</div>
         </div>
       )}
@@ -57,7 +59,7 @@ export function BingoPlayer({ widget, onComplete }: PlayerProps<BingoConfig>) {
     const out: string[] = [];
     let it = 0;
     for (let i = 0; i < size * size; i++) {
-      if (i === centerIdx) out.push('★ GRATIS');
+      if (i === centerIdx) out.push('GRATIS');
       else out.push(items[it++] ?? '—');
     }
     return out;
@@ -102,7 +104,7 @@ export function BingoPlayer({ widget, onComplete }: PlayerProps<BingoConfig>) {
             aria-pressed={marked[i]}
             onClick={() => toggle(i)}
           >
-            {c}
+            {i === centerIdx ? <><Star size={16} className="icon-inline" aria-hidden /> {c}</> : c}
           </button>
         ))}
       </div>

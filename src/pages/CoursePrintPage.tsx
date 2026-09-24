@@ -4,6 +4,7 @@ import { getCourse } from '../lib/courses';
 import { formatDateShort } from '../lib/utils';
 import { BlockRenderer } from '../components/course/BlockRenderer';
 import { EmptyState } from '../components/ui';
+import { BackIcon, GoalIcon, PrintIcon } from '../components/icons';
 
 /** Printbare weergave van een volledige cursus (statisch, zonder spelers). */
 export function CoursePrintPage() {
@@ -13,8 +14,8 @@ export function CoursePrintPage() {
   if (!course) {
     return (
       <div className="page page-narrow" style={{ paddingTop: 60 }}>
-        <EmptyState icon="🖨️" title="Cursus niet gevonden">
-          <Link to="/cursussen" className="btn btn-primary">← Naar de cursussen</Link>
+        <EmptyState icon={<PrintIcon size={40} aria-hidden />} title="Cursus niet gevonden">
+          <Link to="/cursussen" className="btn btn-primary"><BackIcon size={18} aria-hidden /> Naar de cursussen</Link>
         </EmptyState>
       </div>
     );
@@ -31,9 +32,9 @@ export function CoursePrintPage() {
       `}</style>
 
       <div className="no-print" style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        <Link to={`/cursus/bewerk/${course.id}`} className="btn btn-sm btn-ghost">← Terug naar de editor</Link>
+        <Link to={`/cursus/bewerk/${course.id}`} className="btn btn-sm btn-ghost"><BackIcon size={16} aria-hidden /> Terug naar de editor</Link>
         <span style={{ flex: 1 }} />
-        <button className="btn btn-primary" onClick={() => window.print()}>🖨️ Afdrukken / als PDF bewaren</button>
+        <button className="btn btn-primary" onClick={() => window.print()}><PrintIcon size={18} aria-hidden /> Afdrukken / als PDF bewaren</button>
       </div>
 
       {/* titelpagina */}
@@ -77,7 +78,7 @@ export function CoursePrintPage() {
               </h3>
               {se.goals && se.goals.length > 0 && (
                 <div className="callout" style={{ marginBottom: 12 }}>
-                  <span aria-hidden>🎯</span>
+                  <GoalIcon aria-hidden />
                   <div>
                     <strong>Wat leer je hier?</strong>
                     <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>

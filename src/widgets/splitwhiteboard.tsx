@@ -1,14 +1,19 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
+import {
+  ChevronDown, ChevronUp, Eraser, FileText, Image as ImageIcon,
+  type LucideIcon, Pin, Undo2, Video,
+} from 'lucide-react';
 import type { SourcePane, SplitWhiteboardConfig } from '../lib/types';
 import { Field, ImagePicker } from '../components/ui';
+import { CheckIcon, DeleteIcon, InfoIcon, WarningIcon } from '../components/icons';
 import { EditorProps, PlayerProps, ResultHero } from './shared';
 
 // ── Hulpjes (zelfde patronen als het gesplitste werkblad) ───────────────────
 
-const SOURCE_KINDS: { kind: SourcePane['kind']; icon: string; label: string }[] = [
-  { kind: 'text', icon: '📄', label: 'Tekst' },
-  { kind: 'image', icon: '🖼️', label: 'Afbeelding' },
-  { kind: 'video', icon: '🎬', label: 'Video' },
+const SOURCE_KINDS: { kind: SourcePane['kind']; icon: LucideIcon; label: string }[] = [
+  { kind: 'text', icon: FileText, label: 'Tekst' },
+  { kind: 'image', icon: ImageIcon, label: 'Afbeelding' },
+  { kind: 'video', icon: Video, label: 'Video' },
 ];
 
 function sourceKindLabel(kind: SourcePane['kind']): string {
@@ -72,7 +77,7 @@ export function SplitWhiteboardEditor({ config, onChange }: EditorProps<SplitWhi
       {/* ── Bronpaneel ── */}
       <div className="editor-item">
         <div className="editor-item-head">
-          <span aria-hidden>📌</span>
+          <Pin size={16} aria-hidden />
           <strong style={{ fontSize: '0.9rem' }}>Bronpaneel</strong>
         </div>
         <div className="editor-item-body">
@@ -85,7 +90,7 @@ export function SplitWhiteboardEditor({ config, onChange }: EditorProps<SplitWhi
                   aria-pressed={source.kind === k.kind}
                   onClick={() => setSource({ ...source, kind: k.kind })}
                 >
-                  <span aria-hidden>{k.icon}</span> {k.label}
+                  <k.icon size={16} aria-hidden /> {k.label}
                 </button>
               ))}
             </div>
@@ -136,9 +141,11 @@ export function SplitWhiteboardEditor({ config, onChange }: EditorProps<SplitWhi
                 <span
                   className="hint"
                   role="status"
-                  style={{ color: videoId ? 'var(--ok)' : 'var(--warn)', fontWeight: 600 }}
+                  style={{ color: videoId ? 'var(--ok)' : 'var(--warn)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
                 >
-                  {videoId ? '✓ Video herkend — wordt privacyvriendelijk ingesloten.' : '⚠ Geen YouTube-video herkend in deze link.'}
+                  {videoId
+                    ? <><CheckIcon size={16} aria-hidden /> Video herkend — wordt privacyvriendelijk ingesloten.</>
+                    : <><WarningIcon size={16} aria-hidden /> Geen YouTube-video herkend in deze link.</>}
                 </span>
               )}
             </Field>
@@ -170,7 +177,7 @@ function SourceContent({ source }: { source: SourcePane }) {
     if (!id) {
       return (
         <div className="callout warn" style={{ marginBottom: 0 }}>
-          <span aria-hidden>🎬</span>
+          <Video aria-hidden />
           <div>
             Deze video kan niet ingesloten worden.{' '}
             <a href={source.videoUrl} target="_blank" rel="noreferrer">Open de video in een nieuw tabblad.</a>
@@ -222,7 +229,7 @@ function SourcePanel({
             aria-controls={contentId}
             onClick={onToggle}
           >
-            {open ? 'Inklappen ▲' : 'Tonen ▼'}
+            {open ? <><ChevronUp size={16} className="icon-inline" aria-hidden /> Inklappen</> : <><ChevronDown size={16} className="icon-inline" aria-hidden /> Tonen</>}
           </button>
         )}
       </div>
@@ -324,7 +331,7 @@ export function SplitWhiteboardPlayer({ widget, timeUp, onComplete }: PlayerProp
   if (done) {
     return (
       <ResultHero
-        earned={0} max={0} showScore={false} title="Tekening ingediend! 🎨"
+        earned={0} max={0} showScore={false} title="Tekening ingediend!"
         subtitle="Je leerkracht bekijkt en beoordeelt je werk." hasPending
       />
     );
@@ -359,8 +366,8 @@ export function SplitWhiteboardPlayer({ widget, timeUp, onComplete }: PlayerProp
           </button>
         ))}
         <span style={{ width: 1, height: 26, background: 'var(--line-strong)' }} aria-hidden />
-        <button className={`btn btn-sm ${eraser ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setEraser((v) => !v)} aria-pressed={eraser}>🧽 Gom</button>
-        <button className="btn btn-sm btn-ghost" onClick={undo} aria-label="Laatste streek ongedaan maken">↶ Ongedaan</button>
+        <button className={`btn btn-sm ${eraser ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setEraser((v) => !v)} aria-pressed={eraser}><Eraser size={16} aria-hidden /> Gom</button>
+        <button className="btn btn-sm btn-ghost" onClick={undo} aria-label="Laatste streek ongedaan maken"><Undo2 size={16} aria-hidden /> Ongedaan</button>
         <button
           className="btn btn-sm btn-ghost"
           aria-label="Hele tekenvlak wissen"
@@ -371,7 +378,7 @@ export function SplitWhiteboardPlayer({ widget, timeUp, onComplete }: PlayerProp
             ctx.fillRect(0, 0, W, H);
           }}
         >
-          🗑 Alles wissen
+<DeleteIcon size={16} aria-hidden /> Alles wissen
         </button>
       </div>
       <span aria-live="polite" style={VISUALLY_HIDDEN}>
@@ -421,7 +428,7 @@ export function SplitWhiteboardPlayer({ widget, timeUp, onComplete }: PlayerProp
       />
       <div className="player-nav">
         <span />
-        <button className="btn btn-primary btn-lg" onClick={submit}>Tekening indienen ✓</button>
+        <button className="btn btn-primary btn-lg" onClick={submit}><CheckIcon size={18} aria-hidden /> Tekening indienen</button>
       </div>
     </div>
   );
@@ -432,7 +439,7 @@ export function SplitWhiteboardPlayer({ widget, timeUp, onComplete }: PlayerProp
       {prompt && <h2 style={{ textAlign: 'center' }}>{prompt}</h2>}
       {!hasSource && (
         <div className="callout" style={{ marginBottom: 16 }}>
-          <span aria-hidden>ℹ️</span>
+          <InfoIcon aria-hidden />
           <div>Er is nog geen bron ingesteld; je kunt gewoon tekenen en indienen.</div>
         </div>
       )}

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { AlarmClock, Pause } from 'lucide-react';
 import type { TimerConfig } from '../lib/types';
 import { CheckRow, Field } from '../components/ui';
+import { RetryIcon, TryIcon } from '../components/icons';
 import { EditorProps, PlayerProps } from './shared';
 
 export function TimerEditor({ config, onChange }: EditorProps<TimerConfig>) {
@@ -87,17 +89,17 @@ export function TimerPlayer({ widget }: PlayerProps<TimerConfig>) {
       <div className={`timer-display ${cls}`} role="timer" aria-live={left <= 10 ? 'assertive' : 'off'} aria-label={`Nog ${mm} minuten en ${ss} seconden`}>
         {mm}:{ss}
       </div>
-      {left === 0 && <p style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--err)' }} role="alert">⏰ De tijd is om!</p>}
+      {left === 0 && <p style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--err)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} role="alert"><AlarmClock aria-hidden /> De tijd is om!</p>}
       <div className="progressbar" style={{ maxWidth: 420, margin: '22px auto' }}>
         <div style={{ width: `${progress * 100}%` }} />
       </div>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
         {running ? (
-          <button className="btn btn-lg" onClick={() => setRunning(false)}>⏸ Pauze</button>
+          <button className="btn btn-lg" onClick={() => setRunning(false)}><Pause size={18} aria-hidden /> Pauze</button>
         ) : (
-          <button className="btn btn-primary btn-lg" onClick={start} disabled={left <= 0}>▶ Start</button>
+          <button className="btn btn-primary btn-lg" onClick={start} disabled={left <= 0}><TryIcon size={18} aria-hidden /> Start</button>
         )}
-        <button className="btn btn-ghost btn-lg" onClick={() => { setRunning(false); setLeft(total); }}>↺ Reset</button>
+        <button className="btn btn-ghost btn-lg" onClick={() => { setRunning(false); setLeft(total); }}><RetryIcon size={18} aria-hidden /> Reset</button>
       </div>
     </div>
   );

@@ -1,7 +1,9 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Crosshair, Leaf, Undo2 } from 'lucide-react';
 import type { MindmapConfig } from '../lib/types';
 import { clamp } from '../lib/utils';
 import { CheckRow, Field } from '../components/ui';
+import { CheckIcon } from '../components/icons';
 import { EditorProps, GameStatus, PlayerProps, ResultHero } from './shared';
 
 // ── Outline parsen ──────────────────────────────────────────────────────────
@@ -272,7 +274,7 @@ function MindmapCanvas({ root, outline, maxHeight = 480 }: { root: string; outli
           <span className="hint">De mindmap is groter dan het venster — versleep hem om alles te zien.</span>
           {(shown.x !== 0 || shown.y !== 0) && (
             <button className="btn btn-sm btn-quiet" onClick={() => setPan({ x: 0, y: 0 })} aria-label="Mindmap opnieuw centreren">
-              ⌖ Centreer
+<Crosshair size={16} aria-hidden /> Centreer
             </button>
           )}
         </div>
@@ -395,7 +397,7 @@ function MindmapView({ root, outline, timeUp, onComplete }: {
   return (
     <div>
       <GameStatus>
-        <span className="badge badge-brand">🌿 {branches.length} {branches.length === 1 ? 'hoofdtak' : 'hoofdtakken'}</span>
+        <span className="badge badge-brand"><Leaf size={14} className="icon-inline" aria-hidden /> {branches.length} {branches.length === 1 ? 'hoofdtak' : 'hoofdtakken'}</span>
         <span className="badge">{nodeCount} {nodeCount === 1 ? 'knoop' : 'knopen'}</span>
       </GameStatus>
       <div className="card" style={{ padding: 10 }}>
@@ -404,11 +406,11 @@ function MindmapView({ root, outline, timeUp, onComplete }: {
       {!done ? (
         <div className="player-nav">
           <span />
-          <button className="btn btn-primary" onClick={finish}>Ik heb de mindmap bekeken ✓</button>
+          <button className="btn btn-primary" onClick={finish}><CheckIcon size={16} aria-hidden /> Ik heb de mindmap bekeken</button>
         </div>
       ) : (
-        <p role="status" style={{ textAlign: 'center', color: 'var(--ok)', fontWeight: 700, marginTop: 16 }}>
-          ✓ Geregistreerd — goed bezig!
+        <p role="status" style={{ textAlign: 'center', color: 'var(--ok)', fontWeight: 700, marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <CheckIcon size={16} aria-hidden /> Geregistreerd — goed bezig!
         </p>
       )}
     </div>
@@ -452,7 +454,7 @@ function MindmapExercise({ root, outline, timeUp, onComplete }: {
       <div>
         <ResultHero
           earned={0} max={0} showScore={false} hasPending
-          title="Mindmap ingediend! 🧠"
+          title="Mindmap ingediend!"
           subtitle="Je leerkracht bekijkt en beoordeelt je mindmap."
         />
         <div className="card" style={{ padding: 10, marginTop: 16 }}>
@@ -466,7 +468,7 @@ function MindmapExercise({ root, outline, timeUp, onComplete }: {
     <div className="player-main-wide" style={{ margin: '0 auto' }}>
       <GameStatus>
         <span>Vul de mindmap aan — de tekening verandert meteen mee.</span>
-        <span className="badge badge-brand">🌿 {branches.length} {branches.length === 1 ? 'hoofdtak' : 'hoofdtakken'}</span>
+        <span className="badge badge-brand"><Leaf size={14} className="icon-inline" aria-hidden /> {branches.length} {branches.length === 1 ? 'hoofdtak' : 'hoofdtakken'}</span>
         <span className="badge">{nodeCount} {nodeCount === 1 ? 'knoop' : 'knopen'}</span>
       </GameStatus>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'stretch' }}>
@@ -493,13 +495,13 @@ function MindmapExercise({ root, outline, timeUp, onComplete }: {
             style={{ marginTop: 10, alignSelf: 'flex-start' }}
             onClick={() => setDraft(outline)}
           >
-            ↺ Beginversie terugzetten
+<Undo2 size={16} aria-hidden /> Beginversie terugzetten
           </button>
         </div>
       </div>
       <div className="player-nav">
         <span />
-        <button className="btn btn-primary btn-lg" onClick={submit}>Mindmap indienen ✓</button>
+        <button className="btn btn-primary btn-lg" onClick={submit}><CheckIcon size={18} aria-hidden /> Mindmap indienen</button>
       </div>
     </div>
   );

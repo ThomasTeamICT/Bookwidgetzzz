@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowRight, Film } from 'lucide-react';
 import type { Frame, FrameSequenceConfig } from '../lib/types';
 import { uid } from '../lib/utils';
 import { EmptyState, Field, ImagePicker } from '../components/ui';
+import { BackIcon, CheckIcon, RetryIcon } from '../components/icons';
 import { EditorProps, ItemHeader, moveItem, PlayerProps, ResultHero } from './shared';
 
 // ── Editor ──────────────────────────────────────────────────────────────────
@@ -25,7 +27,7 @@ export function FrameSequenceEditor({ config, onChange }: EditorProps<FrameSeque
         beeldverhaal of proefopstelling. Per stap kun je een titel, tekst en een afbeelding instellen.
       </p>
       {frames.length === 0 && (
-        <EmptyState icon="🎞️" title="Nog geen stappen">
+        <EmptyState icon={<Film size={40} aria-hidden />} title="Nog geen stappen">
           <p>Voeg je eerste stap toe om de reeks te vullen.</p>
         </EmptyState>
       )}
@@ -160,7 +162,7 @@ export function FrameSequencePlayer({ widget, timeUp, onComplete }: PlayerProps<
           style={{ marginTop: 14 }}
           onClick={() => { setDone(false); setIdx(0); }}
         >
-          🔁 Opnieuw bekijken
+<RetryIcon size={16} aria-hidden /> Opnieuw bekijken
         </button>
       </ResultHero>
     );
@@ -224,7 +226,7 @@ export function FrameSequencePlayer({ widget, timeUp, onComplete }: PlayerProps<
           disabled={idx === 0}
           onClick={() => goTo(idx - 1)}
         >
-          ← Vorige
+<BackIcon size={18} aria-hidden /> Vorige
         </button>
         {isLast ? (
           <button
@@ -232,7 +234,7 @@ export function FrameSequencePlayer({ widget, timeUp, onComplete }: PlayerProps<
             aria-label="Klaar met bekijken"
             onClick={() => { setDone(true); finish(viewed.size); }}
           >
-            Klaar ✓
+<CheckIcon size={18} aria-hidden /> Klaar
           </button>
         ) : (
           <button
@@ -240,7 +242,7 @@ export function FrameSequencePlayer({ widget, timeUp, onComplete }: PlayerProps<
             aria-label="Volgende stap"
             onClick={() => goTo(idx + 1)}
           >
-            Volgende →
+Volgende <ArrowRight size={18} aria-hidden />
           </button>
         )}
       </div>

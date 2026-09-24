@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Dices, Image as ImageIcon } from 'lucide-react';
 import type { RandomImagesConfig } from '../lib/types';
 import { uid } from '../lib/utils';
 import { CheckRow, EmptyState, Field, ImagePicker } from '../components/ui';
+import { RetryIcon } from '../components/icons';
 import { EditorProps, GameStatus, ItemHeader, moveItem, PlayerProps } from './shared';
 
 type RandomImage = RandomImagesConfig['images'][number];
@@ -27,7 +29,7 @@ export function RandomImagesEditor({ config, onChange }: EditorProps<RandomImage
         handig als schrijfprikkel, gespreksstarter of om beurten en opdrachten te verloten.
       </p>
       {images.length === 0 && (
-        <EmptyState icon="🎲" title="Nog geen afbeeldingen">
+        <EmptyState icon={<Dices size={40} aria-hidden />} title="Nog geen afbeeldingen">
           <p>Voeg minstens twee afbeeldingen toe zodat er echt iets te loten valt.</p>
         </EmptyState>
       )}
@@ -157,7 +159,7 @@ export function RandomImagesPlayer({ widget, timeUp, onComplete }: PlayerProps<R
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
       <GameStatus>
-        <span className="badge badge-brand">🖼 {shownThisRound.size} van {images.length} getoond</span>
+        <span className="badge badge-brand"><ImageIcon size={14} className="icon-inline" aria-hidden /> {shownThisRound.size} van {images.length} getoond</span>
         {!noRepeat && <span className="badge">herhaling toegestaan</span>}
       </GameStatus>
 
@@ -203,7 +205,7 @@ export function RandomImagesPlayer({ widget, timeUp, onComplete }: PlayerProps<R
           </figure>
         ) : (
           <>
-            <div style={{ fontSize: '3.2rem' }} aria-hidden>🎲</div>
+            <Dices size={52} aria-hidden />
             <p style={{ color: 'var(--text-soft)', margin: 0 }}>
               Druk op de knop en ontdek welke afbeelding het lot voor je kiest.
             </p>
@@ -223,7 +225,7 @@ export function RandomImagesPlayer({ widget, timeUp, onComplete }: PlayerProps<R
               onClick={reset}
               aria-label="Opnieuw beginnen met alle afbeeldingen"
             >
-              🔁 Opnieuw beginnen
+              <RetryIcon size={16} aria-hidden /> Opnieuw beginnen
             </button>
           </>
         ) : (
@@ -232,7 +234,7 @@ export function RandomImagesPlayer({ widget, timeUp, onComplete }: PlayerProps<R
             onClick={draw}
             aria-label="Toon een willekeurige afbeelding"
           >
-            🎲 Toon een willekeurige afbeelding
+            <Dices size={16} aria-hidden /> Toon een willekeurige afbeelding
           </button>
         )}
         <CheckRow

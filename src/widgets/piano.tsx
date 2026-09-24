@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Piano, VolumeX } from 'lucide-react';
 import type { PianoConfig } from '../lib/types';
 import { CheckRow, Field } from '../components/ui';
 import { EditorProps, GameStatus, PlayerProps } from './shared';
@@ -59,14 +60,14 @@ export function PianoEditor({ config, onChange }: EditorProps<PianoConfig>) {
             aria-pressed={octaves === 1}
             onClick={() => onChange({ ...config, octaves: 1 })}
           >
-            🎹 1 octaaf
+            <Piano size={16} aria-hidden /> 1 octaaf
           </button>
           <button
             className={`btn btn-sm ${octaves === 2 ? 'btn-primary' : 'btn-ghost'}`}
             aria-pressed={octaves === 2}
             onClick={() => onChange({ ...config, octaves: 2 })}
           >
-            🎹🎹 2 octaven
+            <Piano size={16} aria-hidden /> 2 octaven
           </button>
         </div>
         <span className="hint">
@@ -222,7 +223,7 @@ export function PianoPlayer({ widget }: PlayerProps<PianoConfig>) {
   return (
     <div style={{ maxWidth: octaves === 2 ? 780 : 460, margin: '0 auto' }}>
       <GameStatus>
-        <span aria-hidden>🎹</span>
+        <Piano aria-hidden />
         <span>{lastNote ? `Laatste noot: ${lastNote}` : 'Speel maar — elke toets maakt een toon.'}</span>
       </GameStatus>
       <p style={{ textAlign: 'center', color: 'var(--text-faint)', fontSize: '0.88rem', marginBottom: 14 }}>
@@ -231,7 +232,7 @@ export function PianoPlayer({ widget }: PlayerProps<PianoConfig>) {
       </p>
       {audioBlocked && (
         <div className="callout warn" role="alert">
-          <span aria-hidden>🔇</span>
+          <VolumeX aria-hidden />
           <span>Geluid kon niet gestart worden op dit toestel. Controleer je volume of probeer een andere browser.</span>
         </div>
       )}

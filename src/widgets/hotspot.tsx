@@ -1,7 +1,11 @@
 import React, { useMemo, useRef, useState } from 'react';
+import { MapPin, MousePointerClick } from 'lucide-react';
 import type { HotspotConfig, HotspotPoint } from '../lib/types';
 import { shuffled, uid } from '../lib/utils';
 import { Field, ImagePicker } from '../components/ui';
+import {
+  CheckIcon, CloseIcon, GoalIcon, PreviewIcon, RetryIcon, SearchIcon,
+} from '../components/icons';
 import { EditorProps, GameStatus, PlayerProps, ResultHero } from './shared';
 
 export function HotspotEditor({ config, onChange }: EditorProps<HotspotConfig>) {
@@ -13,10 +17,10 @@ export function HotspotEditor({ config, onChange }: EditorProps<HotspotConfig>) 
       <Field label="Modus">
         <div style={{ display: 'flex', gap: 8 }}>
           <button className={`btn btn-sm ${config.mode === 'explore' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => onChange({ ...config, mode: 'explore' })}>
-            🔎 Verkennen (info bij elke stip)
+            <SearchIcon size={16} aria-hidden /> Verkennen (info bij elke stip)
           </button>
           <button className={`btn btn-sm ${config.mode === 'quiz' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => onChange({ ...config, mode: 'quiz' })}>
-            🎯 Aanwijzen (zoek de juiste plek)
+            <GoalIcon size={16} aria-hidden /> Aanwijzen (zoek de juiste plek)
           </button>
         </div>
       </Field>
@@ -25,7 +29,7 @@ export function HotspotEditor({ config, onChange }: EditorProps<HotspotConfig>) 
         <>
           <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
             <button className={`btn btn-sm ${placing ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPlacing((v) => !v)} aria-pressed={placing}>
-              {placing ? '👆 Klik op de afbeelding om een stip te plaatsen…' : '+ Stip toevoegen'}
+              {placing ? <><MousePointerClick size={16} aria-hidden /> Klik op de afbeelding om een stip te plaatsen…</> : '+ Stip toevoegen'}
             </button>
           </div>
           <div
@@ -68,7 +72,7 @@ export function HotspotEditor({ config, onChange }: EditorProps<HotspotConfig>) 
                   onChange({ ...config, hotspots });
                 }} />
               <button className="btn btn-quiet btn-icon btn-sm" aria-label="Stip verwijderen"
-                onClick={() => onChange({ ...config, hotspots: config.hotspots.filter((_, j) => j !== i) })}>✕</button>
+                onClick={() => onChange({ ...config, hotspots: config.hotspots.filter((_, j) => j !== i) })}><CloseIcon size={16} aria-hidden /></button>
             </div>
           ))}
         </>
@@ -108,7 +112,7 @@ function HotspotExplore({ widget, onComplete }: { widget: PlayerProps<HotspotCon
   return (
     <div style={{ textAlign: 'center' }}>
       <GameStatus>
-        <span className="badge badge-ok">👀 {seen.size} / {config.hotspots.length} bekeken</span>
+        <span className="badge badge-ok"><PreviewIcon size={14} className="icon-inline" aria-hidden /> {seen.size} / {config.hotspots.length} bekeken</span>
       </GameStatus>
       <div className="hotspot-stage">
         <img src={config.imageUrl} alt="Interactieve afbeelding" />
@@ -126,11 +130,11 @@ function HotspotExplore({ widget, onComplete }: { widget: PlayerProps<HotspotCon
       </div>
       {openSpot && (
         <div className="card card-pad" style={{ maxWidth: 480, margin: '16px auto 0', textAlign: 'left' }} role="region" aria-live="polite">
-          <h3 style={{ marginBottom: 4 }}>📍 {openSpot.label}</h3>
+          <h3 style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><MapPin size={18} aria-hidden /> {openSpot.label}</h3>
           <p style={{ margin: 0, color: 'var(--text-soft)' }}>{openSpot.description || 'Geen extra uitleg.'}</p>
         </div>
       )}
-      {finished && <p style={{ color: 'var(--ok)', fontWeight: 700, marginTop: 14 }}>✓ Je hebt alle punten verkend!</p>}
+      {finished && <p style={{ color: 'var(--ok)', fontWeight: 700, marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckIcon aria-hidden /> Je hebt alle punten verkend!</p>}
     </div>
   );
 }
@@ -175,12 +179,12 @@ function HotspotQuiz({ widget, onComplete }: { widget: PlayerProps<HotspotConfig
     return (
       <ResultHero
         earned={order.length} max={order.length} showScore={false}
-        title="Alles gevonden! 🎯"
+        title="Alles gevonden!"
         subtitle={`Je vond alle ${order.length} punten met ${wrongClicks} ${wrongClicks === 1 ? 'foute klik' : 'foute klikken'}.`}
       >
         <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => {
           setFound(new Set()); setIdx(0); setWrongClicks(0); setDone(false);
-        }}>🔁 Opnieuw</button>
+        }}><RetryIcon size={16} aria-hidden /> Opnieuw</button>
       </ResultHero>
     );
   }
@@ -188,12 +192,12 @@ function HotspotQuiz({ widget, onComplete }: { widget: PlayerProps<HotspotConfig
   return (
     <div style={{ textAlign: 'center' }}>
       <GameStatus>
-        <span className="badge badge-ok">🎯 {found.size} / {order.length}</span>
-        <span className="badge badge-err">✗ {wrongClicks} fout</span>
+        <span className="badge badge-ok"><GoalIcon size={14} className="icon-inline" aria-hidden /> {found.size} / {order.length}</span>
+        <span className="badge badge-err"><CloseIcon size={14} className="icon-inline" aria-hidden /> {wrongClicks} fout</span>
       </GameStatus>
       <p style={{ fontSize: '1.25rem', fontWeight: 700, minHeight: 34 }} aria-live="assertive">
         Waar is: <span style={{ color: flash === 'nok' ? 'var(--err)' : 'var(--player-accent, var(--brand))' }}>{target.label}</span>?
-        {flash === 'ok' && <span style={{ color: 'var(--ok)' }}> ✓</span>}
+        {flash === 'ok' && <span style={{ color: 'var(--ok)' }}> <CheckIcon size={18} className="icon-inline" aria-hidden /></span>}
         {flash === 'nok' && <span style={{ color: 'var(--err)' }}> — probeer nog eens!</span>}
       </p>
       <div className="hotspot-stage">
@@ -206,7 +210,7 @@ function HotspotQuiz({ widget, onComplete }: { widget: PlayerProps<HotspotConfig
             aria-label={found.has(h.id) ? h.label : 'Onbekend punt'}
             onClick={() => clickSpot(h)}
           >
-            {found.has(h.id) ? '✓' : '?'}
+            {found.has(h.id) ? <CheckIcon size={16} aria-hidden /> : '?'}
           </button>
         ))}
       </div>

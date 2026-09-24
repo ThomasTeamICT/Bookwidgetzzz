@@ -11,7 +11,9 @@
 //   pdf-weergave van de browser (iframe), zonder markeerstiften.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Eraser, ExternalLink, FileType, Highlighter, Minus } from 'lucide-react';
 import { uid } from '../../lib/utils';
+import { AddIcon, DownloadIcon } from '../icons';
 
 export interface PdfHighlight {
   id: string;
@@ -288,9 +290,9 @@ export function PdfViewer({
   if (error) {
     return (
       <div className="card card-pad" style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '1.8rem' }} aria-hidden>📄</div>
+        <FileType size={32} aria-hidden />
         <p style={{ color: 'var(--err)', fontWeight: 600 }}>{error}</p>
-        <a className="btn btn-sm btn-ghost" href={openUrl} download={title || 'document.pdf'}>⬇ Download het bestand</a>
+        <a className="btn btn-sm btn-ghost" href={openUrl} download={title || 'document.pdf'}><DownloadIcon size={16} aria-hidden /> Download het bestand</a>
       </div>
     );
   }
@@ -298,9 +300,9 @@ export function PdfViewer({
     <div className="pdfv" style={{ height }}>
       <style>{STYLE}</style>
       <div className="pdfv-bar">
-        <button className="btn btn-sm btn-quiet btn-icon" onClick={() => setZoom((z) => Math.max(0.6, +(z - 0.2).toFixed(1)))} aria-label="Uitzoomen">−</button>
+        <button className="btn btn-sm btn-quiet btn-icon" onClick={() => setZoom((z) => Math.max(0.6, +(z - 0.2).toFixed(1)))} aria-label="Uitzoomen"><Minus size={16} aria-hidden /></button>
         <span className="hint" style={{ minWidth: 42, textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
-        <button className="btn btn-sm btn-quiet btn-icon" onClick={() => setZoom((z) => Math.min(2.4, +(z + 0.2).toFixed(1)))} aria-label="Inzoomen">+</button>
+        <button className="btn btn-sm btn-quiet btn-icon" onClick={() => setZoom((z) => Math.min(2.4, +(z + 0.2).toFixed(1)))} aria-label="Inzoomen"><AddIcon size={16} aria-hidden /></button>
         <span className="hint" aria-live="polite" style={{ marginLeft: 6 }}>
           {doc ? `p. ${pageNow}/${doc.numPages}` : 'laden…'}
         </span>
@@ -321,20 +323,21 @@ export function PdfViewer({
             <button
               className="btn btn-sm btn-quiet"
               aria-pressed={tool.kind === 'erase'}
+              aria-label="Markering weggommen"
               title="Markering weggommen: klik op een gemarkeerd stuk"
               onClick={() => setTool(tool.kind === 'erase' ? { kind: 'none' } : { kind: 'erase' })}
             >
-              🧽
+              <Eraser size={16} aria-hidden />
             </button>
           </div>
         )}
-        <a className="btn btn-sm btn-quiet" href={openUrl} target="_blank" rel="noopener noreferrer" title="Openen in nieuw tabblad">⧉</a>
+        <a className="btn btn-sm btn-quiet" href={openUrl} target="_blank" rel="noopener noreferrer" aria-label="Openen in nieuw tabblad" title="Openen in nieuw tabblad"><ExternalLink size={16} aria-hidden /></a>
       </div>
       {canMark && tool.kind !== 'none' && (
         <div className="hint" style={{ padding: '4px 10px', borderBottom: '1px solid var(--line)' }} aria-live="polite">
           {tool.kind === 'mark'
-            ? `🖍 Selecteer tekst in de pdf om ze te markeren (${palette!.find((p) => p.color === (tool as any).color)?.label ?? ''}).`
-            : '🧽 Klik op een gemarkeerd stuk tekst om de markering te verwijderen.'}
+            ? <><Highlighter size={14} className="icon-inline" aria-hidden /> Selecteer tekst in de pdf om ze te markeren ({palette!.find((p) => p.color === (tool as any).color)?.label ?? ''}).</>
+            : <><Eraser size={14} className="icon-inline" aria-hidden /> Klik op een gemarkeerd stuk tekst om de markering te verwijderen.</>}
         </div>
       )}
       <div

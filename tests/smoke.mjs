@@ -466,7 +466,7 @@ check('speler toont de afbeelding na herladen (blob:)', afterReload.src.startsWi
 // c) draagbare link bevat de afbeelding als data-URL (deelvenster in de editor)
 await go('/#/widgets');
 await go(`/#/bewerk/${ivId}`);
-await page.getByRole('button', { name: /^📤 Delen$/ }).first().click();
+await page.getByRole('button', { name: /^Delen$/ }).first().click();
 await page.waitForFunction(() => {
   const el = document.querySelector('input[aria-label="Draagbare deellink"]');
   return el && el.value.startsWith('http');

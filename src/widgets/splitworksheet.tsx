@@ -1,8 +1,13 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  ChevronDown, ChevronUp, FileText, FileType, FolderOpen,
+  Image as ImageIcon, type LucideIcon, Pin, Video, Wrench,
+} from 'lucide-react';
 import type { Question, QuestionType, SourcePane, SplitWorksheetConfig } from '../lib/types';
 import { gradeQuiz } from '../lib/grading';
 import { shuffled, uid } from '../lib/utils';
 import { CheckRow, Field, ImagePicker } from '../components/ui';
+import { CheckIcon, CloseIcon, InfoIcon, WarningIcon } from '../components/icons';
 import { DEFAULT_PALETTE, PdfViewer, pickAndStorePdf } from '../components/pdf/PdfViewer';
 import type { HighlightColor, PdfHighlight } from '../components/pdf/PdfViewer';
 import { deletePdf, formatBytes, getPdf, savePdf } from '../lib/pdfStore';
@@ -15,11 +20,11 @@ import { makeQuestion, QUESTION_TYPES, questionLabel, QuestionView } from './qui
 /** Vraagtypes die deze compacte editor zelf kan bewerken. */
 const EDITABLE_TYPES: ReadonlySet<QuestionType> = new Set(['mc', 'tf', 'short', 'long']);
 
-const SOURCE_KINDS: { kind: SourcePane['kind']; icon: string; label: string }[] = [
-  { kind: 'text', icon: '📝', label: 'Tekst' },
-  { kind: 'image', icon: '🖼️', label: 'Afbeelding' },
-  { kind: 'video', icon: '🎬', label: 'Video' },
-  { kind: 'pdf', icon: '📄', label: 'Pdf' },
+const SOURCE_KINDS: { kind: SourcePane['kind']; icon: LucideIcon; label: string }[] = [
+  { kind: 'text', icon: FileText, label: 'Tekst' },
+  { kind: 'image', icon: ImageIcon, label: 'Afbeelding' },
+  { kind: 'video', icon: Video, label: 'Video' },
+  { kind: 'pdf', icon: FileType, label: 'Pdf' },
 ];
 
 function sourceKindLabel(kind: SourcePane['kind']): string {
@@ -129,7 +134,7 @@ function CompactQuestionEditor({ q, onChange }: { q: Question; onChange: (q: Que
                   const correctIndex = q.correctIndex === i ? 0 : q.correctIndex > i ? q.correctIndex - 1 : q.correctIndex;
                   onChange({ ...q, options, correctIndex });
                 }}
-              >✕</button>
+              ><CloseIcon size={16} aria-hidden /></button>
             </div>
           ))}
           <button className="btn btn-sm btn-ghost" onClick={() => onChange({ ...q, options: [...q.options, ''] })}>
@@ -175,7 +180,7 @@ function CompactQuestionEditor({ q, onChange }: { q: Question; onChange: (q: Que
       const meta = QUESTION_TYPES.find((t) => t.type === q.type);
       return (
         <div className="callout warn" style={{ marginBottom: 0 }}>
-          <span aria-hidden>🛠️</span>
+          <Wrench aria-hidden />
           <div>
             Het vraagtype <strong>{meta?.name ?? q.type}</strong> kun je in het gesplitste werkblad niet bewerken.
             Voor de leerling werkt de vraag wél gewoon; bewerken doe je via een quiz-widget.
@@ -236,7 +241,7 @@ function PdfSourceEditor({ source, setSource }: { source: SourcePane; setSource:
         {source.pdfId ? (
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <span>
-              <span aria-hidden>📄</span> <strong>{source.pdfName ?? (hasStored ? stored.name : 'pdf')}</strong>
+              <FileType size={16} className="icon-inline" aria-hidden /> <strong>{source.pdfName ?? (hasStored ? stored.name : 'pdf')}</strong>
               {hasStored && <span className="hint"> · {formatBytes(stored.blob.size)}</span>}
             </span>
             <button className="btn btn-sm btn-ghost" onClick={() => fileRef.current?.click()} disabled={busy}>Vervangen</button>
@@ -245,7 +250,7 @@ function PdfSourceEditor({ source, setSource }: { source: SourcePane; setSource:
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-sm btn-ghost" onClick={() => fileRef.current?.click()} disabled={busy}>
-              📄 Pdf kiezen… {busy && '(bezig)'}
+              <FileType size={16} aria-hidden /> Pdf kiezen… {busy && '(bezig)'}
             </button>
           </div>
         )}
@@ -263,8 +268,8 @@ function PdfSourceEditor({ source, setSource }: { source: SourcePane; setSource:
         />
         {uploadError && <span role="alert" className="hint" style={{ color: 'var(--err)', fontWeight: 600 }}>{uploadError}</span>}
         {source.pdfId && stored === 'missing' && (
-          <span className="hint" role="status" style={{ color: 'var(--warn)', fontWeight: 600 }}>
-            ⚠ Dit bestand staat niet (meer) op dit toestel. Kies het opnieuw via “Vervangen”.
+          <span className="hint" role="status" style={{ color: 'var(--warn)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <WarningIcon size={16} aria-hidden /> Dit bestand staat niet (meer) op dit toestel. Kies het opnieuw via “Vervangen”.
           </span>
         )}
         <span className="hint">
@@ -288,7 +293,7 @@ function PdfSourceEditor({ source, setSource }: { source: SourcePane; setSource:
         onChange={(on) =>
           setSource({ ...source, highlightPalette: on ? DEFAULT_PALETTE.map((p) => ({ ...p })) : undefined })
         }
-        label="🖍 Leerlingen kunnen markeren in de pdf"
+        label="Leerlingen kunnen markeren in de pdf"
       />
       {!!palette?.length && (
         <div style={{ margin: '6px 0 12px', paddingLeft: 4 }}>
@@ -344,7 +349,7 @@ export function SplitWorksheetEditor({ config, onChange }: EditorProps<SplitWork
       {/* ── Bronpaneel ── */}
       <div className="editor-item">
         <div className="editor-item-head">
-          <span aria-hidden>📌</span>
+          <Pin size={16} aria-hidden />
           <strong style={{ fontSize: '0.9rem' }}>Bronpaneel</strong>
         </div>
         <div className="editor-item-body">
@@ -357,7 +362,7 @@ export function SplitWorksheetEditor({ config, onChange }: EditorProps<SplitWork
                   aria-pressed={source.kind === k.kind}
                   onClick={() => setSource({ ...source, kind: k.kind })}
                 >
-                  <span aria-hidden>{k.icon}</span> {k.label}
+                  <k.icon size={16} aria-hidden /> {k.label}
                 </button>
               ))}
             </div>
@@ -408,9 +413,11 @@ export function SplitWorksheetEditor({ config, onChange }: EditorProps<SplitWork
                 <span
                   className="hint"
                   role="status"
-                  style={{ color: videoId ? 'var(--ok)' : 'var(--warn)', fontWeight: 600 }}
+                  style={{ color: videoId ? 'var(--ok)' : 'var(--warn)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
                 >
-                  {videoId ? '✓ Video herkend — wordt privacyvriendelijk ingesloten.' : '⚠ Geen YouTube-video herkend in deze link.'}
+                  {videoId
+                    ? <><CheckIcon size={16} aria-hidden /> Video herkend — wordt privacyvriendelijk ingesloten.</>
+                    : <><WarningIcon size={16} aria-hidden /> Geen YouTube-video herkend in deze link.</>}
                 </span>
               )}
             </Field>
@@ -476,7 +483,7 @@ export function SplitWorksheetEditor({ config, onChange }: EditorProps<SplitWork
 
       {questions.length === 0 && (
         <p style={{ color: 'var(--text-soft)', textAlign: 'center', padding: '14px 0' }}>
-          Nog geen vragen. Voeg je eerste vraag over de bron toe. 👇
+          Nog geen vragen. Voeg je eerste vraag over de bron toe.
         </p>
       )}
 
@@ -504,7 +511,7 @@ export function SplitWorksheetEditor({ config, onChange }: EditorProps<SplitWork
                   setAddOpen(false);
                 }}
               >
-                <span aria-hidden>{t.icon}</span>
+                <t.icon size={18} aria-hidden />
                 <span style={{ textAlign: 'left' }}>
                   <strong style={{ display: 'block', fontSize: '0.92rem' }}>{t.name}</strong>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-soft)', fontWeight: 400 }}>{t.desc}</span>
@@ -583,7 +590,7 @@ function PdfSourcePane({ source, palette, highlights, onHighlightsChange }: PdfP
       )}
       {state === 'missing' && (
         <div className="callout warn" style={{ marginBottom: src ? 10 : 0 }}>
-          <span aria-hidden>📄</span>
+          <FileType aria-hidden />
           <div>
             <p style={{ margin: 0 }}>
               <strong>Deze pdf staat niet op dit toestel.</strong>{' '}
@@ -592,7 +599,7 @@ function PdfSourcePane({ source, palette, highlights, onHighlightsChange }: PdfP
                 : 'Kreeg je het bestand van je leerkracht (bv. via e-mail of een USB-stick)? Kies het hier om verder te werken.'}
             </p>
             <button className="btn btn-sm btn-ghost" style={{ marginTop: 8 }} onClick={() => fileRef.current?.click()}>
-              📂 Kies het pdf-bestand dat je van je leerkracht kreeg
+              <FolderOpen size={16} aria-hidden /> Kies het pdf-bestand dat je van je leerkracht kreeg
             </button>
             <input
               ref={fileRef}
@@ -642,7 +649,7 @@ function SourceContent({ source, pdf }: { source: SourcePane; pdf?: PdfPaneProps
     if (!id) {
       return (
         <div className="callout warn" style={{ marginBottom: 0 }}>
-          <span aria-hidden>🎬</span>
+          <Video aria-hidden />
           <div>
             Deze video kan niet ingesloten worden.{' '}
             <a href={source.videoUrl} target="_blank" rel="noreferrer">Open de video in een nieuw tabblad.</a>
@@ -695,7 +702,7 @@ function SourcePanel({
             aria-controls={contentId}
             onClick={onToggle}
           >
-            {open ? 'Inklappen ▲' : 'Tonen ▼'}
+            {open ? <><ChevronUp size={16} className="icon-inline" aria-hidden /> Inklappen</> : <><ChevronDown size={16} className="icon-inline" aria-hidden /> Tonen</>}
           </button>
         )}
       </div>
@@ -802,8 +809,8 @@ export function SplitWorksheetPlayer({ widget, studentName, preview, timeUp, onC
           <div style={{ marginTop: 22 }}>
             {hasSource && (
               <details className="card card-pad" style={{ marginBottom: 16 }}>
-                <summary style={{ cursor: 'pointer', fontWeight: 700 }}>
-                  📌 Bron opnieuw bekijken
+                <summary style={{ cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Pin size={16} aria-hidden /> Bron opnieuw bekijken
                 </summary>
                 <div style={{ marginTop: 12 }}>
                   {/* alleen-lezen: eigen markeringen blijven zichtbaar, markeren kan niet meer */}
@@ -866,7 +873,7 @@ export function SplitWorksheetPlayer({ widget, studentName, preview, timeUp, onC
       <div>
         {!hasSource && (
           <div className="callout" style={{ marginBottom: 16 }}>
-            <span aria-hidden>ℹ️</span>
+            <InfoIcon aria-hidden />
             <div>Er is nog geen bron ingesteld; je kunt de vragen gewoon beantwoorden.</div>
           </div>
         )}
@@ -885,7 +892,7 @@ export function SplitWorksheetPlayer({ widget, studentName, preview, timeUp, onC
           <span role="status" aria-live="polite" style={{ color: 'var(--text-soft)', fontWeight: 600 }}>
             {answeredCount} van {gradable.length} beantwoord
           </span>
-          <button className="btn btn-primary btn-lg" onClick={submit}>Indienen ✓</button>
+          <button className="btn btn-primary btn-lg" onClick={submit}><CheckIcon size={18} aria-hidden /> Indienen</button>
         </div>
       </div>
     </div>

@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  BarChart3, Donut, LineChart, type LucideIcon, PieChart as PieChartIcon, Undo2,
+} from 'lucide-react';
 import type { ChartConfig } from '../lib/types';
 import { CheckRow, Field } from '../components/ui';
+import { CloseIcon, MoveDownIcon, MoveUpIcon, WarningIcon } from '../components/icons';
 import { EditorProps, PlayerProps, moveItem } from './shared';
 
 // ── Kleuren ─────────────────────────────────────────────────────────────────
@@ -183,11 +187,11 @@ function NumberInput({
 
 // ── Editor ──────────────────────────────────────────────────────────────────
 
-const CHART_TYPE_OPTIONS: { id: ChartConfig['chartType']; label: string; icon: string }[] = [
-  { id: 'bar', label: 'Staaf', icon: '📊' },
-  { id: 'line', label: 'Lijn', icon: '📈' },
-  { id: 'pie', label: 'Taart', icon: '🥧' },
-  { id: 'donut', label: 'Donut', icon: '🍩' },
+const CHART_TYPE_OPTIONS: { id: ChartConfig['chartType']; label: string; icon: LucideIcon }[] = [
+  { id: 'bar', label: 'Staaf', icon: BarChart3 },
+  { id: 'line', label: 'Lijn', icon: LineChart },
+  { id: 'pie', label: 'Taart', icon: PieChartIcon },
+  { id: 'donut', label: 'Donut', icon: Donut },
 ];
 
 export function ChartEditor({ config, onChange }: EditorProps<ChartConfig>) {
@@ -218,7 +222,7 @@ export function ChartEditor({ config, onChange }: EditorProps<ChartConfig>) {
               aria-pressed={config.chartType === t.id}
               onClick={() => onChange({ ...config, chartType: t.id })}
             >
-              {t.icon} {t.label}
+              <t.icon size={16} aria-hidden /> {t.label}
             </button>
           ))}
         </div>
@@ -226,8 +230,8 @@ export function ChartEditor({ config, onChange }: EditorProps<ChartConfig>) {
           <span className="hint">Tip: een taart- of donutdiagram werkt het best met 2 tot 6 positieve waarden.</span>
         )}
         {isPie && hasNegative && (
-          <span className="hint" style={{ color: 'var(--warn)' }}>
-            ⚠ Negatieve waarden worden in een taart- of donutdiagram als 0 getoond.
+          <span className="hint" style={{ color: 'var(--warn)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <WarningIcon size={14} aria-hidden /> Negatieve waarden worden in een taart- of donutdiagram als 0 getoond.
           </span>
         )}
       </Field>
@@ -272,21 +276,21 @@ export function ChartEditor({ config, onChange }: EditorProps<ChartConfig>) {
                 title="Omhoog"
                 disabled={i === 0}
                 onClick={() => commit(moveItem(rows, i, i - 1))}
-              >↑</button>
+              ><MoveUpIcon size={16} aria-hidden /></button>
               <button
                 className="btn btn-quiet btn-icon btn-sm"
                 aria-label={`Rij ${i + 1} omlaag`}
                 title="Omlaag"
                 disabled={i === rows.length - 1}
                 onClick={() => commit(moveItem(rows, i, i + 1))}
-              >↓</button>
+              ><MoveDownIcon size={16} aria-hidden /></button>
               <button
                 className="btn btn-quiet btn-icon btn-sm"
                 aria-label={`Rij ${i + 1} verwijderen`}
                 title="Verwijderen"
                 style={{ color: 'var(--err)' }}
                 onClick={() => commit(rows.filter((_, j) => j !== i))}
-              >✕</button>
+              ><CloseIcon size={16} aria-hidden /></button>
             </div>
           ))}
           <button
@@ -662,7 +666,7 @@ export function ChartPlayer({ widget }: PlayerProps<ChartConfig>) {
                 title="Verwijderen"
                 disabled={rows.length <= 1}
                 onClick={() => setRows(rows.filter((_, j) => j !== i))}
-              >✕</button>
+              ><CloseIcon size={16} aria-hidden /></button>
             </div>
           ))}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
@@ -674,7 +678,7 @@ export function ChartPlayer({ widget }: PlayerProps<ChartConfig>) {
               + Rij toevoegen
             </button>
             <button className="btn btn-sm btn-quiet" onClick={() => setRows(initialRows)}>
-              ↺ Originele gegevens terugzetten
+              <Undo2 size={16} aria-hidden /> Originele gegevens terugzetten
             </button>
           </div>
           <p className="sr-only" aria-live="polite">

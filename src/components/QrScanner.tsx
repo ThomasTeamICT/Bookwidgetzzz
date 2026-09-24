@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Camera, Square } from 'lucide-react';
+import { CheckIcon } from './icons';
 
 /**
  * QR-scanner met de camera van het toestel — voor het inleverpunt: de
@@ -211,14 +213,14 @@ export function QrScanner({
   return (
     <div className="card card-pad" style={{ marginBottom: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-        <strong style={{ flex: 1 }}>📷 Scannen met de camera</strong>
+        <strong style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}><Camera size={18} aria-hidden /> Scannen met de camera</strong>
         <span className="badge badge-brand" aria-hidden>{count} gescand</span>
-        <button className="btn btn-sm btn-ghost" onClick={onClose}>⏹ Stoppen</button>
+        <button className="btn btn-sm btn-ghost" onClick={onClose}><Square size={16} aria-hidden /> Stoppen</button>
       </div>
 
       {error ? (
         <div className="callout warn" role="alert">
-          <span aria-hidden>📷</span>
+          <Camera aria-hidden />
           <div>{error}</div>
         </div>
       ) : (
@@ -259,7 +261,7 @@ export function QrScanner({
         ) : (
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 4 }}>
             {log.map((l) => (
-              <li key={l.id} style={{ fontSize: '0.9rem' }}>✓ {l.text}</li>
+              <li key={l.id} style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}><CheckIcon size={14} aria-hidden /> {l.text}</li>
             ))}
           </ul>
         )}

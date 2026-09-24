@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import type { ArithmeticConfig, ArithmeticOp, ItemScore } from '../lib/types';
 import { Field } from '../components/ui';
+import { CheckIcon, CloseIcon } from '../components/icons';
 import { EditorProps, GameStatus, PlayerProps, ResultHero } from './shared';
 
 const OP_META: Record<ArithmeticOp, { label: string; symbol: string }> = {
@@ -152,8 +153,8 @@ export function ArithmeticPlayer({ widget, timeUp, onComplete }: PlayerProps<Ari
               return (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid var(--line)', fontVariantNumeric: 'tabular-nums' }}>
                   <span style={{ fontWeight: 600 }}>{s.a} {OP_META[s.op].symbol} {s.b} = {given[i] ?? '—'}</span>
-                  <span style={{ color: ok ? 'var(--ok)' : 'var(--err)', fontWeight: 700 }}>
-                    {ok ? '✓' : `✗ (${s.answer})`}
+                  <span style={{ color: ok ? 'var(--ok)' : 'var(--err)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    {ok ? <CheckIcon size={16} aria-hidden /> : <><CloseIcon size={16} aria-hidden /> ({s.answer})</>}
                   </span>
                 </div>
               );
@@ -169,7 +170,7 @@ export function ArithmeticPlayer({ widget, timeUp, onComplete }: PlayerProps<Ari
     <div style={{ maxWidth: 460, margin: '0 auto', textAlign: 'center' }}>
       <GameStatus>
         <span>Oefening {idx + 1} / {sums.length}</span>
-        <span className="badge badge-ok">✓ {given.filter((g, i) => g === sums[i].answer).length}</span>
+        <span className="badge badge-ok"><CheckIcon size={14} className="icon-inline" aria-hidden /> {given.filter((g, i) => g === sums[i].answer).length}</span>
       </GameStatus>
       <div
         className="card card-pad"
@@ -183,7 +184,7 @@ export function ArithmeticPlayer({ widget, timeUp, onComplete }: PlayerProps<Ari
       >
         {s.a} {OP_META[s.op].symbol} {s.b} = {feedback === 'nok' ? <span style={{ color: 'var(--err)' }}>{current || '?'}</span> : current || '?'}
         {feedback === 'nok' && <div style={{ fontSize: '1.1rem', color: 'var(--err)', fontWeight: 700 }}>Juiste antwoord: {s.answer}</div>}
-        {feedback === 'ok' && <div style={{ fontSize: '1.3rem', color: 'var(--ok)' }} aria-label="juist">✓</div>}
+        {feedback === 'ok' && <div style={{ fontSize: '1.3rem', color: 'var(--ok)' }} aria-label="juist"><CheckIcon aria-hidden /></div>}
       </div>
       <form
         onSubmit={(e) => { e.preventDefault(); if (current !== '' && !feedback) submit(); }}

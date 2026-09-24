@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Clock, Globe, Video } from 'lucide-react';
 import type { MediaPlayerConfig } from '../lib/types';
 import { Field } from '../components/ui';
+import { CheckIcon, TryIcon, WarningIcon } from '../components/icons';
 import { EditorProps, PlayerProps } from './shared';
 
 // ── Hulptypen & parsing ─────────────────────────────────────────────────────
@@ -250,14 +252,14 @@ export function MediaPlayerEditor({ config, onChange }: EditorProps<MediaPlayerC
             aria-pressed={provider === 'youtube'}
             onClick={() => onChange({ ...config, provider: 'youtube' })}
           >
-            ▶ YouTube
+            <TryIcon size={16} aria-hidden /> YouTube
           </button>
           <button
             className={`btn btn-sm ${provider === 'vimeo' ? 'btn-primary' : 'btn-ghost'}`}
             aria-pressed={provider === 'vimeo'}
             onClick={() => onChange({ ...config, provider: 'vimeo' })}
           >
-            🎬 Vimeo
+            <Video size={16} aria-hidden /> Vimeo
           </button>
         </div>
       </Field>
@@ -284,7 +286,7 @@ export function MediaPlayerEditor({ config, onChange }: EditorProps<MediaPlayerC
 
       {videoUrl.trim() !== '' && !parsed && (
         <div className="callout warn" role="status">
-          <span aria-hidden>⚠️</span>
+          <WarningIcon aria-hidden />
           <div>
             Dit lijkt geen geldige {PROVIDER_LABEL[provider]}-link of video-id. Controleer de invoer.
             {parsesAsOther && (
@@ -332,7 +334,7 @@ export function MediaPlayerEditor({ config, onChange }: EditorProps<MediaPlayerC
 
       {endBeforeStart && (
         <div className="callout warn" role="status">
-          <span aria-hidden>⚠️</span>
+          <WarningIcon aria-hidden />
           <div>De eindtijd moet ná de starttijd liggen. Zolang dat niet zo is, wordt de eindtijd genegeerd.</div>
         </div>
       )}
@@ -407,22 +409,22 @@ export function MediaPlayerPlayer({ widget, timeUp, onComplete }: PlayerProps<Me
     <div>
       {title && <h2 style={{ textAlign: 'center', marginBottom: 6 }}>{title}</h2>}
       {frag && (
-        <p style={{ textAlign: 'center', color: 'var(--player-accent, var(--brand))', fontWeight: 700, fontSize: '0.9rem', margin: '0 0 14px' }}>
-          ⏱ {frag}
+        <p style={{ textAlign: 'center', color: 'var(--player-accent, var(--brand))', fontWeight: 700, fontSize: '0.9rem', margin: '0 0 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <Clock size={16} aria-hidden /> {frag}
         </p>
       )}
 
       <VideoFrame src={src} title={title || `Video (${PROVIDER_LABEL[provider]})`} />
 
-      <p className="hint" style={{ textAlign: 'center', marginTop: 10 }}>
-        🌐 Voor deze video heb je een internetverbinding nodig. Blijft het kader zwart of leeg?
+      <p className="hint" style={{ textAlign: 'center', marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <Globe size={14} className="icon-inline" aria-hidden /> Voor deze video heb je een internetverbinding nodig. Blijft het kader zwart of leeg?
         Controleer je verbinding en herlaad de pagina.
       </p>
 
       <div aria-live="polite">
         {done && (
-          <p style={{ textAlign: 'center', color: 'var(--ok)', fontWeight: 700, marginTop: 14 }}>
-            ✓ Geregistreerd — je bent klaar met deze video.
+          <p style={{ textAlign: 'center', color: 'var(--ok)', fontWeight: 700, marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <CheckIcon size={16} aria-hidden /> Geregistreerd — je bent klaar met deze video.
           </p>
         )}
       </div>
@@ -433,7 +435,7 @@ export function MediaPlayerPlayer({ widget, timeUp, onComplete }: PlayerProps<Me
             Klaar met kijken? Rond dan hieronder af.
           </span>
           <button className="btn btn-primary btn-lg" onClick={() => complete(true)}>
-            Ik heb de video bekeken ✓
+            <CheckIcon size={18} aria-hidden /> Ik heb de video bekeken
           </button>
         </div>
       )}

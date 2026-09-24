@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Flag, MousePointerClick } from 'lucide-react';
 import type { SpotDifference, SpotDifferenceConfig } from '../lib/types';
 import { clamp, uid } from '../lib/utils';
 import { ImagePicker } from '../components/ui';
+import { CheckIcon, CloseIcon, SearchIcon } from '../components/icons';
 import { EditorProps, GameStatus, PlayerProps, ResultHero } from './shared';
 
 // ── Stijl (keyframe-animaties kunnen niet inline) ───────────────────────────
@@ -97,7 +99,7 @@ export function SpotDifferenceEditor({ config, onChange }: EditorProps<SpotDiffe
               onClick={() => setPlacing((v) => !v)}
               aria-pressed={placing}
             >
-              {placing ? '👆 Klik op afbeelding B waar een verschil zit (klaar? klik hier)' : '+ Verschil markeren'}
+              {placing ? <><MousePointerClick size={16} aria-hidden /> Klik op afbeelding B waar een verschil zit (klaar? klik hier)</> : '+ Verschil markeren'}
             </button>
             <span className="badge badge-brand">{diffs.length} {diffs.length === 1 ? 'verschil' : 'verschillen'}</span>
           </div>
@@ -175,7 +177,7 @@ export function SpotDifferenceEditor({ config, onChange }: EditorProps<SpotDiffe
                 aria-label={`Verschil ${i + 1} verwijderen`}
                 onClick={() => onChange({ ...config, differences: diffs.filter((_, j) => j !== i) })}
               >
-                ✕
+                <CloseIcon size={16} aria-hidden />
               </button>
             </div>
           ))}
@@ -244,7 +246,7 @@ export function SpotDifferencePlayer({ widget, timeUp, onComplete }: PlayerProps
           title={d.label?.trim() || `Verschil ${i + 1}`}
           aria-hidden
         >
-          {isFound ? '✓' : '!'}
+          {isFound ? <CheckIcon size={14} /> : '!'}
         </div>
       );
     });
@@ -259,7 +261,7 @@ export function SpotDifferencePlayer({ widget, timeUp, onComplete }: PlayerProps
           earned={found.size}
           max={diffs.length}
           showScore={widget.settings.showScore}
-          title={end === 'won' ? 'Alle verschillen gevonden! 🔍' : end === 'time' ? 'De tijd is om ⏰' : 'Ingediend — goed geprobeerd!'}
+          title={end === 'won' ? 'Alle verschillen gevonden!' : end === 'time' ? 'De tijd is om' : 'Ingediend — goed geprobeerd!'}
           subtitle={detail}
         >
           {widget.settings.showScore && <p style={{ color: 'var(--text-soft)', margin: '6px 0 0' }}>{detail}</p>}
@@ -330,8 +332,8 @@ export function SpotDifferencePlayer({ widget, timeUp, onComplete }: PlayerProps
     <div>
       <style>{SD_CSS}</style>
       <GameStatus>
-        <span className="badge badge-ok">🔍 {found.size} / {diffs.length} gevonden</span>
-        <span className="badge badge-err">✗ {misses} fout</span>
+        <span className="badge badge-ok"><SearchIcon size={14} className="icon-inline" aria-hidden /> {found.size} / {diffs.length} gevonden</span>
+        <span className="badge badge-err"><CloseIcon size={14} className="icon-inline" aria-hidden /> {misses} fout</span>
       </GameStatus>
       <p
         role="status"
@@ -372,7 +374,7 @@ export function SpotDifferencePlayer({ widget, timeUp, onComplete }: PlayerProps
                 style={{ left: `${missFlash.x}%`, top: `${missFlash.y}%` }}
                 aria-hidden
               >
-                ✗
+                <CloseIcon size={16} />
               </div>
             )}
           </div>
@@ -387,7 +389,7 @@ export function SpotDifferencePlayer({ widget, timeUp, onComplete }: PlayerProps
             ? 'Ik geef op — toon het resterende verschil en dien in'
             : `Ik geef op — toon de ${remaining} resterende verschillen en dien in`}
         >
-          🏳️ Ik geef op ({remaining} nog te vinden)
+<Flag size={16} aria-hidden /> Ik geef op ({remaining} nog te vinden)
         </button>
       </div>
     </div>

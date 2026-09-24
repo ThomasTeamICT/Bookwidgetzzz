@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { hasAIKey } from '../lib/ai';
+import { AIIcon, SettingsIcon, WarningIcon } from './icons';
 
 /**
  * Poortje voor AI-functies: toont de kinderen alleen als er een API-sleutel
@@ -10,14 +11,14 @@ export function AIGate({ children }: { children: React.ReactNode }) {
   if (hasAIKey()) return <>{children}</>;
   return (
     <div className="card" style={{ padding: 18, textAlign: 'center', display: 'grid', gap: 8, justifyItems: 'center' }}>
-      <div style={{ fontSize: '1.8rem' }} aria-hidden>✨</div>
+      <div aria-hidden><AIIcon size={32} /></div>
       <strong>AI-assistent nog niet ingesteld</strong>
       <p className="hint" style={{ maxWidth: 420, margin: 0 }}>
         Voeg één keer een API-sleutel toe (Google Gemini, Anthropic of OpenAI) — of open de
         instel-link die je van je beheerder kreeg — en maak daarna in enkele seconden widgets
         en cursussen uit je eigen bronmateriaal. De sleutel blijft op dit toestel.
       </p>
-      <Link to="/ai-instellingen" className="btn btn-primary">⚙️ AI instellen</Link>
+      <Link to="/ai-instellingen" className="btn btn-primary"><SettingsIcon size={18} aria-hidden /> AI instellen</Link>
     </div>
   );
 }
@@ -37,7 +38,7 @@ export function AIWorkingBox({
   return (
     <div style={{ display: 'grid', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span className="ai-pulse" aria-hidden>✨</span>
+        <span className="ai-pulse" aria-hidden><AIIcon size={18} /></span>
         <strong aria-live="polite">{label}</strong>
         <span style={{ flex: 1 }} />
         {onCancel && (
@@ -69,7 +70,7 @@ export function AIErrorBox({ error, onRetry }: { error: string; onRetry?: () => 
         display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap',
       }}
     >
-      <span aria-hidden>⚠️</span>
+      <WarningIcon aria-hidden />
       <span style={{ flex: 1, minWidth: 200 }}>{error}</span>
       {onRetry && <button className="btn btn-sm" onClick={onRetry}>Opnieuw proberen</button>}
     </div>
@@ -80,7 +81,7 @@ export function AIErrorBox({ error, onRetry }: { error: string; onRetry?: () => 
 export function AIReviewNote() {
   return (
     <p className="hint" style={{ margin: 0 }}>
-      ✨ Dit is een AI-voorzet. <strong>Kijk alles na voor je het gebruikt</strong> — jij blijft
+      <AIIcon size={16} className="icon-inline" aria-hidden /> Dit is een AI-voorzet. <strong>Kijk alles na voor je het gebruikt</strong> — jij blijft
       de leerkracht; de AI kan zich vergissen.
     </p>
   );

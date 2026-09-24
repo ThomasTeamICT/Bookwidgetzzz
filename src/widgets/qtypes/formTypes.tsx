@@ -3,12 +3,16 @@
 // punten, uitleg en hints generiek — hier alleen het vraagspecifieke deel.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ChevronDown, Paperclip, Rows3, Star,
+} from 'lucide-react';
 import type {
   DropdownQuestion, ItemScore, LikertQuestion, QuestionType, RatingQuestion, UploadQuestion,
 } from '../../lib/types';
 import { clamp, uid } from '../../lib/utils';
 import { deleteStudentFile, getStudentFile, saveStudentFile } from '../../lib/pdfStore';
 import { CheckRow, Field } from '../../components/ui';
+import { CheckIcon, CloseIcon, PreviewIcon, WarningIcon } from '../../components/icons';
 import type { AnswerProps, ExtraQType } from './contract';
 
 // ── Gedeelde hulpjes ────────────────────────────────────────────────────────
@@ -120,7 +124,7 @@ function DropdownEditor({ q, onChange }: { q: DropdownQuestion; onChange: (q: Dr
       <CheckRow checked={q.shuffle} onChange={(shuffle) => onChange({ ...q, shuffle })} label="Afleiders door elkaar tonen" />
       {gaps.length > 0 && (
         <div className="callout" style={{ marginTop: 8 }}>
-          <span aria-hidden>👀</span>
+          <PreviewIcon aria-hidden />
           <div>
             <strong>Voorbeeld voor de leerling:</strong>
             <p style={{ margin: '6px 0 0', lineHeight: 2.2 }}>
@@ -179,10 +183,10 @@ function DropdownAnswer({ q, value, onChange, review }: AnswerProps<DropdownQues
               {shown.map((o, oi) => <option key={oi} value={o}>{o}</option>)}
             </select>
             {review && (ok ? (
-              <small style={{ color: 'var(--ok)', fontWeight: 700 }} aria-label="juist"> ✓</small>
+              <small style={{ color: 'var(--ok)', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }} aria-label="juist"> <CheckIcon size={16} aria-hidden /></small>
             ) : (
               <small style={{ fontWeight: 700 }}>
-                <span style={{ color: 'var(--err)' }} aria-label="onjuist"> ✗</span>
+                <span style={{ color: 'var(--err)', display: 'inline-flex', alignItems: 'center' }} aria-label="onjuist"> <CloseIcon size={16} aria-hidden /></span>
                 <span style={{ color: 'var(--ok)' }}> ({correct})</span>
               </small>
             ))}
@@ -196,7 +200,7 @@ function DropdownAnswer({ q, value, onChange, review }: AnswerProps<DropdownQues
 const dropdownType: ExtraQType<DropdownQuestion> = {
   type: 'dropdown',
   name: 'Keuzelijst in zin',
-  icon: '📋',
+  icon: ChevronDown,
   desc: 'Zin met uitklapbare keuzelijstjes',
   make: (base) => ({ ...base, type: 'dropdown', text: '', shuffle: true }),
   Editor: DropdownEditor,
@@ -290,13 +294,15 @@ function RatingAnswer({ q, value, onChange, review }: AnswerProps<RatingQuestion
               disabled={review}
               onClick={() => onChange(n)}
               style={{
-                font: 'inherit', fontSize: '1.8rem', lineHeight: 1,
-                background: 'none', border: 'none', padding: '2px 4px', borderRadius: 8,
+                font: 'inherit', lineHeight: 1,
+                background: 'none', border: 'none', borderRadius: 8,
+                minWidth: 44, minHeight: 44,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 cursor: review ? 'default' : 'pointer',
                 color: filled ? 'var(--warn)' : 'var(--text-faint)',
               }}
             >
-              <span aria-hidden>{filled ? '★' : '☆'}</span>
+              <Star size={28} aria-hidden fill={filled ? 'currentColor' : 'none'} />
             </button>
           );
         })}
@@ -326,7 +332,7 @@ function RatingAnswer({ q, value, onChange, review }: AnswerProps<RatingQuestion
 const ratingType: ExtraQType<RatingQuestion> = {
   type: 'rating',
   name: 'Beoordeling (sterren)',
-  icon: '⭐',
+  icon: Star,
   desc: 'Mening of zelfinschatting, niet beoordeeld',
   make: (base) => ({ ...base, type: 'rating', points: 0, scale: 5 }),
   Editor: RatingEditor,
@@ -339,8 +345,8 @@ const ratingType: ExtraQType<RatingQuestion> = {
 // Antwoordvorm: Record<statementId, optionIndex>. Niet beoordeeld.
 
 const LIKERT_PRESETS: { key: string; name: string; options: string[] }[] = [
-  { key: 'agree5', name: '5-punts: helemaal oneens → helemaal eens', options: ['Helemaal oneens', 'Oneens', 'Neutraal', 'Eens', 'Helemaal eens'] },
-  { key: 'freq4', name: '4-punts: nooit → altijd', options: ['Nooit', 'Soms', 'Vaak', 'Altijd'] },
+  { key: 'agree5', name: '5-punts: van helemaal oneens tot helemaal eens', options: ['Helemaal oneens', 'Oneens', 'Neutraal', 'Eens', 'Helemaal eens'] },
+  { key: 'freq4', name: '4-punts: van nooit tot altijd', options: ['Nooit', 'Soms', 'Vaak', 'Altijd'] },
   { key: 'smiley3', name: '3-punts: smileys', options: ['🙁', '😐', '🙂'] },
 ];
 
@@ -384,7 +390,7 @@ function LikertEditor({ q, onChange }: { q: LikertQuestion; onChange: (q: Likert
                 className="btn btn-quiet btn-icon btn-sm" aria-label="Stelling verwijderen"
                 disabled={q.statements.length <= 1}
                 onClick={() => removeStatement(i)}
-              >✕</button>
+              ><CloseIcon size={16} aria-hidden /></button>
             </div>
           ))}
           <button
@@ -564,7 +570,7 @@ function LikertAnswer({ q, value, onChange, review }: AnswerProps<LikertQuestion
 const likertType: ExtraQType<LikertQuestion> = {
   type: 'likert',
   name: 'Stellingen (schaal)',
-  icon: '📊',
+  icon: Rows3,
   desc: 'Meerdere stellingen op één schaal',
   make: (base) => ({
     ...base,
@@ -615,7 +621,7 @@ function UploadEditor({ q, onChange }: { q: UploadQuestion; onChange: (q: Upload
         </Field>
       </div>
       <div className="callout warn" role="note">
-        <span aria-hidden>⚠️</span>
+        <WarningIcon aria-hidden />
         <div>
           Ingeleverde bestanden belanden in de browseropslag op <strong>jouw</strong> toestel,
           en die opslag is beperkt. Hou de maximale grootte dus klein.
@@ -676,7 +682,7 @@ function UploadAnswer({ q, value, onChange, review }: AnswerProps<UploadQuestion
 
   if (review) {
     if (!file) return <div><p className="hint">(geen bestand ingeleverd)</p></div>;
-    const tag = `📎 ${file.name} (${formatBytes(file.size)})`;
+    const tag = <><Paperclip size={16} className="icon-inline" aria-hidden /> {file.name} ({formatBytes(file.size)})</>;
     const href = file.dataUrl ?? blobUrl; // legacy data-URL rechtstreeks als link
     return (
       <div>
@@ -689,7 +695,7 @@ function UploadAnswer({ q, value, onChange, review }: AnswerProps<UploadQuestion
         ) : (
           <p className="hint">{tag} — bestand laden…</p>
         )}
-        <p className="hint" style={{ marginTop: 8 }}>✍️ Dit bestand wordt door je leerkracht beoordeeld.</p>
+        <p className="hint" style={{ marginTop: 8 }}>Dit bestand wordt door je leerkracht beoordeeld.</p>
       </div>
     );
   }
@@ -709,7 +715,7 @@ function UploadAnswer({ q, value, onChange, review }: AnswerProps<UploadQuestion
       {file ? (
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <span className="badge badge-ok" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
-            📎 {file.name} ({formatBytes(file.size)})
+            <Paperclip size={16} className="icon-inline" aria-hidden /> {file.name} ({formatBytes(file.size)})
           </span>
           <button type="button" className="btn btn-sm btn-ghost" onClick={() => inputRef.current?.click()}>
             Vervangen
@@ -727,7 +733,7 @@ function UploadAnswer({ q, value, onChange, review }: AnswerProps<UploadQuestion
         </div>
       ) : (
         <button type="button" className="btn btn-ghost" onClick={() => inputRef.current?.click()}>
-          📎 Bestand kiezen
+          <Paperclip size={18} aria-hidden /> Bestand kiezen
         </button>
       )}
       <p className="hint" style={{ marginTop: 6 }}>
@@ -741,7 +747,7 @@ function UploadAnswer({ q, value, onChange, review }: AnswerProps<UploadQuestion
 const uploadType: ExtraQType<UploadQuestion> = {
   type: 'upload',
   name: 'Bestand inleveren',
-  icon: '📎',
+  icon: Paperclip,
   desc: 'Bestand uploaden, manueel beoordeeld',
   make: (base) => ({ ...base, type: 'upload', accept: '', maxMb: 2 }),
   Editor: UploadEditor,

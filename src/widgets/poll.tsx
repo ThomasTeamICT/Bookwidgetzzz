@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { Vote } from 'lucide-react';
 import type { PollConfig } from '../lib/types';
 import { getSubmissions } from '../lib/storage';
 import { CheckRow, Field } from '../components/ui';
+import { CheckIcon } from '../components/icons';
 import { EditorProps, PlayerProps } from './shared';
 
 export function PollEditor({ config, onChange }: EditorProps<PollConfig>) {
@@ -64,7 +66,7 @@ export function PollPlayer({ widget, preview, onComplete }: PlayerProps<PollConf
           return (
             <div key={i} style={{ marginBottom: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, marginBottom: 4 }}>
-                <span>{o}{selected.includes(i) ? ' ✓' : ''}</span>
+                <span>{o}{selected.includes(i) && <CheckIcon size={14} className="icon-inline" aria-hidden />}</span>
                 <span style={{ color: 'var(--text-soft)' }}>{counts[i]} ({p}%)</span>
               </div>
               <div className="progressbar"><div style={{ width: `${p}%` }} /></div>
@@ -78,7 +80,7 @@ export function PollPlayer({ widget, preview, onComplete }: PlayerProps<PollConf
   if (voted) {
     return (
       <div className="card result-hero">
-        <div style={{ fontSize: '3rem' }} aria-hidden>🗳️</div>
+        <Vote size={48} aria-hidden />
         <h2>Je stem is geregistreerd!</h2>
       </div>
     );
@@ -94,7 +96,7 @@ export function PollPlayer({ widget, preview, onComplete }: PlayerProps<PollConf
           aria-pressed={selected.includes(i)}
           onClick={() => toggle(i)}
         >
-          <span className="marker" aria-hidden>{selected.includes(i) ? '✓' : ''}</span>
+          <span className="marker" aria-hidden>{selected.includes(i) && <CheckIcon size={14} />}</span>
           {o}
         </button>
       ))}
@@ -102,7 +104,7 @@ export function PollPlayer({ widget, preview, onComplete }: PlayerProps<PollConf
       <div className="player-nav">
         <span />
         <button className="btn btn-primary btn-lg" disabled={selected.length === 0} onClick={vote}>
-          Stem uitbrengen 🗳️
+          <Vote size={18} aria-hidden /> Stem uitbrengen
         </button>
       </div>
     </div>

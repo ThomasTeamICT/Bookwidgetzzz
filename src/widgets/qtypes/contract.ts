@@ -2,6 +2,7 @@
 // deelmodules (formTypes/interactTypes) geen importcyclus met de index vormen.
 
 import type React from 'react';
+import type { LucideIcon } from 'lucide-react';
 import type { ItemScore, Question, QuestionType } from '../../lib/types';
 
 export interface AnswerProps<Q extends Question = Question> {
@@ -15,7 +16,7 @@ export interface AnswerProps<Q extends Question = Question> {
 export interface ExtraQType<Q extends Question = Question> {
   type: QuestionType;
   name: string;
-  icon: string;
+  icon: LucideIcon;
   desc: string;
   /** Nieuwe, lege vraag (id/points/prompt komen uit base). */
   make: (base: { id: string; prompt: string; points: number }) => Q;

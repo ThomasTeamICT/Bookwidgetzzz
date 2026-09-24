@@ -1,4 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ArrowLeftRight, ArrowRight, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, CircleDot,
+  ClipboardPaste, Compass, Database, Dices, Dumbbell, Eraser, Globe, Hash, HelpCircle,
+  type LucideIcon, Mic, NotebookPen, Palette, Pencil, PenLine, Puzzle, Save, Scale,
+  SlidersHorizontal, Square, SquareCheck, Volume2,
+} from 'lucide-react';
 import type {
   GapQuestion, LongAnswerValue, MatchQuestion, MCQuestion, MultiQuestion, NumberQuestion,
   OrderQuestion, Question, QuestionType, QuizConfig, ShortQuestion, SliderQuestion,
@@ -7,6 +13,10 @@ import type {
 import { extractGaps, gradeQuestion, gradeQuiz, splitGapText } from '../lib/grading';
 import { normalizeAnswer, shuffled, uid } from '../lib/utils';
 import { Field, ImagePicker, Modal, useToast } from '../components/ui';
+import {
+  BackIcon, CheckIcon, CloseIcon, DeleteIcon, GoalIcon, InfoIcon, LinkIcon, MoveDownIcon,
+  MoveUpIcon, RetryIcon, TipIcon, WarningIcon,
+} from '../components/icons';
 import { EditorProps, ItemHeader, moveItem, PlayerProps, ResultHero } from './shared';
 import { clearProgress, loadProgress, saveProgress } from '../lib/autosave';
 import { getWidgets } from '../lib/storage';
@@ -142,14 +152,14 @@ function PromptText({
             background: 'var(--brand-soft)', borderRadius: 8, padding: '6px 10px', marginTop: 8,
           }}
         >
-          📖 <strong>{openTerm.term}:</strong> {openTerm.uitleg}
+          <InfoIcon size={16} className="icon-inline" aria-hidden /> <strong>{openTerm.term}:</strong> {openTerm.uitleg}
           <button
             className="btn btn-quiet btn-sm"
             style={{ minHeight: 22, padding: '0 6px', marginLeft: 6 }}
             onClick={() => setOpenTerm(null)}
             aria-label="Uitleg sluiten"
           >
-            ✕
+            <CloseIcon size={14} aria-hidden />
           </button>
         </span>
       )}
@@ -203,18 +213,18 @@ function AccentBar({ onInsert }: { onInsert: (ch: string) => void }) {
 
 // ── Vraagtype-metadata ──────────────────────────────────────────────────────
 
-export const QUESTION_TYPES: { type: QuestionType; name: string; icon: string; desc: string }[] = [
-  { type: 'mc', name: 'Meerkeuze', icon: '🔘', desc: 'Eén juist antwoord' },
-  { type: 'multi', name: 'Meerdere antwoorden', icon: '☑️', desc: 'Meerdere juiste antwoorden' },
-  { type: 'tf', name: 'Juist of onjuist', icon: '⚖️', desc: 'Stelling beoordelen' },
-  { type: 'short', name: 'Kort antwoord', icon: '✏️', desc: 'Woord of korte zin typen' },
-  { type: 'long', name: 'Open vraag', icon: '📝', desc: 'Lang antwoord, manueel beoordeeld' },
-  { type: 'gap', name: 'Invuloefening', icon: '🧩', desc: 'Gaten in een tekst invullen' },
-  { type: 'match', name: 'Koppelen', icon: '🔗', desc: 'Paren bij elkaar zoeken' },
-  { type: 'order', name: 'Rangschikken', icon: '↕️', desc: 'Items in juiste volgorde slepen' },
-  { type: 'number', name: 'Getal', icon: '🔢', desc: 'Numeriek antwoord met tolerantie' },
-  { type: 'slider', name: 'Schuiver', icon: '🎚️', desc: 'Waarde op een schaal kiezen' },
-  { type: 'info', name: 'Infoblok', icon: 'ℹ️', desc: 'Tekst of afbeelding zonder vraag' },
+export const QUESTION_TYPES: { type: QuestionType; name: string; icon: LucideIcon; desc: string }[] = [
+  { type: 'mc', name: 'Meerkeuze', icon: CircleDot, desc: 'Eén juist antwoord' },
+  { type: 'multi', name: 'Meerdere antwoorden', icon: SquareCheck, desc: 'Meerdere juiste antwoorden' },
+  { type: 'tf', name: 'Juist of onjuist', icon: Scale, desc: 'Stelling beoordelen' },
+  { type: 'short', name: 'Kort antwoord', icon: PenLine, desc: 'Woord of korte zin typen' },
+  { type: 'long', name: 'Open vraag', icon: NotebookPen, desc: 'Lang antwoord, manueel beoordeeld' },
+  { type: 'gap', name: 'Invuloefening', icon: Puzzle, desc: 'Gaten in een tekst invullen' },
+  { type: 'match', name: 'Koppelen', icon: LinkIcon, desc: 'Paren bij elkaar zoeken' },
+  { type: 'order', name: 'Rangschikken', icon: ArrowUpDown, desc: 'Items in juiste volgorde slepen' },
+  { type: 'number', name: 'Getal', icon: Hash, desc: 'Numeriek antwoord met tolerantie' },
+  { type: 'slider', name: 'Schuiver', icon: SlidersHorizontal, desc: 'Waarde op een schaal kiezen' },
+  { type: 'info', name: 'Infoblok', icon: InfoIcon, desc: 'Tekst of afbeelding zonder vraag' },
   // uitgebreide types uit src/widgets/qtypes/
   ...Object.values(EXTRA_QTYPES).map((t) => ({ type: t.type, name: t.name, icon: t.icon, desc: t.desc })),
 ];
@@ -242,7 +252,7 @@ export function makeQuestion(type: QuestionType): Question {
 export function questionLabel(q: Question): string {
   const meta = QUESTION_TYPES.find((t) => t.type === q.type)!;
   const text = q.type === 'gap' ? (q as GapQuestion).text : q.prompt;
-  return `${meta.icon} ${meta.name}${text ? ' — ' + text.slice(0, 60) : ''}`;
+  return `${meta.name}${text ? ' — ' + text.slice(0, 60) : ''}`;
 }
 
 // ── EDITOR ──────────────────────────────────────────────────────────────────
@@ -301,7 +311,7 @@ function OptionListEditor({
                   onCorrectChange((correct as number[]).filter((x) => x !== i).map((x) => (x > i ? x - 1 : x)));
                 }
               }}
-            >✕</button>
+            ><CloseIcon size={16} aria-hidden /></button>
           </div>
         );
       })}
@@ -388,7 +398,7 @@ function QuestionBodyEditor({ q, onChange }: { q: Question; onChange: (q: Questi
                       onChange({ ...q, rubric });
                     }} />
                   <button className="btn btn-quiet btn-icon btn-sm" aria-label="Criterium verwijderen"
-                    onClick={() => onChange({ ...q, rubric: (q.rubric ?? []).filter((_, j) => j !== ri) })}>✕</button>
+                    onClick={() => onChange({ ...q, rubric: (q.rubric ?? []).filter((_, j) => j !== ri) })}><CloseIcon size={16} aria-hidden /></button>
                 </div>
               ))}
               <button className="btn btn-sm btn-ghost"
@@ -424,11 +434,11 @@ function QuestionBodyEditor({ q, onChange }: { q: Question; onChange: (q: Questi
             <div className="option-row" key={i}>
               <input className="input input-sm" placeholder="Links" value={p.left}
                 onChange={(e) => { const pairs = q.pairs.slice(); pairs[i] = { ...p, left: e.target.value }; onChange({ ...q, pairs }); }} />
-              <span aria-hidden>↔</span>
+              <ArrowLeftRight size={16} aria-hidden />
               <input className="input input-sm" placeholder="Rechts (hoort bij links)" value={p.right}
                 onChange={(e) => { const pairs = q.pairs.slice(); pairs[i] = { ...p, right: e.target.value }; onChange({ ...q, pairs }); }} />
               <button className="btn btn-quiet btn-icon btn-sm" aria-label="Paar verwijderen" disabled={q.pairs.length <= 2}
-                onClick={() => onChange({ ...q, pairs: q.pairs.filter((_, j) => j !== i) })}>✕</button>
+                onClick={() => onChange({ ...q, pairs: q.pairs.filter((_, j) => j !== i) })}><CloseIcon size={16} aria-hidden /></button>
             </div>
           ))}
           <button className="btn btn-sm btn-ghost" onClick={() => onChange({ ...q, pairs: [...q.pairs, { left: '', right: '' }] })}>+ Paar toevoegen</button>
@@ -444,7 +454,7 @@ function QuestionBodyEditor({ q, onChange }: { q: Question; onChange: (q: Questi
               <input className="input input-sm" value={it} placeholder={`Item ${i + 1}`}
                 onChange={(e) => { const items = q.items.slice(); items[i] = e.target.value; onChange({ ...q, items }); }} />
               <button className="btn btn-quiet btn-icon btn-sm" aria-label="Item verwijderen" disabled={q.items.length <= 2}
-                onClick={() => onChange({ ...q, items: q.items.filter((_, j) => j !== i) })}>✕</button>
+                onClick={() => onChange({ ...q, items: q.items.filter((_, j) => j !== i) })}><CloseIcon size={16} aria-hidden /></button>
             </div>
           ))}
           <button className="btn btn-sm btn-ghost" onClick={() => onChange({ ...q, items: [...q.items, ''] })}>+ Item toevoegen</button>
@@ -531,7 +541,7 @@ function QuestionBankModal({ onImport, onClose }: { onImport: (qs: Question[]) =
 
   return (
     <Modal
-      title="📚 Vragen importeren uit je andere widgets"
+      title="Vragen importeren uit je andere widgets"
       onClose={onClose}
       wide
       footer={
@@ -572,7 +582,7 @@ function QuestionBankModal({ onImport, onClose }: { onImport: (qs: Question[]) =
                 aria-expanded={isOpen}
                 onClick={() => setOpenWidget(isOpen ? null : w.id)}
               >
-                {isOpen ? '▾' : '▸'} <strong>{w.title}</strong>
+                {isOpen ? <ChevronDown size={16} className="icon-inline" aria-hidden /> : <ChevronRight size={16} className="icon-inline" aria-hidden />} <strong>{w.title}</strong>
                 <span className="hint" style={{ marginLeft: 'auto' }}>{qs.length} vragen</span>
               </button>
               {isOpen && (
@@ -609,7 +619,7 @@ function BulkImportModal({ onImport, onClose }: { onImport: (qs: Question[]) => 
   const parsed = useMemo(() => parseBulkQuestions(text), [text]);
   return (
     <Modal
-      title="📋 Vragen plakken (bulk-import)"
+      title="Vragen plakken (bulk-import)"
       onClose={onClose}
       wide
       footer={
@@ -634,9 +644,9 @@ function BulkImportModal({ onImport, onClose }: { onImport: (qs: Question[]) => 
         onChange={(e) => setText(e.target.value)}
         style={{ fontFamily: 'monospace' }}
       />
-      <p className="hint" style={{ marginTop: 6 }} aria-live="polite">
+      <p className="hint" style={{ marginTop: 6, display: 'flex', alignItems: 'flex-start', gap: 6 }} aria-live="polite">
         {parsed.length > 0
-          ? `✓ ${parsed.length} ${parsed.length === 1 ? 'vraag' : 'vragen'} herkend: ${parsed.map((q) => QUESTION_TYPES.find((t) => t.type === q.type)?.name).join(', ')}`
+          ? <><CheckIcon size={16} className="icon-inline" aria-hidden /> {parsed.length} {parsed.length === 1 ? 'vraag' : 'vragen'} herkend: {parsed.map((q) => QUESTION_TYPES.find((t) => t.type === q.type)?.name).join(', ')}</>
           : 'Nog geen vragen herkend.'}
       </p>
     </Modal>
@@ -680,8 +690,10 @@ function GoalCodeField({ value, hasOptions, onChange }: {
           onChange={(e) => onChange(e.target.value)}
         />
         {value.trim() !== '' && (
-          <span className="hint" style={{ display: 'block', marginTop: 3 }}>
-            {hit ? `✓ ${shortGoalText(hit.goal.text, 90)}` : '⚠️ Deze code staat in geen enkel leerplan op dit toestel.'}
+          <span className="hint" style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 3 }}>
+            {hit
+              ? <><CheckIcon size={16} className="icon-inline" aria-hidden /> {shortGoalText(hit.goal.text, 90)}</>
+              : <><WarningIcon size={16} className="icon-inline" aria-hidden /> Deze code staat in geen enkel leerplan op dit toestel.</>}
           </span>
         )}
       </div>
@@ -735,7 +747,7 @@ export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
       {config.layout === 'single' && (
         <label className="checkbox-row" style={{ marginBottom: 4 }}>
           <input type="checkbox" checked={config.stepCheck ?? false} onChange={(e) => onChange({ ...config, stepCheck: e.target.checked })} />
-          <span>Getrapte feedback: controleren per vraag <span className="hint">(fout → hint en tweede kans, dán pas de oplossing)</span></span>
+          <span>Getrapte feedback: controleren per vraag <span className="hint">(bij een fout eerst een hint en een tweede kans, dan pas de oplossing)</span></span>
         </label>
       )}
       {config.questions.some((q) => q.level) && (
@@ -745,8 +757,8 @@ export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
         </label>
       )}
       <details style={{ margin: '10px 0 14px' }} open={(config.glossary?.length ?? 0) > 0}>
-        <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.92rem' }}>
-          📖 Glossarium — schooltaalwoorden met uitleg ({(config.glossary ?? []).filter((g) => g.term.trim()).length})
+        <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <BookOpen size={18} aria-hidden /> Glossarium — schooltaalwoorden met uitleg ({(config.glossary ?? []).filter((g) => g.term.trim()).length})
         </summary>
         <div style={{ paddingTop: 8 }}>
           <p className="hint" style={{ marginTop: 0 }}>
@@ -768,7 +780,7 @@ export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
                   onChange({ ...config, glossary });
                 }} />
               <button className="btn btn-quiet btn-icon btn-sm" aria-label="Woord verwijderen"
-                onClick={() => onChange({ ...config, glossary: (config.glossary ?? []).filter((_, j) => j !== gi) })}>✕</button>
+                onClick={() => onChange({ ...config, glossary: (config.glossary ?? []).filter((_, j) => j !== gi) })}><CloseIcon size={16} aria-hidden /></button>
             </div>
           ))}
           <button className="btn btn-sm btn-ghost"
@@ -853,7 +865,7 @@ export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
                             onClick={() => {
                               const hints = questionHints(q).filter((_, j) => j !== hi);
                               update(i, { ...q, hints, hint: undefined });
-                            }}>✕</button>
+                            }}><CloseIcon size={16} aria-hidden /></button>
                         </div>
                       ))}
                       {questionHints(q).length < 3 && (
@@ -865,7 +877,7 @@ export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
                     </div>
                   </Field>
                 )}
-                <Field label="In andere woorden / steuntaal (optioneel)" hint="Vertaling of eenvoudiger formulering; de leerling opent dit zelf via 🌐 — standaard verborgen.">
+                <Field label="In andere woorden / steuntaal (optioneel)" hint="Vertaling of eenvoudiger formulering; de leerling opent dit zelf via het knopje ernaast — standaard verborgen.">
                   <input className="input input-sm" value={q.support ?? ''} placeholder='bv. vertaling of "Wat moet je hier eigenlijk doen?"'
                     onChange={(e) => update(i, { ...q, support: e.target.value })} />
                 </Field>
@@ -916,7 +928,7 @@ export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
 
       {qs.length === 0 && (
         <p style={{ color: 'var(--text-soft)', textAlign: 'center', padding: '18px 0' }}>
-          Nog geen vragen. Voeg je eerste vraag toe. 👇
+          Nog geen vragen. Voeg je eerste vraag toe.
         </p>
       )}
 
@@ -925,10 +937,10 @@ export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
           + Vraag toevoegen
         </button>
         <button className="btn btn-ghost" onClick={() => setImportOpen('bank')}>
-          📚 Uit vraagbank
+          <Database size={18} aria-hidden /> Uit vraagbank
         </button>
         <button className="btn btn-ghost" onClick={() => setImportOpen('bulk')}>
-          📋 Tekst plakken
+          <ClipboardPaste size={18} aria-hidden /> Tekst plakken
         </button>
         {addOpen && (
           <div
@@ -950,7 +962,7 @@ export function QuizEditor({ config, onChange }: EditorProps<QuizConfig>) {
                   setAddOpen(false);
                 }}
               >
-                <span aria-hidden>{t.icon}</span>
+                <t.icon size={18} aria-hidden />
                 <span style={{ textAlign: 'left' }}>
                   <strong style={{ display: 'block', fontSize: '0.92rem' }}>{t.name}</strong>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-soft)', fontWeight: 400 }}>{t.desc}</span>
@@ -1001,7 +1013,7 @@ function MCAnswer({ q, value, onChange, review }: { q: MCQuestion; value: unknow
           <button key={i} type="button" role="radio" aria-checked={sel} className={cls} disabled={review} onClick={() => onChange(i)}>
             <span className="marker" aria-hidden>{String.fromCharCode(65 + i)}</span>
             <span>{opt}</span>
-            {review && i === q.correctIndex && <span style={{ marginLeft: 'auto' }} aria-label="juist">✓</span>}
+            {review && i === q.correctIndex && <span style={{ marginLeft: 'auto' }} aria-label="juist"><CheckIcon size={18} aria-hidden /></span>}
           </button>
         );
       })}
@@ -1030,9 +1042,9 @@ function MultiAnswer({ q, value, onChange, review }: { q: MultiQuestion; value: 
               onChange([...next].sort((a, b) => a - b));
             }}
           >
-            <span className="marker" aria-hidden style={{ borderRadius: 7 }}>{isSel ? '✓' : ''}</span>
+            <span className="marker" aria-hidden style={{ borderRadius: 7 }}>{isSel && <CheckIcon size={14} />}</span>
             <span>{opt}</span>
-            {review && isCor && <span style={{ marginLeft: 'auto' }} aria-label="juist">✓</span>}
+            {review && isCor && <span style={{ marginLeft: 'auto' }} aria-label="juist"><CheckIcon size={18} aria-hidden /></span>}
           </button>
         );
       })}
@@ -1053,7 +1065,7 @@ function TFAnswer({ q, value, onChange, review }: { q: TFQuestion; value: unknow
         } else if (sel) cls += ' selected';
         return (
           <button key={String(v)} type="button" className={cls} style={{ justifyContent: 'center' }} disabled={review} onClick={() => onChange(v)} aria-pressed={sel}>
-            {v ? '✓ Juist' : '✗ Onjuist'}
+            {v ? <><CheckIcon size={18} aria-hidden /> Juist</> : <><CloseIcon size={18} aria-hidden /> Onjuist</>}
           </button>
         );
       })}
@@ -1111,8 +1123,8 @@ function MiniDrawPad({ value, onChange, disabled }: { value?: string; onChange: 
   return (
     <div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-        <button type="button" className={`btn btn-sm ${!eraser ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setEraser(false)} aria-pressed={!eraser}>✏️ Pen</button>
-        <button type="button" className={`btn btn-sm ${eraser ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setEraser(true)} aria-pressed={eraser}>🧽 Gom</button>
+        <button type="button" className={`btn btn-sm ${!eraser ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setEraser(false)} aria-pressed={!eraser}><Pencil size={16} aria-hidden /> Pen</button>
+        <button type="button" className={`btn btn-sm ${eraser ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setEraser(true)} aria-pressed={eraser}><Eraser size={16} aria-hidden /> Gom</button>
         <button type="button" className="btn btn-sm btn-quiet" disabled={disabled}
           onClick={() => {
             const ctx = canvasRef.current!.getContext('2d')!;
@@ -1121,7 +1133,7 @@ function MiniDrawPad({ value, onChange, disabled }: { value?: string; onChange: 
             // leeg canvas is geen antwoord: tekening uit het antwoord verwijderen
             onChange(undefined);
           }}>
-          🗑 Wissen
+          <DeleteIcon size={16} aria-hidden /> Wissen
         </button>
       </div>
       <canvas
@@ -1223,7 +1235,7 @@ function AudioRecorder({ value, onChange }: { value?: string; onChange: (dataUrl
     return (
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <audio controls src={value} style={{ maxWidth: '100%' }} />
-        <button type="button" className="btn btn-sm btn-ghost" onClick={() => onChange(undefined)}>🗑 Opnieuw opnemen</button>
+        <button type="button" className="btn btn-sm btn-ghost" onClick={() => onChange(undefined)}><RetryIcon size={16} aria-hidden /> Opnieuw opnemen</button>
       </div>
     );
   }
@@ -1232,11 +1244,14 @@ function AudioRecorder({ value, onChange }: { value?: string; onChange: (dataUrl
     <div>
       {recording ? (
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <span className="badge badge-err" aria-live="polite">● opname {seconds}s / 60s</span>
-          <button type="button" className="btn btn-primary" onClick={() => recRef.current?.stop()}>⏹ Stop</button>
+          <span className="badge badge-err" aria-live="polite" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span aria-hidden style={{ width: 8, height: 8, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
+            opname {seconds}s / 60s
+          </span>
+          <button type="button" className="btn btn-primary" onClick={() => recRef.current?.stop()}><Square size={16} aria-hidden /> Stop</button>
         </div>
       ) : (
-        <button type="button" className="btn btn-ghost" onClick={start}>🎤 Start opname</button>
+        <button type="button" className="btn btn-ghost" onClick={start}><Mic size={18} aria-hidden /> Start opname</button>
       )}
       {error && <p role="alert" style={{ color: 'var(--err)', fontWeight: 600, marginTop: 6 }}>{error}</p>}
     </div>
@@ -1262,7 +1277,7 @@ function LongAnswer({ q, value, onChange, review }: { q: LongQuestion; value: un
     <div>
       {rubric.length > 0 && (
         <div className="callout" style={{ marginBottom: 10 }}>
-          <span aria-hidden>🎯</span>
+          <GoalIcon aria-hidden />
           <div>
             <strong>Hier let je leerkracht op:</strong>
             <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
@@ -1272,18 +1287,18 @@ function LongAnswer({ q, value, onChange, review }: { q: LongQuestion; value: un
         </div>
       )}
       {multi && !review && (
-        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }} role="tablist" aria-label="Antwoordvorm kiezen">
-          <button type="button" role="tab" aria-selected={mode === 'typen'} className={`btn btn-sm ${mode === 'typen' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setMode('typen')}>
-            ✏️ Typen{val.tekst?.trim() ? ' ✓' : ''}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }} aria-label="Antwoordvorm kiezen">
+          <button type="button" aria-pressed={mode === 'typen'} className={`btn btn-sm ${mode === 'typen' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setMode('typen')}>
+            <Pencil size={16} aria-hidden /> Typen{val.tekst?.trim() ? <CheckIcon size={14} className="icon-inline" aria-hidden /> : ''}
           </button>
           {q.allowDraw && (
-            <button type="button" role="tab" aria-selected={mode === 'tekenen'} className={`btn btn-sm ${mode === 'tekenen' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setMode('tekenen')}>
-              🎨 Tekenen{val.tekening ? ' ✓' : ''}
+            <button type="button" aria-pressed={mode === 'tekenen'} className={`btn btn-sm ${mode === 'tekenen' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setMode('tekenen')}>
+              <Palette size={16} aria-hidden /> Tekenen{val.tekening ? <CheckIcon size={14} className="icon-inline" aria-hidden /> : ''}
             </button>
           )}
           {q.allowAudio && (
-            <button type="button" role="tab" aria-selected={mode === 'audio'} className={`btn btn-sm ${mode === 'audio' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setMode('audio')}>
-              🎤 Inspreken{val.audio ? ' ✓' : ''}
+            <button type="button" aria-pressed={mode === 'audio'} className={`btn btn-sm ${mode === 'audio' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setMode('audio')}>
+              <Mic size={16} aria-hidden /> Inspreken{val.audio ? <CheckIcon size={14} className="icon-inline" aria-hidden /> : ''}
             </button>
           )}
         </div>
@@ -1294,7 +1309,7 @@ function LongAnswer({ q, value, onChange, review }: { q: LongQuestion; value: un
           {val.tekening && <img src={val.tekening} alt="Jouw tekening als antwoord" style={{ maxWidth: '100%', borderRadius: 8, border: '1px solid var(--line)' }} />}
           {val.audio && <audio controls src={val.audio} style={{ maxWidth: '100%', marginTop: 6 }} />}
           {!val.tekst?.trim() && !val.tekening && !val.audio && <p className="hint">(geen antwoord)</p>}
-          <p className="hint" style={{ marginTop: 6 }}>✍️ Deze open vraag wordt door je leerkracht beoordeeld.</p>
+          <p className="hint" style={{ marginTop: 6 }}>Deze open vraag wordt door je leerkracht beoordeeld.</p>
         </div>
       ) : (
         <>
@@ -1371,7 +1386,7 @@ function MatchAnswer({ q, value, onChange, review }: { q: MatchQuestion; value: 
         return (
           <div key={li} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontWeight: 650, flex: '1 1 160px' }}>{p.left}</span>
-            <span aria-hidden>→</span>
+            <ArrowRight size={16} aria-hidden />
             <select
               className="select"
               style={{ flex: '1 1 190px', maxWidth: 280, ...(review ? { borderColor: ok ? 'var(--ok)' : 'var(--err)' } : {}) }}
@@ -1390,7 +1405,7 @@ function MatchAnswer({ q, value, onChange, review }: { q: MatchQuestion; value: 
                 <option key={ri} value={ri}>{q.pairs[ri].right}</option>
               ))}
             </select>
-            {review && !ok && <small style={{ color: 'var(--ok)', fontWeight: 700 }}>✓ {p.right}</small>}
+            {review && !ok && <small style={{ color: 'var(--ok)', fontWeight: 700 }}><CheckIcon size={14} className="icon-inline" aria-hidden /> {p.right}</small>}
           </div>
         );
       })}
@@ -1432,8 +1447,8 @@ function OrderAnswer({ q, value, onChange, review }: { q: OrderQuestion; value: 
               !ok && <small style={{ color: 'var(--text-soft)' }}>hoort op plaats {origIdx + 1}</small>
             ) : (
               <span className="updown">
-                <button className="btn btn-quiet btn-icon btn-sm" aria-label="Omhoog" disabled={pos === 0} onClick={() => move(pos, pos - 1)}>↑</button>
-                <button className="btn btn-quiet btn-icon btn-sm" aria-label="Omlaag" disabled={pos === order.length - 1} onClick={() => move(pos, pos + 1)}>↓</button>
+                <button className="btn btn-quiet btn-icon btn-sm" aria-label="Omhoog" disabled={pos === 0} onClick={() => move(pos, pos - 1)}><MoveUpIcon size={16} aria-hidden /></button>
+                <button className="btn btn-quiet btn-icon btn-sm" aria-label="Omlaag" disabled={pos === order.length - 1} onClick={() => move(pos, pos + 1)}><MoveDownIcon size={16} aria-hidden /></button>
               </span>
             )}
           </div>
@@ -1478,16 +1493,16 @@ function SliderAnswer({ q, value, onChange, review }: { q: SliderQuestion; value
         </output>
       </div>
       {review && <p style={{ marginTop: 8, color: ok ? 'var(--ok)' : 'var(--err)', fontWeight: 600 }}>
-        {ok ? '✓ Juist' : `Juiste waarde: ${q.answer}${q.tolerance > 0 ? ` (± ${q.tolerance})` : ''}`}
+        {ok ? <><CheckIcon size={16} className="icon-inline" aria-hidden /> Juist</> : `Juiste waarde: ${q.answer}${q.tolerance > 0 ? ` (± ${q.tolerance})` : ''}`}
       </p>}
     </div>
   );
 }
 
 const CONF_OPTIONS = [
-  { key: 'zeker', label: '🎯 Zeker' },
-  { key: 'twijfel', label: '🤔 Twijfel' },
-  { key: 'gok', label: '🎲 Gok' },
+  { key: 'zeker', label: 'Zeker', icon: GoalIcon },
+  { key: 'twijfel', label: 'Twijfel', icon: HelpCircle },
+  { key: 'gok', label: 'Gok', icon: Dices },
 ] as const;
 export type Confidence = (typeof CONF_OPTIONS)[number]['key'];
 
@@ -1541,36 +1556,36 @@ export function QuestionView({
         <button
           type="button"
           className="btn btn-quiet btn-icon btn-sm"
-          style={{ minHeight: 26, minWidth: 26, padding: 2 }}
+          style={{ minHeight: 44, minWidth: 44, padding: 2 }}
           onClick={() => speakQuestion(q, setSpoken)}
           aria-label="Vraag voorlezen (met meeleesmarkering)"
           title="Vraag voorlezen"
         >
-          🔊
+          <Volume2 size={18} aria-hidden />
         </button>
         {sentences.length >= 2 && (
           <button
             type="button"
             className="btn btn-quiet btn-sm"
-            style={{ minHeight: 26, padding: '2px 6px', fontSize: '0.75rem' }}
+            style={{ minHeight: 44, padding: '2px 10px', fontSize: '0.75rem' }}
             onClick={speakNextSentence}
             aria-label="Zin per zin voorlezen (volgende zin)"
             title="Zin per zin voorlezen"
           >
-            🔊¹²³
+            <Volume2 size={16} className="icon-inline" aria-hidden /> 1-2-3
           </button>
         )}
         {q.support && !review && (
           <button
             type="button"
             className="btn btn-quiet btn-icon btn-sm"
-            style={{ minHeight: 26, minWidth: 26, padding: 2 }}
+            style={{ minHeight: 44, minWidth: 44, padding: 2 }}
             onClick={() => setSupportOpen((v) => !v)}
             aria-pressed={supportOpen}
             aria-label="Vraag in andere woorden tonen"
             title="In andere woorden"
           >
-            🌐
+            <Globe size={18} aria-hidden />
           </button>
         )}
         {score && score.mode !== 'pending' && (
@@ -1583,7 +1598,7 @@ export function QuestionView({
       {q.prompt && <PromptText text={q.prompt} spoken={spoken} glossary={glossary} />}
       {supportOpen && q.support && (
         <div className="callout" style={{ marginTop: -6, marginBottom: 12 }} role="note">
-          <span aria-hidden>🌐</span>
+          <Globe aria-hidden />
           <div>{q.support}</div>
         </div>
       )}
@@ -1608,7 +1623,7 @@ export function QuestionView({
         <div style={{ marginTop: 12 }}>
           {hints.slice(0, hintLevel).map((h, i) => (
             <div key={i} className="callout warn" style={{ marginBottom: 8 }}>
-              <span aria-hidden>💡</span>
+              <TipIcon aria-hidden />
               <div><strong>Hint {hints.length > 1 ? `${i + 1}/${hints.length}` : ''}:</strong> {h}</div>
             </div>
           ))}
@@ -1621,7 +1636,7 @@ export function QuestionView({
                 onHintUsed?.(next);
               }}
             >
-              💡 {hintLevel === 0 ? 'Ik wil een hint' : `Nog een hint (${hintLevel + 1}/${hints.length})`}
+              <TipIcon size={16} aria-hidden /> {hintLevel === 0 ? 'Ik wil een hint' : `Nog een hint (${hintLevel + 1}/${hints.length})`}
             </button>
           )}
         </div>
@@ -1638,14 +1653,14 @@ export function QuestionView({
               aria-pressed={confidence === c.key}
               onClick={() => onConfidence(c.key)}
             >
-              {c.label}
+              <c.icon size={16} aria-hidden /> {c.label}
             </button>
           ))}
         </div>
       )}
       {review && q.explanation && (
         <div className="callout" style={{ marginTop: 14, marginBottom: 0 }}>
-          <span aria-hidden>💡</span>
+          <TipIcon aria-hidden />
           <div><strong>Uitleg:</strong> {q.explanation}</div>
         </div>
       )}
@@ -1786,10 +1801,10 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
       setIdx(0);
       setPhase('answering');
     };
-    const meta: { r: 1 | 2 | 3; icon: string; label: string; desc: string }[] = [
-      { r: 1, icon: '🟢', label: 'Route 1', desc: 'De kernvragen — een stevige basis.' },
-      { r: 2, icon: '🔵', label: 'Route 2', desc: 'Basis plus verdiepende vragen.' },
-      { r: 3, icon: '🟣', label: 'Route 3', desc: 'Alles, inclusief uitdagende vragen.' },
+    const meta: { r: 1 | 2 | 3; color: string; label: string; desc: string }[] = [
+      { r: 1, color: 'var(--ok)', label: 'Route 1', desc: 'De kernvragen — een stevige basis.' },
+      { r: 2, color: 'var(--brand)', label: 'Route 2', desc: 'Basis plus verdiepende vragen.' },
+      { r: 3, color: 'var(--accent)', label: 'Route 3', desc: 'Alles, inclusief uitdagende vragen.' },
     ];
     return (
       <div style={{ maxWidth: 520, margin: '0 auto', textAlign: 'center' }}>
@@ -1797,11 +1812,11 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
         <p style={{ color: 'var(--text-soft)' }}>
           Elke route werkt aan dezelfde leerstof. Kies wat nu bij je past — je mag altijd een andere route proberen.
         </p>
-        {meta.map(({ r, icon, label, desc }) => {
+        {meta.map(({ r, color, label, desc }) => {
           const n = forRoute(r).filter((q) => q.type !== 'info').length;
           return (
             <button key={r} className="answer-option" onClick={() => pick(r)} style={{ textAlign: 'left' }}>
-              <span style={{ fontSize: '1.4rem' }} aria-hidden>{icon}</span>
+              <span aria-hidden style={{ width: 14, height: 14, borderRadius: '50%', background: color, flex: 'none' }} />
               <span style={{ flex: 1 }}>
                 <strong>{label}</strong> · {n} vragen
                 <span style={{ display: 'block', fontSize: '0.86rem', color: 'var(--text-soft)' }}>{desc}</span>
@@ -1838,14 +1853,14 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
       <div>
         {practice && (
           <div className="callout" role="status">
-            <span aria-hidden>🏋️</span>
+            <Dumbbell aria-hidden />
             <div><strong>Oefenronde</strong> — dit resultaat wordt niet ingediend; je echte inzending is al bij je leerkracht.</div>
           </div>
         )}
         <ResultHero earned={res.earned} max={res.max} showScore={widget.settings.showScore} hasPending={res.hasPending}>
           {review && wrongCount > 0 && (
             <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={practiceMistakes}>
-              🏋️ Oefen je {wrongCount} {wrongCount === 1 ? 'fout' : 'fouten'} opnieuw
+              <Dumbbell size={18} aria-hidden /> Oefen je {wrongCount} {wrongCount === 1 ? 'fout' : 'fouten'} opnieuw
             </button>
           )}
         </ResultHero>
@@ -1855,7 +1870,7 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
           if (goalList.length === 0) return null;
           return (
             <div className="card card-pad" style={{ marginTop: 16 }}>
-              <h3>🎯 Per leerdoel</h3>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><GoalIcon size={20} aria-hidden /> Per leerdoel</h3>
               {goalList.map((goal) => {
                 const qs = questions.filter((q) => q.type !== 'info' && q.goal?.trim() === goal);
                 let earned = 0, max = 0, pending = false;
@@ -1885,7 +1900,7 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
         })()}
         {config.askConfidence && review && (misconcepties.length > 0 || verborgenKennis.length > 0) && (
           <div className="card card-pad" style={{ marginTop: 16 }}>
-            <h3>🧭 Jouw zelfinschatting</h3>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Compass size={20} aria-hidden /> Jouw zelfinschatting</h3>
             {misconcepties.length > 0 && (
               <p style={{ marginBottom: 6 }}>
                 <span className="badge badge-err">let op</span>{' '}
@@ -1917,7 +1932,7 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
 
   const restoredBanner = showRestored ? (
     <div className="callout" role="status" style={{ alignItems: 'center' }}>
-      <span aria-hidden>💾</span>
+      <Save aria-hidden />
       <div style={{ flex: 1 }}>Je eerdere antwoorden op dit toestel zijn teruggezet — je kan gewoon verdergaan.</div>
       <button
         className="btn btn-sm btn-ghost"
@@ -1926,7 +1941,7 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
           if (!preview) clearProgress(widget.id, studentName);
         }}
       >
-        🧹 Opnieuw beginnen
+        <RetryIcon size={16} aria-hidden /> Opnieuw beginnen
       </button>
     </div>
   ) : null;
@@ -1952,7 +1967,7 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
           <span style={{ color: 'var(--text-soft)', fontWeight: 600 }}>
             {answeredCount} van {gradable.length} beantwoord
           </span>
-          <button className="btn btn-primary btn-lg" onClick={submit}>Indienen ✓</button>
+          <button className="btn btn-primary btn-lg" onClick={submit}><CheckIcon size={18} aria-hidden /> Indienen</button>
         </div>
       </div>
     );
@@ -2005,28 +2020,28 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
       />
       {stepMode && qStep === 'retry' && (
         <div className="callout warn" role="alert">
-          <span aria-hidden>🔁</span>
+          <RetryIcon aria-hidden />
           <div>
             <strong>Nog niet helemaal juist.</strong> Kijk nog eens goed en probeer één keer opnieuw.
             {questionHints(q).length > 0 && (
-              <div style={{ marginTop: 4 }}>💡 <strong>Hint:</strong> {questionHints(q)[0]}</div>
+              <div style={{ marginTop: 4, display: 'flex', alignItems: 'flex-start', gap: 6 }}><TipIcon size={16} className="icon-inline" aria-hidden /> <strong>Hint:</strong> {questionHints(q)[0]}</div>
             )}
           </div>
         </div>
       )}
       <div className="player-nav">
         <button className="btn btn-ghost" onClick={() => setIdx((i) => Math.max(0, i - 1))} disabled={idx === 0}>
-          ← Vorige
+          <BackIcon size={18} aria-hidden /> Vorige
         </button>
         {needsCheck ? (
           <button className="btn btn-primary" onClick={checkCurrent} disabled={!answered(q, answers[q.id])}>
-            {qStep === 'retry' ? 'Opnieuw controleren ✓' : 'Controleren ✓'}
+            <CheckIcon size={18} aria-hidden /> {qStep === 'retry' ? 'Opnieuw controleren' : 'Controleren'}
           </button>
         ) : isLast ? (
-          <button className="btn btn-primary btn-lg" onClick={submit}>Indienen ✓</button>
+          <button className="btn btn-primary btn-lg" onClick={submit}><CheckIcon size={18} aria-hidden /> Indienen</button>
         ) : (
           <button className="btn btn-primary" onClick={() => setIdx((i) => Math.min(questions.length - 1, i + 1))}>
-            Volgende →
+            Volgende <ArrowRight size={18} aria-hidden />
           </button>
         )}
       </div>

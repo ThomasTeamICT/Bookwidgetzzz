@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ArrowRight, CheckCircle2, Save } from 'lucide-react';
+import {
+  AIIcon, BackIcon, CheckIcon, EditIcon, GoalIcon, ImportIcon, PrivacyIcon, RetryIcon,
+  SearchIcon, TryIcon, WarningIcon,
+} from '../components/icons';
 import type {
   BingoConfig, ChecklistConfig, CrosswordConfig, DictationConfig, FlashcardsConfig,
   Folder, HangmanConfig, MemoryConfig, MindmapConfig, PairsConfig, PlannerConfig,
@@ -67,17 +72,17 @@ function widgetSummary(w: Widget): Summary {
       return listSummary(qs.map((q) => (q.type === 'gap' ? q.text : q.prompt)), 'vraag', 'vragen');
     }
     case 'flashcards':
-      return listSummary((w.config as FlashcardsConfig).cards.map((c) => `${c.front} → ${c.back}`), 'kaart', 'kaarten');
+      return listSummary((w.config as FlashcardsConfig).cards.map((c) => `${c.front} — ${c.back}`), 'kaart', 'kaarten');
     case 'crossword':
       return listSummary((w.config as CrosswordConfig).entries.map((e) => `${e.word} — ${e.clue}`), 'woord', 'woorden');
     case 'wordsearch':
       return listSummary((w.config as WordsearchConfig).words, 'woord', 'woorden');
     case 'memory':
-      return listSummary((w.config as MemoryConfig).pairs.map((p) => `${p.a} ↔ ${p.b}`), 'paar', 'paren');
+      return listSummary((w.config as MemoryConfig).pairs.map((p) => `${p.a} — ${p.b}`), 'paar', 'paren');
     case 'hangman':
       return listSummary((w.config as HangmanConfig).words.map((x) => (x.hint ? `${x.word} — ${x.hint}` : x.word)), 'woord', 'woorden');
     case 'pairs':
-      return listSummary((w.config as PairsConfig).pairs.map((p) => `${p.left} ↔ ${p.right}`), 'paar', 'paren');
+      return listSummary((w.config as PairsConfig).pairs.map((p) => `${p.left} — ${p.right}`), 'paar', 'paren');
     case 'timeline':
       return listSummary((w.config as TimelineConfig).events.map((e) => `${e.date}: ${e.title}`), 'gebeurtenis', 'gebeurtenissen');
     case 'scramble':
@@ -317,7 +322,7 @@ export function AIStudioPage() {
     <div className="page page-narrow">
       <div className="page-head">
         <div>
-          <h1>✨ AI-studio</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}><AIIcon aria-hidden /> AI-studio</h1>
           <p className="sub">Van bronmateriaal naar kant-en-klare oefeningen in één minuut.</p>
         </div>
       </div>
@@ -358,7 +363,7 @@ export function AIStudioPage() {
                 />
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                   <button type="button" className="btn btn-sm btn-ghost" onClick={() => fileRef.current?.click()}>
-                    📄 Bestand laden (.txt/.md)
+                    <ImportIcon size={16} aria-hidden /> Bestand laden (.txt/.md)
                   </button>
                   <PdfImportButton onText={pastePdfText} />
                   <input
@@ -379,7 +384,7 @@ export function AIStudioPage() {
                     style={sourceTooLong ? { color: 'var(--warn)', fontWeight: 600 } : undefined}
                   >
                     {source.length.toLocaleString('nl-BE')} tekens
-                    {sourceTooLong && ' — ⚠️ erg lang: knip in kleinere stukken voor een beter resultaat'}
+                    {sourceTooLong && <> — <WarningIcon size={14} className="icon-inline" aria-hidden /> erg lang: knip in kleinere stukken voor een beter resultaat</>}
                   </span>
                 </div>
                 <span className="hint">
@@ -466,7 +471,7 @@ export function AIStudioPage() {
                           background: on ? 'var(--brand-soft)' : 'transparent',
                         }}
                       >
-                        <TypeTile type={def} size="xs" /> {def.name}{on && <span aria-hidden> ✓</span>}
+                        <TypeTile type={def} size="xs" /> {def.name}{on && <CheckIcon size={14} className="icon-inline" aria-hidden />}
                       </button>
                     );
                   })}
@@ -484,7 +489,7 @@ export function AIStudioPage() {
               ) : (
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                   <button className="btn btn-primary btn-lg" onClick={generate} disabled={!canGenerate}>
-                    ✨ Genereer {types.length > 1 ? `${types.length} widgets` : 'widget'}
+                    <AIIcon size={18} aria-hidden /> Genereer {types.length > 1 ? `${types.length} widgets` : 'widget'}
                   </button>
                   {!canGenerate && (
                     <span className="hint">
@@ -493,7 +498,7 @@ export function AIStudioPage() {
                   )}
                   {result && result.widgets.length > 0 && (
                     <button className="btn btn-ghost" onClick={() => setPhase('preview')}>
-                      Terug naar de voorstellen →
+                      Terug naar de voorstellen <ArrowRight size={16} aria-hidden />
                     </button>
                   )}
                 </div>
@@ -505,8 +510,8 @@ export function AIStudioPage() {
         {phase === 'preview' && result && (
           <div style={{ display: 'grid', gap: 14 }}>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-              <button className="btn btn-ghost" onClick={() => setPhase('idle')}>← Invoer aanpassen</button>
-              <button className="btn btn-ghost" onClick={generate}>🔁 Opnieuw genereren</button>
+              <button className="btn btn-ghost" onClick={() => setPhase('idle')}><BackIcon size={16} aria-hidden /> Invoer aanpassen</button>
+              <button className="btn btn-ghost" onClick={generate}><RetryIcon size={16} aria-hidden /> Opnieuw genereren</button>
               <span style={{ flex: 1 }} />
               <span className="hint">
                 {result.widgets.length} {n(result.widgets.length, 'voorstel', 'voorstellen')}
@@ -524,7 +529,7 @@ export function AIStudioPage() {
                 }}
               >
                 {result.warnings.map((wtext, i) => (
-                  <div key={i}>⚠️ {wtext}</div>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><WarningIcon size={16} aria-hidden /> {wtext}</div>
                 ))}
               </div>
             )}
@@ -578,7 +583,7 @@ export function AIStudioPage() {
                     return (
                       <div style={{ paddingLeft: 30, display: 'grid', gap: 2 }}>
                         {codes.map((code) => (
-                          <span key={code} className="hint">🎯 {goalLabel(code, curriculumId || undefined)}</span>
+                          <span key={code} className="hint"><GoalIcon size={14} className="icon-inline" aria-hidden /> {goalLabel(code, curriculumId || undefined)}</span>
                         ))}
                       </div>
                     );
@@ -587,8 +592,8 @@ export function AIStudioPage() {
                   {lint && lint.length > 0 && (
                     <div style={{ borderTop: '1px dashed var(--line)', paddingTop: 8, display: 'grid', gap: 3 }}>
                       {lint.map((lw, i) => (
-                        <span key={i} className="hint" style={{ color: 'var(--warn)' }}>
-                          🔎 {lw.questionNo !== null ? `Vraag ${lw.questionNo}: ` : ''}{lw.text}
+                        <span key={i} className="hint" style={{ color: 'var(--warn)', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                          <SearchIcon size={14} className="icon-inline" aria-hidden /> {lw.questionNo !== null ? `Vraag ${lw.questionNo}: ` : ''}{lw.text}
                         </span>
                       ))}
                     </div>
@@ -598,7 +603,7 @@ export function AIStudioPage() {
             })}
 
             <div className="card" style={{ padding: 16, display: 'grid', gap: 4 }}>
-              <h2 style={{ margin: '0 0 8px', fontSize: '1.05rem' }}>💾 Bewaren</h2>
+              <h2 style={{ margin: '0 0 8px', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: 8 }}><Save size={20} aria-hidden /> Bewaren</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0 14px' }}>
                 <Field label="In welke map?">
                   <select
@@ -607,11 +612,11 @@ export function AIStudioPage() {
                     onChange={(e) => setFolderId(e.target.value)}
                     aria-label="Map om de widgets in te bewaren"
                   >
-                    <option value="">📂 Hoofdmap (geen map)</option>
+                    <option value="">Hoofdmap (geen map)</option>
                     {folders.map((f) => (
-                      <option key={f.id} value={f.id}>📁 {f.name}</option>
+                      <option key={f.id} value={f.id}>{f.name}</option>
                     ))}
-                    <option value="__new__">🆕 Nieuwe map…</option>
+                    <option value="__new__">Nieuwe map…</option>
                   </select>
                 </Field>
                 {folderId === '__new__' && (
@@ -633,7 +638,7 @@ export function AIStudioPage() {
                   onClick={saveAll}
                   disabled={checkedCount === 0 || (folderId === '__new__' && !newFolderName.trim())}
                 >
-                  ✔ {checkedCount} {n(checkedCount, 'widget', 'widgets')} bewaren
+                  <CheckIcon size={16} aria-hidden /> {checkedCount} {n(checkedCount, 'widget', 'widgets')} bewaren
                 </button>
                 {checkedCount === 0 && <span className="hint">Vink minstens één widget aan om te bewaren.</span>}
                 {checkedCount > 0 && folderId === '__new__' && !newFolderName.trim() && (
@@ -647,7 +652,7 @@ export function AIStudioPage() {
         {phase === 'saved' && (
           <div className="card" style={{ padding: 22, display: 'grid', gap: 16 }}>
             <div style={{ textAlign: 'center', display: 'grid', gap: 4, justifyItems: 'center' }}>
-              <span style={{ fontSize: '2.2rem' }} aria-hidden>🎉</span>
+              <CheckCircle2 size={40} aria-hidden style={{ color: 'var(--ok)' }} />
               <h2 style={{ margin: 0 }}>
                 Klaar — {saved.length} {n(saved.length, 'widget', 'widgets')} bewaard
               </h2>
@@ -669,25 +674,26 @@ export function AIStudioPage() {
                   >
                     <TypeTile type={def} size="sm" />
                     <strong style={{ flex: 1, minWidth: 160 }}>{w.title}</strong>
-                    <Link className="btn btn-sm btn-ghost" to={`/bewerk/${w.id}`}>✏️ Bewerken</Link>
-                    <Link className="btn btn-sm btn-ghost" to={`/speel/${w.code}`}>▶ Uittesten</Link>
+                    <Link className="btn btn-sm btn-ghost" to={`/bewerk/${w.id}`}><EditIcon size={16} aria-hidden /> Bewerken</Link>
+                    <Link className="btn btn-sm btn-ghost" to={`/speel/${w.code}`}><TryIcon size={16} aria-hidden /> Uittesten</Link>
                   </div>
                 );
               })}
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button className="btn btn-primary" onClick={resetForNext}>✨ Nog iets maken</button>
+              <button className="btn btn-primary" onClick={resetForNext}><AIIcon size={16} aria-hidden /> Nog iets maken</button>
               <Link className="btn btn-ghost" to="/widgets">Naar mijn widgets</Link>
             </div>
           </div>
         )}
       </AIGate>
 
-      <p className="hint" style={{ marginTop: 28, maxWidth: 720 }}>
-        🔒 <strong>Wat verlaat dit toestel?</strong> Alleen wat je hierboven invult — het bronmateriaal
+      <p className="hint" style={{ marginTop: 28, maxWidth: 720, display: 'flex', gap: 6 }}>
+        <PrivacyIcon size={16} className="icon-inline" aria-hidden style={{ flexShrink: 0, marginTop: 2 }} />
+        <span><strong>Wat verlaat dit toestel?</strong> Alleen wat je hierboven invult — het bronmateriaal
         en je opdracht — gaat naar je gekozen AI-aanbieder. Leerlingnamen of resultaten worden nooit
         meegestuurd. De voorstellen verschijnen eerst hier en jij kijkt alles na vóór je het met
-        leerlingen gebruikt.
+        leerlingen gebruikt.</span>
       </p>
     </div>
   );

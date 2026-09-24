@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { ChecklistConfig } from '../lib/types';
 import { Field } from '../components/ui';
+import { CheckIcon } from '../components/icons';
 import { uid } from '../lib/utils';
 import { EditorProps, PlayerProps, ResultHero } from './shared';
 
@@ -33,7 +34,7 @@ export function ChecklistPlayer({ widget, onComplete }: PlayerProps<ChecklistCon
     return (
       <ResultHero
         earned={checked.size} max={items.length} showScore={false}
-        title="Checklist ingediend! ✅"
+        title="Checklist ingediend!"
         subtitle={`${checked.size} van de ${items.length} stappen afgevinkt.`}
       />
     );
@@ -78,7 +79,7 @@ export function ChecklistPlayer({ widget, onComplete }: PlayerProps<ChecklistCon
             });
           }}
         >
-          Indienen ✓
+<CheckIcon size={18} aria-hidden /> Indienen
         </button>
       </div>
     </div>

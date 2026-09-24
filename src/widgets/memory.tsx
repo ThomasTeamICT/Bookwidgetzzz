@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import type { MemoryConfig, MemoryPair } from '../lib/types';
 import { shuffled, uid } from '../lib/utils';
 import { Field, ImagePicker } from '../components/ui';
+import { CheckIcon, GoalIcon, RetryIcon } from '../components/icons';
 import { EditorProps, GameStatus, ItemHeader, PlayerProps, ResultHero } from './shared';
 
 export function MemoryEditor({ config, onChange }: EditorProps<MemoryConfig>) {
@@ -19,7 +20,7 @@ export function MemoryEditor({ config, onChange }: EditorProps<MemoryConfig>) {
       {pairs.map((p, i) => (
         <div className="editor-item" key={p.id}>
           <ItemHeader
-            index={i} label={`${p.a || '…'} ↔ ${p.b || '…'}`}
+            index={i} label={`${p.a || '…'} — ${p.b || '…'}`}
             canUp={false} canDown={false}
             onMoveUp={() => {}} onMoveDown={() => {}}
             onDelete={() => onChange({ ...config, pairs: pairs.filter((_, j) => j !== i) })}
@@ -106,7 +107,7 @@ export function MemoryPlayer({ widget, onComplete }: PlayerProps<MemoryConfig>) 
       >
         <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => {
           setMatched(new Set()); setOpen([]); setTries(0); setDone(false);
-        }}>🔁 Opnieuw spelen</button>
+        }}><RetryIcon size={16} aria-hidden /> Opnieuw spelen</button>
       </ResultHero>
     );
   }
@@ -114,8 +115,8 @@ export function MemoryPlayer({ widget, onComplete }: PlayerProps<MemoryConfig>) 
   return (
     <div>
       <GameStatus>
-        <span className="badge badge-ok">✓ {matched.size} / {totalPairs} paren</span>
-        <span className="badge">🎯 {tries} pogingen</span>
+        <span className="badge badge-ok"><CheckIcon size={14} className="icon-inline" aria-hidden /> {matched.size} / {totalPairs} paren</span>
+        <span className="badge"><GoalIcon size={14} className="icon-inline" aria-hidden /> {tries} pogingen</span>
       </GameStatus>
       <div className="memory-grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, maxWidth: cols * 130 }}>
         {cards.map((c) => {

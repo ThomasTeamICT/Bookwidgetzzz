@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowRight, Compass, ExternalLink, Globe } from 'lucide-react';
 import type { WebquestConfig, WebquestStep } from '../lib/types';
 import { pct, uid } from '../lib/utils';
 import { Field, ImagePicker } from '../components/ui';
+import {
+  BackIcon, CheckIcon, CloseIcon, LinkIcon,
+} from '../components/icons';
 import { EditorProps, ItemHeader, moveItem, PlayerProps, ResultHero } from './shared';
 
 // ── Hulpjes ─────────────────────────────────────────────────────────────────
@@ -140,7 +144,7 @@ export function WebquestEditor({ config, onChange }: EditorProps<WebquestConfig>
                     title="Link verwijderen"
                     onClick={() => update(i, { ...s, links: s.links.filter((_, k) => k !== j) })}
                   >
-                    ✕
+                    <CloseIcon size={16} aria-hidden />
                   </button>
                 </div>
               ))}
@@ -219,7 +223,7 @@ export function WebquestPlayer({ widget, timeUp, onComplete }: PlayerProps<Webqu
         earned={count}
         max={steps.length}
         showScore={false}
-        title={all ? 'WebQuest voltooid! 🧭' : 'Tijd is om ⏰'}
+        title={all ? 'WebQuest voltooid!' : 'Tijd is om'}
         subtitle={`Je rondde ${count} van de ${steps.length} ${steps.length === 1 ? 'stap' : 'stappen'} af.`}
       />
     );
@@ -260,7 +264,7 @@ export function WebquestPlayer({ widget, timeUp, onComplete }: PlayerProps<Webqu
           aria-label={`${stepTitle(s, i)}${isDone ? ' (afgerond)' : ''}`}
           onClick={() => setActive(i)}
         >
-          <span aria-hidden>{isDone ? '✓' : `${i + 1}.`}</span> {stepTitle(s, i)}
+          <span aria-hidden>{isDone ? <CheckIcon size={14} className="icon-inline" /> : `${i + 1}.`}</span> {stepTitle(s, i)}
         </button>
       );
     }
@@ -272,7 +276,7 @@ export function WebquestPlayer({ widget, timeUp, onComplete }: PlayerProps<Webqu
         aria-current={isActive ? 'step' : undefined}
         onClick={() => setActive(i)}
       >
-        <span className="marker" aria-hidden>{isDone ? '✓' : i + 1}</span>
+        <span className="marker" aria-hidden>{isDone ? <CheckIcon size={14} /> : i + 1}</span>
         <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {stepTitle(s, i)}
         </span>
@@ -285,7 +289,7 @@ export function WebquestPlayer({ widget, timeUp, onComplete }: PlayerProps<Webqu
     <section className="card question-card" style={{ marginBottom: 0 }} aria-label={`Stap ${active + 1}: ${stepTitle(step, active)}`}>
       <div className="question-num">
         Stap {active + 1} van {steps.length}
-        {isDoneStep && <span className="badge badge-ok">✓ Afgerond</span>}
+        {isDoneStep && <span className="badge badge-ok"><CheckIcon size={14} className="icon-inline" aria-hidden /> Afgerond</span>}
       </div>
       <h2 style={{ marginBottom: 12 }}>{stepTitle(step, active)}</h2>
       {step.imageUrl && <img src={step.imageUrl} alt="" className="question-image" />}
@@ -298,8 +302,8 @@ export function WebquestPlayer({ widget, timeUp, onComplete }: PlayerProps<Webqu
       )}
       {links.length > 0 && (
         <div style={{ marginTop: 16 }}>
-          <h3 style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-soft)' }}>
-            🔗 Links bij deze stap
+          <h3 style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-soft)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <LinkIcon size={14} aria-hidden /> Links bij deze stap
           </h3>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {links.map((l, i) => (
@@ -311,7 +315,7 @@ export function WebquestPlayer({ widget, timeUp, onComplete }: PlayerProps<Webqu
                 rel="noopener noreferrer"
                 aria-label={`${l.label.trim() || l.url} openen in een nieuw tabblad`}
               >
-                🌐 {l.label.trim() || l.url} <span aria-hidden>↗</span>
+                <Globe size={14} className="icon-inline" aria-hidden /> {l.label.trim() || l.url} <ExternalLink size={14} aria-hidden />
               </a>
             ))}
           </div>
@@ -327,7 +331,7 @@ export function WebquestPlayer({ widget, timeUp, onComplete }: PlayerProps<Webqu
           aria-label="Naar de vorige stap"
           onClick={() => setActive(active - 1)}
         >
-          ← Vorige
+<BackIcon size={18} aria-hidden /> Vorige
         </button>
         {!isDoneStep ? (
           <button
@@ -335,11 +339,11 @@ export function WebquestPlayer({ widget, timeUp, onComplete }: PlayerProps<Webqu
             aria-label={`Stap ${active + 1} afronden`}
             onClick={completeStep}
           >
-            Stap afronden ✓
+            <CheckIcon size={16} aria-hidden /> Stap afronden
           </button>
         ) : active < steps.length - 1 ? (
           <button className="btn btn-ghost" aria-label="Naar de volgende stap" onClick={() => setActive(active + 1)}>
-            Volgende →
+            Volgende <ArrowRight size={16} aria-hidden />
           </button>
         ) : (
           <span className="badge badge-ok">Deze stap is afgerond</span>
@@ -358,7 +362,7 @@ export function WebquestPlayer({ widget, timeUp, onComplete }: PlayerProps<Webqu
             marginBottom: 6, fontWeight: 650, color: 'var(--text-soft)', fontSize: '0.92rem',
           }}
         >
-          <span>🧭 WebQuest</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Compass size={16} aria-hidden /> WebQuest</span>
           <span role="status" aria-live="polite">
             {doneCount} van {steps.length} {steps.length === 1 ? 'stap' : 'stappen'} afgerond
           </span>

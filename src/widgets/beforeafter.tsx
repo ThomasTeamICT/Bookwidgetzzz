@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { ArrowLeftRight } from 'lucide-react';
 import type { BeforeAfterConfig } from '../lib/types';
 import { clamp } from '../lib/utils';
 import { Field, ImagePicker } from '../components/ui';
+import { CheckIcon, RetryIcon } from '../components/icons';
 import { EditorProps, GameStatus, PlayerProps } from './shared';
 
 // ── Gedeelde vergelijkingsweergave (editor-voorbeeld + speler) ──────────────
@@ -183,7 +185,7 @@ function CompareStage({
             cursor: 'ew-resize',
           }}
         >
-          <span aria-hidden>⇄</span>
+          <ArrowLeftRight size={18} aria-hidden />
         </div>
       </div>
       <div
@@ -205,7 +207,7 @@ function CompareStage({
           onClick={() => { markInteracted(); setPos(50); }}
           aria-label="Zet de schuiflijn terug in het midden"
         >
-          ↔ Terug naar het midden
+<RetryIcon size={16} aria-hidden /> Terug naar het midden
         </button>
       </div>
     </div>
@@ -310,7 +312,7 @@ export function BeforeAfterPlayer({ widget, timeUp, onComplete }: PlayerProps<Be
     <div style={{ maxWidth: 760, margin: '0 auto' }}>
       <GameStatus>
         {registered ? (
-          <span className="badge badge-ok">✓ Je verkenning is geregistreerd</span>
+          <span className="badge badge-ok"><CheckIcon size={14} className="icon-inline" aria-hidden /> Je verkenning is geregistreerd</span>
         ) : (
           <span>Sleep de lijn (of gebruik de pijltjestoetsen) om voor en na te vergelijken.</span>
         )}

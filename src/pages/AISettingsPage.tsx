@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { EyeOff, KeyRound, Loader2, Plug } from 'lucide-react';
 import {
   AIProviderId,
   AISettings,
@@ -13,7 +14,11 @@ import {
 } from '../lib/ai';
 import { AIErrorBox } from '../components/aiCommon';
 import { CheckRow, ConfirmModal, CopyButton, Field, useToast } from '../components/ui';
+import {
+  AIIcon, CheckIcon, DeleteIcon, LinkIcon, PreviewIcon, PrivacyIcon, ResultsIcon, WarningIcon,
+} from '../components/icons';
 import { formatDate } from '../lib/utils';
+import '../styles/editor.css';
 
 // ── Instel-links: instellingen (incl. sleutel) delen met een testgroep ──────
 // De link gebruikt het hash-fragment, dus de sleutel bereikt nooit een server;
@@ -104,7 +109,7 @@ export function AISettingsPage() {
       saveAISettings(next);
       setSaved(next);
       setForm(next);
-      toast('✨ AI-instellingen automatisch bewaard — je kan meteen aan de slag', 'ok');
+      toast('AI-instellingen automatisch bewaard — je kan meteen aan de slag', 'ok');
     } else {
       setForm((f) => ({ ...f, ...next }));
     }
@@ -188,15 +193,15 @@ export function AISettingsPage() {
     <div className="page" style={{ maxWidth: 760 }}>
       <div className="page-head">
         <div>
-          <h1>✨ AI-instellingen</h1>
-          <p className="sub">Jouw sleutel, jouw toestel, jouw controle — de AI-assistent werkt pas als jij hem instelt.</p>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}><AIIcon aria-hidden /> AI-instellingen</h1>
+          <p className="sub">Jouw sleutel, jouw toestel, jouw controle — Boosterz werkt ook prima zonder, de AI-functies schakelen pas in als jij zelf een sleutel instelt.</p>
         </div>
       </div>
 
       <div style={{ display: 'grid', gap: 16 }}>
         {/* ── 1. Verbinding ─────────────────────────────────────────────── */}
         <section className="card card-pad">
-          <h3 style={{ marginTop: 0 }}>🔑 Verbinding</h3>
+          <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}><KeyRound size={20} aria-hidden /> Verbinding</h3>
           <p style={{ marginTop: 0 }}>
             Je gebruikt je <strong>eigen API-sleutel</strong>; die wordt enkel in de browser van dit
             toestel bewaard. Aanvragen gaan <strong>rechtstreeks van je browser naar de gekozen
@@ -205,13 +210,13 @@ export function AISettingsPage() {
 
           {fromLink && (
             <div className="callout">
-              <span aria-hidden>🔗</span>
+              <LinkIcon aria-hidden />
               <div>
                 {fromLink === 'saved' ? (
                   <>
                     <strong>Klaar!</strong> De instellingen uit je instel-link zijn bewaard — de
                     AI-assistent werkt nu overal in de app. Probeer gerust de{' '}
-                    <em>Test de verbinding</em>-knop, of ga meteen naar de ✨ AI-studio.
+                    <em>Test de verbinding</em>-knop, of ga meteen naar de AI-studio.
                   </>
                 ) : (
                   <>
@@ -260,14 +265,14 @@ export function AISettingsPage() {
                 aria-pressed={showKey}
                 title={showKey ? 'Verberg de API-sleutel' : 'Toon de API-sleutel'}
               >
-                <span aria-hidden>{showKey ? '🙈' : '👁️'}</span>
+                {showKey ? <EyeOff size={18} aria-hidden /> : <PreviewIcon size={18} aria-hidden />}
               </button>
             </div>
           </Field>
 
           {form.provider === 'gemini' && (
             <div className="callout warn">
-              <span aria-hidden>⚠️</span>
+              <WarningIcon aria-hidden />
               <div>
                 <strong>Gratis Gemini-sleutel?</strong> Op de gratis laag van Google AI Studio mag
                 Google je invoer gebruiken om zijn producten te verbeteren. Voor schoolgebruik:
@@ -326,7 +331,7 @@ export function AISettingsPage() {
               onClick={() => { void doTest(); }}
               disabled={testing || !form.apiKey.trim()}
             >
-              {testing ? '⏳ Bezig met testen…' : '🔌 Test de verbinding'}
+              {testing ? <><Loader2 size={16} className="icon-inline icon-spin" aria-hidden /> Bezig met testen…</> : <><Plug size={16} aria-hidden /> Test de verbinding</>}
             </button>
           </div>
           <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
@@ -341,7 +346,7 @@ export function AISettingsPage() {
                 borderRadius: 10, padding: '10px 14px', display: 'flex', gap: 10, alignItems: 'center',
               }}
             >
-              <span aria-hidden>✅</span>
+              <CheckIcon aria-hidden style={{ color: 'var(--ok)' }} />
               <span>Verbinding werkt (model {testResult.model}).</span>
             </div>
           )}
@@ -370,7 +375,7 @@ export function AISettingsPage() {
           {saved.apiKey && (
             <>
               <hr className="divider" />
-              <h3>🔗 Instel-link voor je testgroep</h3>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><LinkIcon size={20} aria-hidden /> Instel-link voor je testgroep</h3>
               <p style={{ marginTop: 0 }}>
                 Wil je collega's laten meetesten zonder dat ze zelf iets moeten instellen? Deel
                 deze link: wie hem opent, krijgt deze aanbieder, dit model én deze sleutel
@@ -398,7 +403,7 @@ export function AISettingsPage() {
                 );
               })()}
               <div className="callout warn" style={{ marginTop: 10 }}>
-                <span aria-hidden>🔒</span>
+                <PrivacyIcon aria-hidden />
                 <div>
                   <strong>Deze link bevat je API-sleutel.</strong> Deel hem alleen rechtstreeks met
                   mensen die je vertrouwt (je testgroep), nooit in openbare kanalen of chats met
@@ -413,13 +418,13 @@ export function AISettingsPage() {
         {/* ── 2. Gebruik & kosten ───────────────────────────────────────── */}
         <section className="card card-pad">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <h3 style={{ margin: 0, flex: 1 }}>📊 Gebruik &amp; kosten</h3>
+            <h3 style={{ margin: 0, flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}><ResultsIcon size={20} aria-hidden /> Gebruik &amp; kosten</h3>
             <button
               className="btn btn-sm btn-ghost"
               onClick={() => setConfirm('log')}
               disabled={totals.calls === 0}
             >
-              🧹 Log wissen
+              <DeleteIcon size={16} aria-hidden /> Log wissen
             </button>
           </div>
 
@@ -514,11 +519,16 @@ export function AISettingsPage() {
 
         {/* ── 3. Privacy & goed gebruik ─────────────────────────────────── */}
         <section className="card card-pad">
-          <h3 style={{ marginTop: 0 }}>🛡️ Privacy &amp; goed gebruik</h3>
+          <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}><PrivacyIcon size={20} aria-hidden /> Privacy &amp; goed gebruik</h3>
           <ul style={{ paddingLeft: 20, margin: 0, display: 'grid', gap: 8 }}>
             <li>
-              Je sleutel staat <strong>alleen in deze browser</strong> (localStorage) en verlaat dit
-              toestel niet — behalve richting je AI-aanbieder om je aanvragen te ondertekenen.
+              Je sleutel is van <strong>jou</strong> en staat <strong>alleen in deze browser</strong>
+              {' '}(localStorage) — ze verlaat dit toestel niet, behalve richting je AI-aanbieder om
+              je aanvragen te ondertekenen.
+            </li>
+            <li>
+              <strong>Boosterz blijft volledig bruikbaar zonder sleutel</strong>: alleen de
+              AI-functies (AI-studio en de AI-assistent in de editor) staan dan uit.
             </li>
             <li>
               Wat je laat genereren, vertrekt <strong>als tekst naar de gekozen aanbieder</strong>.
@@ -538,7 +548,7 @@ export function AISettingsPage() {
 
         {/* ── 4. Sleutel verwijderen ────────────────────────────────────── */}
         <section className="card card-pad">
-          <h3 style={{ marginTop: 0 }}>🗑️ Sleutel verwijderen</h3>
+          <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}><DeleteIcon size={20} aria-hidden /> Sleutel verwijderen</h3>
           <p style={{ marginTop: 0 }}>
             Verwijder je sleutel van dit toestel — bijvoorbeeld op een gedeelde klascomputer.
             De AI-functies schakelen dan uit tot je opnieuw een sleutel instelt; je aanbieder en
@@ -549,7 +559,7 @@ export function AISettingsPage() {
             onClick={() => setConfirm('key')}
             disabled={!hasSavedKey}
           >
-            🗑️ Sleutel verwijderen van dit toestel
+<DeleteIcon size={16} aria-hidden /> Sleutel verwijderen van dit toestel
           </button>
           {!hasSavedKey && (
             <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>

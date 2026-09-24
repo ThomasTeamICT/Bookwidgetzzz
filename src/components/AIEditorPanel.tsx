@@ -9,6 +9,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { BookOpen, Clock, Compass, MessageSquare, RefreshCw } from 'lucide-react';
 import type {
   GapQuestion, MCQuestion, MultiQuestion, Question, VideoCheckpoint, Widget, WidgetTypeId,
 } from '../lib/types';
@@ -22,6 +23,9 @@ import { uid } from '../lib/utils';
 import { getCurricula, normalizeGoalCode } from '../lib/curriculum';
 import { getTypeDef } from '../widgets/registry';
 import { Field, EmptyState, Modal, useToast } from './ui';
+import {
+  AddIcon, AIIcon, BackIcon, CheckIcon, GoalIcon, TipIcon, WarningIcon,
+} from './icons';
 import { AIErrorBox, AIGate, AIReviewNote, AIWorkingBox } from './aiCommon';
 import { PdfImportButton } from './PdfImportButton';
 
@@ -68,7 +72,7 @@ const ITEM_DEFS: Partial<Record<WidgetTypeId, ItemDef>> = {
   flashcards: {
     field: 'cards', noun: 'kaarten', one: 'kaart',
     textOf: (i) => str(asRec(i).front),
-    line: (i) => `${str(asRec(i).front)} → ${str(asRec(i).back)}`,
+    line: (i) => `${str(asRec(i).front)} — ${str(asRec(i).back)}`,
   },
   crossword: {
     field: 'entries', noun: 'woorden', one: 'woord',
@@ -83,7 +87,7 @@ const ITEM_DEFS: Partial<Record<WidgetTypeId, ItemDef>> = {
   memory: {
     field: 'pairs', noun: 'paren', one: 'paar',
     textOf: (i) => str(asRec(i).a),
-    line: (i) => `${str(asRec(i).a)} ↔ ${str(asRec(i).b)}`,
+    line: (i) => `${str(asRec(i).a)} — ${str(asRec(i).b)}`,
   },
   hangman: {
     field: 'words', noun: 'woorden', one: 'woord',
@@ -93,7 +97,7 @@ const ITEM_DEFS: Partial<Record<WidgetTypeId, ItemDef>> = {
   pairs: {
     field: 'pairs', noun: 'paren', one: 'paar',
     textOf: (i) => str(asRec(i).left),
-    line: (i) => `${str(asRec(i).left)} ↔ ${str(asRec(i).right)}`,
+    line: (i) => `${str(asRec(i).left)} — ${str(asRec(i).right)}`,
   },
   timeline: {
     field: 'events', noun: 'gebeurtenissen', one: 'gebeurtenis',
@@ -204,7 +208,7 @@ function pluckRawQuestions(json: unknown): unknown[] {
 function ActionCard({
   icon, title, desc, onClick, disabled, disabledHint,
 }: {
-  icon: string; title: string; desc: string; onClick: () => void;
+  icon: React.ReactNode; title: string; desc: string; onClick: () => void;
   disabled?: boolean; disabledHint?: string;
 }) {
   return (
@@ -219,7 +223,7 @@ function ActionCard({
         font: 'inherit', color: 'inherit',
       }}
     >
-      <span style={{ fontSize: '1.4rem', lineHeight: 1 }} aria-hidden>{icon}</span>
+      <span style={{ lineHeight: 1 }} aria-hidden>{icon}</span>
       <span style={{ display: 'grid', gap: 2 }}>
         <strong>{title}</strong>
         <span className="hint">{disabled && disabledHint ? disabledHint : desc}</span>
@@ -258,7 +262,7 @@ function QuestionPreviewList({ qs }: { qs: Question[] }) {
                 const correct = q.type === 'mc'
                   ? i === (q as MCQuestion).correctIndex
                   : (q as MultiQuestion).correctIndices.includes(i);
-                return <li key={i}>{correct ? <strong>✓ {o}</strong> : o}</li>;
+                return <li key={i}>{correct ? <strong><CheckIcon size={14} className="icon-inline" aria-hidden /> {o}</strong> : o}</li>;
               })}
             </ul>
           )}
@@ -461,19 +465,19 @@ ${payload}`;
         const added: React.ReactNode[] = [];
         if (!nq.explanation && u.explanation) {
           nq.explanation = u.explanation;
-          added.push(<span key="e" className="hint">💬 Uitleg: {u.explanation}</span>);
+          added.push(<span key="e" className="hint"><MessageSquare size={14} className="icon-inline" aria-hidden /> Uitleg: {u.explanation}</span>);
         }
         if (!((nq.hints && nq.hints.length > 0) || nq.hint) && u.hints) {
           nq.hints = u.hints;
           added.push(
             <span key="h" className="hint">
-              🪜 Hints: {u.hints.map((h, i) => `${i + 1}) ${h}`).join(' ')}
+              <TipIcon size={14} className="icon-inline" aria-hidden /> Hints: {u.hints.map((h, i) => `${i + 1}) ${h}`).join(' ')}
             </span>
           );
         }
         if (!nq.support && u.support) {
           nq.support = u.support;
-          added.push(<span key="s" className="hint">🧭 Steuntaal: {u.support}</span>);
+          added.push(<span key="s" className="hint"><Compass size={14} className="icon-inline" aria-hidden /> Steuntaal: {u.support}</span>);
         }
         if (added.length === 0) return q;
         touched++;
@@ -618,11 +622,11 @@ ${payload}`;
               {cleaned.map((o, i) => (
                 <li key={i}>
                   {correctIdx.includes(i) ? (
-                    <strong>✓ {o} <span style={{ fontWeight: 400 }}>(juist, ongewijzigd)</span></strong>
+                    <strong><CheckIcon size={14} className="icon-inline" aria-hidden /> {o} <span style={{ fontWeight: 400 }}>(juist, ongewijzigd)</span></strong>
                   ) : o === q.options[i] ? (
                     o
                   ) : (
-                    <>↻ {o} <s style={{ opacity: 0.6 }}>{q.options[i]}</s></>
+                    <><RefreshCw size={14} className="icon-inline" aria-hidden /> {o} <s style={{ opacity: 0.6 }}>{q.options[i]}</s></>
                   )}
                 </li>
               ))}
@@ -733,7 +737,7 @@ ${payload}`;
           <PreviewCard key={q.id}>
             <strong style={{ fontWeight: 600 }}>{q.prompt || (q.type === 'gap' ? (q as GapQuestion).text : '')}</strong>
             <span className="hint">
-              🎯 <strong>{code}</strong> — {shortText(goalText, 110)}
+              <GoalIcon size={14} className="icon-inline" aria-hidden /> <strong>{code}</strong> — {shortText(goalText, 110)}
               {q.goalCode ? ` (was ${q.goalCode})` : ''}
             </span>
           </PreviewCard>
@@ -891,7 +895,7 @@ ${payload}`;
   function runVideoQuiz() {
     const n = clampCount(count);
     if (!source.trim()) {
-      setError('Plak eerst het transcript van de video (YouTube: … onder de video → "Transcript tonen" → alles kopiëren).');
+      setError('Plak eerst het transcript van de video (YouTube: klik onder de video op "… meer", dan op "Transcript tonen" en kopieer alles).');
       return;
     }
     const existing: VideoCheckpoint[] = Array.isArray(cfg.checkpoints) ? (cfg.checkpoints as VideoCheckpoint[]) : [];
@@ -944,7 +948,7 @@ ${source.trim()}
             {fresh.map((c) => (
               <PreviewCard key={c.id}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
-                  <span className="badge badge-brand" style={{ fontFamily: 'monospace' }}>⏱ {formatTime(c.timeSec)}</span>
+                  <span className="badge badge-brand" style={{ fontFamily: 'monospace', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Clock size={14} aria-hidden /> {formatTime(c.timeSec)}</span>
                   <span className="hint" style={{ border: '1px solid var(--line)', borderRadius: 6, padding: '0 6px' }}>
                     {Q_LABEL[c.question.type] ?? c.question.type}
                   </span>
@@ -962,8 +966,8 @@ ${source.trim()}
   // ── Weergave ────────────────────────────────────────────────────────────────
 
   const footer = (
-    <span className="hint" style={{ marginRight: 'auto', textAlign: 'left' }}>
-      ✨ AI-voorzet — kijk alles na. Gebruik: ~tokens zichtbaar bij{' '}
+    <span className="hint" style={{ marginRight: 'auto', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 6 }}>
+      <AIIcon size={16} aria-hidden /> AI-voorzet — kijk alles na. Gebruik: ~tokens zichtbaar bij{' '}
       <Link to="/ai-instellingen">AI-instellingen</Link>.
     </span>
   );
@@ -971,7 +975,7 @@ ${source.trim()}
   let body: React.ReactNode;
   if (!supported) {
     body = (
-      <EmptyState icon="🤖" title="Voor dit widgettype is er (nog) geen AI-hulp.">
+      <EmptyState icon={<AIIcon size={40} aria-hidden />} title="Voor dit widgettype is er (nog) geen AI-hulp.">
         <p className="hint" style={{ margin: 0 }}>
           Probeer de AI-studio voor het genereren van nieuwe widgets uit bronmateriaal.
         </p>
@@ -985,7 +989,7 @@ ${source.trim()}
         <AIErrorBox error={error} onRetry={() => lastRunRef.current?.()} />
         <div>
           <button className="btn btn-sm btn-quiet" onClick={() => { setError(null); setMode('menu'); }}>
-            ← Terug naar de acties
+            <BackIcon size={16} aria-hidden /> Terug naar de acties
           </button>
         </div>
       </div>
@@ -998,7 +1002,7 @@ ${source.trim()}
         {preview.warnings.length > 0 && (
           <div style={{ display: 'grid', gap: 4 }}>
             {preview.warnings.map((w, i) => (
-              <p key={i} className="hint" style={{ margin: 0, color: 'var(--warn)' }}>⚠ {w}</p>
+              <p key={i} className="hint" style={{ margin: 0, color: 'var(--warn)', display: 'flex', alignItems: 'center', gap: 6 }}><WarningIcon size={14} aria-hidden /> {w}</p>
             ))}
           </div>
         )}
@@ -1009,7 +1013,7 @@ ${source.trim()}
           <button className="btn btn-ghost" onClick={() => { setPreview(null); setMode('menu'); }}>
             Verwerpen
           </button>
-          <button className="btn btn-primary" onClick={applyPreview}>✔ Toepassen</button>
+          <button className="btn btn-primary" onClick={applyPreview}><CheckIcon size={16} aria-hidden /> Toepassen</button>
         </div>
       </div>
     );
@@ -1017,12 +1021,12 @@ ${source.trim()}
     body = (
       <div style={{ display: 'grid', gap: 4 }}>
         <div>
-          <button className="btn btn-sm btn-quiet" onClick={() => setMode('menu')}>← Terug</button>
+          <button className="btn btn-sm btn-quiet" onClick={() => setMode('menu')}><BackIcon size={16} aria-hidden /> Terug</button>
         </div>
-        <h3 style={{ margin: '4px 0 10px' }}>⏱️ Kijkvragen uit een transcript</h3>
+        <h3 style={{ margin: '4px 0 10px', display: 'flex', alignItems: 'center', gap: 8 }}><Clock size={20} aria-hidden /> Kijkvragen uit een transcript</h3>
         <Field
           label="Transcript van de video"
-          hint='YouTube: klik onder de video op "… meer" → "Transcript tonen" en kopieer alles (met de tijdstempels).'
+          hint='YouTube: klik onder de video op "… meer", dan op "Transcript tonen" en kopieer alles (met de tijdstempels).'
         >
           <textarea
             className="textarea" rows={8} value={source}
@@ -1044,7 +1048,7 @@ ${source.trim()}
         </div>
         <div>
           <button className="btn btn-primary" disabled={!source.trim()} onClick={runVideoQuiz}>
-            ✨ Voorstel maken
+            <AIIcon size={16} aria-hidden /> Voorstel maken
           </button>
         </div>
       </div>
@@ -1055,9 +1059,9 @@ ${source.trim()}
     body = (
       <div style={{ display: 'grid', gap: 4 }}>
         <div>
-          <button className="btn btn-sm btn-quiet" onClick={() => setMode('menu')}>← Terug</button>
+          <button className="btn btn-sm btn-quiet" onClick={() => setMode('menu')}><BackIcon size={16} aria-hidden /> Terug</button>
         </div>
-        <h3 style={{ margin: '4px 0 10px' }}>🎯 Vragen aan leerplandoelen koppelen</h3>
+        <h3 style={{ margin: '4px 0 10px', display: 'flex', alignItems: 'center', gap: 8 }}><GoalIcon size={20} aria-hidden /> Vragen aan leerplandoelen koppelen</h3>
         <p className="hint" style={{ marginTop: 0 }}>
           De AI krijgt je {taggable.length} {taggable.length === 1 ? 'vraag' : 'vragen'} (zonder afbeeldingen) en de
           doelenlijst van het gekozen leerplan. Ze mag alleen codes uit die lijst gebruiken — alle andere worden
@@ -1078,8 +1082,8 @@ ${source.trim()}
           </select>
         </Field>
         {curriculum && curriculum.goals.length === 0 && (
-          <p className="hint" style={{ color: 'var(--warn)' }}>
-            ⚠️ Dit leerplan bevat nog geen doelen. Vul het eerst aan bij <Link to="/leerplannen">Leerplannen</Link>.
+          <p className="hint" style={{ color: 'var(--warn)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <WarningIcon size={16} aria-hidden /> Dit leerplan bevat nog geen doelen. Vul het eerst aan bij <Link to="/leerplannen">Leerplannen</Link>.
           </p>
         )}
         <div>
@@ -1088,7 +1092,7 @@ ${source.trim()}
             disabled={!curriculum || curriculum.goals.length === 0 || taggable.length === 0}
             onClick={runGoalLink}
           >
-            ✨ Voorstel maken
+            <AIIcon size={16} aria-hidden /> Voorstel maken
           </button>
         </div>
       </div>
@@ -1098,9 +1102,9 @@ ${source.trim()}
     body = (
       <div style={{ display: 'grid', gap: 4 }}>
         <div>
-          <button className="btn btn-sm btn-quiet" onClick={() => setMode('menu')}>← Terug</button>
+          <button className="btn btn-sm btn-quiet" onClick={() => setMode('menu')}><BackIcon size={16} aria-hidden /> Terug</button>
         </div>
-        <h3 style={{ margin: '4px 0 10px' }}>➕ {forQuestions ? 'Vragen' : 'Items'} bijmaken</h3>
+        <h3 style={{ margin: '4px 0 10px', display: 'flex', alignItems: 'center', gap: 8 }}><AddIcon size={20} aria-hidden /> {forQuestions ? 'Vragen' : 'Items'} bijmaken</h3>
         <Field label="Aantal">
           <input
             className="input input-sm"
@@ -1136,7 +1140,7 @@ ${source.trim()}
         </Field>
         <div>
           <button className="btn btn-primary" onClick={forQuestions ? runAddQuestions : runAddItems}>
-            ✨ Voorstel maken
+            <AIIcon size={16} aria-hidden /> Voorstel maken
           </button>
         </div>
       </div>
@@ -1151,13 +1155,13 @@ ${source.trim()}
         {isQuizFam ? (
           <>
             <ActionCard
-              icon="➕"
+              icon={<AddIcon size={24} aria-hidden />}
               title="Vragen bijmaken"
               desc="Nieuwe vragen die aansluiten bij de bestaande, zonder overlap."
               onClick={() => setMode('form-questions')}
             />
             <ActionCard
-              icon="💡"
+              icon={<TipIcon size={24} aria-hidden />}
               title="Hulp aanvullen"
               desc="Vult ontbrekende uitleg, hintladders en steuntaal aan bij je vragen."
               onClick={runEnrich}
@@ -1165,7 +1169,7 @@ ${source.trim()}
               disabledHint="Nog geen vragen om aan te vullen."
             />
             <ActionCard
-              icon="📖"
+              icon={<BookOpen size={24} aria-hidden />}
               title="Glossarium maken"
               desc="Destilleert schooltaalwoorden uit de vragen, met korte uitleg voor leerlingen."
               onClick={runGlossary}
@@ -1173,7 +1177,7 @@ ${source.trim()}
               disabledHint="Nog geen vragen om begrippen uit te halen."
             />
             <ActionCard
-              icon="🎯"
+              icon={<GoalIcon size={24} aria-hidden />}
               title="Afleiders versterken"
               desc="Herschrijft zwakke foute opties tot plausibele misvattingen; juiste antwoorden blijven staan."
               onClick={runDistractors}
@@ -1181,7 +1185,7 @@ ${source.trim()}
               disabledHint="Geen meerkeuzevragen in deze widget."
             />
             <ActionCard
-              icon="🎯"
+              icon={<GoalIcon size={24} aria-hidden />}
               title="Koppel vragen aan leerplandoelen"
               desc="Hangt aan elke vraag een doelcode uit je leerplan — de basis voor score per leerplandoel."
               onClick={() => setMode('form-goals')}
@@ -1195,14 +1199,14 @@ ${source.trim()}
           </>
         ) : isVideoQuiz ? (
           <ActionCard
-            icon="⏱️"
+            icon={<Clock size={24} aria-hidden />}
             title="Kijkvragen uit een transcript"
             desc="Plak het transcript van de video (bv. van YouTube) en krijg vragen op de juiste tijdstippen."
             onClick={() => setMode('form-video')}
           />
         ) : (
           <ActionCard
-            icon="➕"
+            icon={<AddIcon size={24} aria-hidden />}
             title="Items bijmaken"
             desc={`Nieuwe ${widget.type === 'mindmap' ? 'takken' : itemDef?.noun ?? 'items'} die passen bij de bestaande inhoud.`}
             onClick={() => setMode('form-items')}
@@ -1213,7 +1217,7 @@ ${source.trim()}
   }
 
   return (
-    <Modal title={`✨ AI-hulp — ${typeDef.name}`} onClose={onClose} wide footer={footer}>
+    <Modal title={`AI-hulp — ${typeDef.name}`} onClose={onClose} wide footer={footer}>
       <AIGate>{body}</AIGate>
     </Modal>
   );

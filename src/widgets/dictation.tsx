@@ -1,7 +1,9 @@
 import React, { useMemo, useRef, useState } from 'react';
+import { ArrowRight, Volume2 } from 'lucide-react';
 import type { DictationConfig } from '../lib/types';
 import { normalizeAnswer, uid } from '../lib/utils';
 import { Field } from '../components/ui';
+import { CheckIcon, CloseIcon } from '../components/icons';
 import { EditorProps, GameStatus, PlayerProps, ResultHero } from './shared';
 import type { ItemScore } from '../lib/types';
 
@@ -48,7 +50,7 @@ export function DictationEditor({ config, onChange }: EditorProps<DictationConfi
           speechSynthesis.speak(u);
         }}
       >
-        🔊 Stem testen
+<Volume2 size={16} aria-hidden /> Stem testen
       </button>
     </div>
   );
@@ -117,8 +119,8 @@ export function DictationPlayer({ widget, onComplete }: PlayerProps<DictationCon
               const ok = normalizeAnswer(typed[i] ?? '').replace(/[.,!?;:'"]/g, '') === normalizeAnswer(s.text).replace(/[.,!?;:'"]/g, '');
               return (
                 <div key={s.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--line)' }}>
-                  <div style={{ fontWeight: 600, color: ok ? 'var(--ok)' : 'var(--err)' }}>
-                    {ok ? '✓' : '✗'} Jij schreef: {typed[i] || '—'}
+                  <div style={{ fontWeight: 600, color: ok ? 'var(--ok)' : 'var(--err)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {ok ? <CheckIcon size={16} aria-hidden /> : <CloseIcon size={16} aria-hidden />} Jij schreef: {typed[i] || '—'}
                   </div>
                   {!ok && <div style={{ color: 'var(--ok)' }}>Juist: {s.text}</div>}
                 </div>
@@ -137,7 +139,7 @@ export function DictationPlayer({ widget, onComplete }: PlayerProps<DictationCon
       </GameStatus>
       <div className="card card-pad" style={{ marginBottom: 18 }}>
         <button className="btn btn-primary btn-lg" onClick={speak}>
-          🔊 {playCount === 0 ? 'Beluister de zin' : 'Nog eens beluisteren'}
+          <Volume2 size={18} aria-hidden /> {playCount === 0 ? 'Beluister de zin' : 'Nog eens beluisteren'}
         </button>
         {playCount > 0 && <p className="hint" style={{ marginTop: 10 }}>{playCount}× beluisterd</p>}
       </div>
@@ -155,7 +157,7 @@ export function DictationPlayer({ widget, onComplete }: PlayerProps<DictationCon
       <div className="player-nav">
         <span />
         <button className="btn btn-primary" onClick={next} disabled={!current.trim()}>
-          {idx + 1 >= sentences.length ? 'Indienen ✓' : 'Volgende →'}
+          {idx + 1 >= sentences.length ? <><CheckIcon size={18} aria-hidden /> Indienen</> : <>Volgende <ArrowRight size={18} aria-hidden /></>}
         </button>
       </div>
     </div>

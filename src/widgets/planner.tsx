@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { PlannerConfig, PlannerSection } from '../lib/types';
 import { uid } from '../lib/utils';
 import { Field } from '../components/ui';
+import { CheckIcon } from '../components/icons';
 import { EditorProps, GameStatus, ItemHeader, moveItem, PlayerProps, ResultHero } from './shared';
 
 // ── Editor ──────────────────────────────────────────────────────────────────
@@ -144,7 +145,7 @@ export function PlannerPlayer({ widget, timeUp, onComplete }: PlayerProps<Planne
         earned={checked.size}
         max={totalTasks}
         showScore={widget.settings.showScore}
-        title="Planning ingediend! 🗓️"
+        title="Planning ingediend!"
         subtitle={`Je vinkte ${checked.size} van de ${totalTasks} taken af.`}
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 12 }}>
@@ -190,7 +191,7 @@ export function PlannerPlayer({ widget, timeUp, onComplete }: PlayerProps<Planne
         <span>
           <strong style={{ color: 'var(--player-accent, var(--brand))' }}>{checked.size}</strong> van {totalTasks} taken afgevinkt
         </span>
-        {checked.size === totalTasks && <span className="badge badge-ok">✓ Alles klaar!</span>}
+        {checked.size === totalTasks && <span className="badge badge-ok"><CheckIcon size={14} className="icon-inline" aria-hidden /> Alles klaar!</span>}
       </GameStatus>
 
       <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(255px, 1fr))', alignItems: 'start' }}>
@@ -250,7 +251,7 @@ export function PlannerPlayer({ widget, timeUp, onComplete }: PlayerProps<Planne
           Klaar met je planning? Dien ze dan in.
         </span>
         <button className="btn btn-primary btn-lg" onClick={submit}>
-          Planning indienen ✓
+          <CheckIcon size={18} aria-hidden /> Planning indienen
         </button>
       </div>
     </div>

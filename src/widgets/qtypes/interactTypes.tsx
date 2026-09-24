@@ -2,11 +2,15 @@
 // Alles werkt met tikken/klikken (geen sleep-verplichting); zie contract.ts.
 
 import React, { useMemo, useRef, useState } from 'react';
+import {
+  ArrowDown, ArrowLeft, ArrowRight, ArrowUp, FolderTree, Highlighter, Lock, MapPin, SquarePen, Table2,
+} from 'lucide-react';
 import type {
   ImagePointQuestion, ItemScore, MarkTextQuestion, QuestionType, SortQuestion, TableQuestion,
 } from '../../lib/types';
 import type { AnswerProps, ExtraQType } from './contract';
 import { CheckRow, Field, ImagePicker } from '../../components/ui';
+import { CheckIcon, CloseIcon, WarningIcon } from '../../components/icons';
 import { clamp, normalizeAnswer, shuffled, uid } from '../../lib/utils';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -100,7 +104,7 @@ function MarkTextEditor({ q, onChange }: { q: MarkTextQuestion; onChange: (q: Ma
 function MarkTextAnswer({ q, value, onChange, review }: AnswerProps<MarkTextQuestion>) {
   const tokens = useMemo(() => markTokens(q.text), [q.text]);
   const sel = Array.isArray(value) ? (value as number[]) : [];
-  if (tokens.length === 0) return <p className="hint">⚠ Deze vraag heeft nog geen tekst.</p>;
+  if (tokens.length === 0) return <p className="hint"><WarningIcon size={16} className="icon-inline" aria-hidden /> Deze vraag heeft nog geen tekst.</p>;
 
   const toggle = (i: number) => {
     const next = new Set(sel);
@@ -119,15 +123,15 @@ function MarkTextAnswer({ q, value, onChange, review }: AnswerProps<MarkTextQues
             cursor: review ? 'default' : 'pointer',
             border: '2px solid transparent', borderRadius: 6, padding: '0 3px',
           };
-          let suffix: string | null = null;
+          let suffix: React.ReactNode = null;
           let srState = '';
           if (review) {
             if (marked && t.correct) {
               style.background = 'var(--ok-soft)'; style.color = 'var(--ok)'; style.fontWeight = 700;
-              suffix = '✓'; srState = 'juist gemarkeerd';
+              suffix = <CheckIcon size={16} className="icon-inline" />; srState = 'juist gemarkeerd';
             } else if (marked) {
               style.background = 'var(--err-soft)'; style.color = 'var(--err)'; style.textDecoration = 'line-through';
-              suffix = '✗'; srState = 'fout gemarkeerd';
+              suffix = <CloseIcon size={16} className="icon-inline" />; srState = 'fout gemarkeerd';
             } else if (t.correct) {
               style.border = '2px dotted var(--warn)';
               srState = 'gemist doelwoord';
@@ -177,7 +181,7 @@ function gradeMarkText(q: MarkTextQuestion, answer: unknown): ItemScore {
 const marktext: ExtraQType<MarkTextQuestion> = {
   type: 'marktext',
   name: 'Woorden markeren',
-  icon: '🖍',
+  icon: Highlighter,
   desc: 'Juiste woorden in een tekst aanklikken',
   make: (base) => ({ ...base, type: 'marktext', text: '', penalizeWrong: false }),
   Editor: MarkTextEditor,
@@ -229,7 +233,7 @@ function SortEditor({ q, onChange }: { q: SortQuestion; onChange: (q: SortQuesti
                   });
                   refocusAfterRemove(catListRef.current, ci, catAddRef.current);
                 }}
-              >✕</button>
+              ><CloseIcon size={16} aria-hidden /></button>
             </div>
           ))}
           <button
@@ -275,7 +279,7 @@ function SortEditor({ q, onChange }: { q: SortQuestion; onChange: (q: SortQuesti
                   onChange({ ...q, items: q.items.filter((_, j) => j !== ii) });
                   refocusAfterRemove(itemListRef.current, ii, itemAddRef.current);
                 }}
-              >✕</button>
+              ><CloseIcon size={16} aria-hidden /></button>
             </div>
           ))}
           <button
@@ -333,8 +337,8 @@ function SortAnswer({ q, value, onChange, review }: AnswerProps<SortQuestion>) {
                       background: ok ? 'var(--ok-soft)' : 'var(--err-soft)',
                     }}
                   >
-                    <span aria-hidden>{ok ? '✓' : '✗'}</span> {it.text}
-                    {!ok && <small style={{ color: 'var(--text-soft)' }}> → {catLabel(it.categoryId)}</small>}
+                    <span aria-hidden>{ok ? <CheckIcon size={16} className="icon-inline" /> : <CloseIcon size={16} className="icon-inline" />}</span> {it.text}
+                    {!ok && <small style={{ color: 'var(--text-soft)' }}> <ArrowRight size={14} className="icon-inline" aria-hidden /> {catLabel(it.categoryId)}</small>}
                   </span>
                 );
               })}
@@ -343,11 +347,11 @@ function SortAnswer({ q, value, onChange, review }: AnswerProps<SortQuestion>) {
         ))}
         {loose.length > 0 && (
           <div style={{ flexBasis: '100%' }}>
-            <p style={{ color: 'var(--err)', fontWeight: 700, margin: '4px 0 6px' }}>✗ Niet geplaatst:</p>
+            <p style={{ color: 'var(--err)', fontWeight: 700, margin: '4px 0 6px', display: 'flex', alignItems: 'center', gap: 6 }}><CloseIcon size={16} aria-hidden /> Niet geplaatst:</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {loose.map((it) => (
                 <span key={it.id} className="chip" style={{ cursor: 'default', borderColor: 'var(--err)', background: 'var(--err-soft)' }}>
-                  {it.text} <small style={{ color: 'var(--text-soft)' }}>→ {catLabel(it.categoryId)}</small>
+                  {it.text} <small style={{ color: 'var(--text-soft)' }}><ArrowRight size={14} className="icon-inline" aria-hidden /> {catLabel(it.categoryId)}</small>
                 </span>
               ))}
             </div>
@@ -423,7 +427,7 @@ function SortAnswer({ q, value, onChange, review }: AnswerProps<SortQuestion>) {
                   });
                 }}
               >
-                {name}{selectedItem ? ' ⬇' : ''}
+                {name}{selectedItem && <ArrowDown size={16} className="icon-inline" aria-hidden />}
               </button>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, minHeight: 30 }}>
                 {inBox.map((it) => (
@@ -440,7 +444,7 @@ function SortAnswer({ q, value, onChange, review }: AnswerProps<SortQuestion>) {
                       setStatus(`"${it.text}" geselecteerd — klik nu een categorie.`);
                     }}
                   >
-                    {it.text} <span aria-hidden>✕</span>
+                    {it.text} <CloseIcon size={14} className="icon-inline" aria-hidden />
                   </button>
                 ))}
               </div>
@@ -465,7 +469,7 @@ function gradeSort(q: SortQuestion, answer: unknown): ItemScore {
 const sort: ExtraQType<SortQuestion> = {
   type: 'sort',
   name: 'Sorteren in categorieën',
-  icon: '🗂️',
+  icon: FolderTree,
   desc: 'Items in de juiste categorie plaatsen',
   make: (base) => ({
     ...base,
@@ -649,22 +653,22 @@ function ImagePointEditor({ q, onChange }: { q: ImagePointQuestion; onChange: (q
                   className="btn btn-quiet btn-icon btn-sm"
                   aria-label={`Zone ${i + 1} naar links`}
                   onClick={() => nudgeZone(i, -2, 0)}
-                >◀</button>
+                ><ArrowLeft size={16} aria-hidden /></button>
                 <button
                   className="btn btn-quiet btn-icon btn-sm"
                   aria-label={`Zone ${i + 1} naar boven`}
                   onClick={() => nudgeZone(i, 0, -2)}
-                >▲</button>
+                ><ArrowUp size={16} aria-hidden /></button>
                 <button
                   className="btn btn-quiet btn-icon btn-sm"
                   aria-label={`Zone ${i + 1} naar onder`}
                   onClick={() => nudgeZone(i, 0, 2)}
-                >▼</button>
+                ><ArrowDown size={16} aria-hidden /></button>
                 <button
                   className="btn btn-quiet btn-icon btn-sm"
                   aria-label={`Zone ${i + 1} naar rechts`}
                   onClick={() => nudgeZone(i, 2, 0)}
-                >▶</button>
+                ><ArrowRight size={16} aria-hidden /></button>
                 <button
                   className="btn btn-quiet btn-icon btn-sm"
                   aria-label={`Zone ${i + 1} verwijderen`}
@@ -672,7 +676,7 @@ function ImagePointEditor({ q, onChange }: { q: ImagePointQuestion; onChange: (q
                     setTargets(q.targets.filter((_, j) => j !== i));
                     refocusAfterRemove(zoneListRef.current, i, imageBtnRef.current);
                   }}
-                >✕</button>
+                ><CloseIcon size={16} aria-hidden /></button>
               </div>
             ))}
           </div>
@@ -697,7 +701,7 @@ function ImagePointAnswer({ q, value, onChange, review }: AnswerProps<ImagePoint
     : [];
   const maxClicks = Math.max(1, q.maxClicks || q.targets.length || 1);
 
-  if (!q.image) return <p className="hint">⚠ Deze vraag heeft nog geen afbeelding.</p>;
+  if (!q.image) return <p className="hint"><WarningIcon size={16} className="icon-inline" aria-hidden /> Deze vraag heeft nog geen afbeelding.</p>;
 
   if (review) {
     const { claimed, markerHit } = matchMarkers(q.targets, markers);
@@ -719,8 +723,8 @@ function ImagePointAnswer({ q, value, onChange, review }: AnswerProps<ImagePoint
             const hitId = markerHit[i];
             const ti = hitId ? q.targets.findIndex((t) => t.id === hitId) : -1;
             return (
-              <li key={i} style={{ color: hitId ? 'var(--ok)' : 'var(--err)', fontWeight: 600, fontSize: '0.9rem' }}>
-                {hitId ? `✓ Markering ${i + 1}: in ${zoneLabel(q.targets[ti], ti)}` : `✗ Markering ${i + 1}: buiten de zones`}
+              <li key={i} style={{ color: hitId ? 'var(--ok)' : 'var(--err)', fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {hitId ? <><CheckIcon size={16} aria-hidden /> Markering {i + 1}: in {zoneLabel(q.targets[ti], ti)}</> : <><CloseIcon size={16} aria-hidden /> Markering {i + 1}: buiten de zones</>}
               </li>
             );
           })}
@@ -728,8 +732,8 @@ function ImagePointAnswer({ q, value, onChange, review }: AnswerProps<ImagePoint
           {q.targets.filter((t) => !claimed.has(t.id)).map((t) => {
             const ti = q.targets.findIndex((x) => x.id === t.id);
             return (
-              <li key={t.id} style={{ color: 'var(--err)', fontWeight: 600, fontSize: '0.9rem' }}>
-                ✗ Gemist: {zoneLabel(t, ti)} (gestippelde cirkel)
+              <li key={t.id} style={{ color: 'var(--err)', fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <CloseIcon size={16} aria-hidden /> Gemist: {zoneLabel(t, ti)} (gestippelde cirkel)
               </li>
             );
           })}
@@ -798,22 +802,22 @@ function ImagePointAnswer({ q, value, onChange, review }: AnswerProps<ImagePoint
                   className="btn btn-quiet btn-icon btn-sm"
                   aria-label={`Markering ${i + 1} naar links`}
                   onClick={() => nudgeMarker(i, -2, 0)}
-                >◀</button>
+                ><ArrowLeft size={16} aria-hidden /></button>
                 <button
                   className="btn btn-quiet btn-icon btn-sm"
                   aria-label={`Markering ${i + 1} naar boven`}
                   onClick={() => nudgeMarker(i, 0, -2)}
-                >▲</button>
+                ><ArrowUp size={16} aria-hidden /></button>
                 <button
                   className="btn btn-quiet btn-icon btn-sm"
                   aria-label={`Markering ${i + 1} naar onder`}
                   onClick={() => nudgeMarker(i, 0, 2)}
-                >▼</button>
+                ><ArrowDown size={16} aria-hidden /></button>
                 <button
                   className="btn btn-quiet btn-icon btn-sm"
                   aria-label={`Markering ${i + 1} naar rechts`}
                   onClick={() => nudgeMarker(i, 2, 0)}
-                >▶</button>
+                ><ArrowRight size={16} aria-hidden /></button>
                 <button
                   className="btn btn-quiet btn-icon btn-sm"
                   aria-label={`Markering ${i + 1} verwijderen`}
@@ -821,7 +825,7 @@ function ImagePointAnswer({ q, value, onChange, review }: AnswerProps<ImagePoint
                     onChange(markers.filter((_, j) => j !== i));
                     setStatus(`Markering ${i + 1} verwijderd.`);
                   }}
-                >✕</button>
+                ><CloseIcon size={16} aria-hidden /></button>
               </li>
             ))}
           </ul>
@@ -847,7 +851,7 @@ function gradeImagePoint(q: ImagePointQuestion, answer: unknown): ItemScore {
 const imagepoint: ExtraQType<ImagePointQuestion> = {
   type: 'imagepoint',
   name: 'Aanduiden op afbeelding',
-  icon: '📍',
+  icon: MapPin,
   desc: 'De juiste plek(ken) op een afbeelding aanklikken',
   make: (base) => ({ ...base, type: 'imagepoint', image: '', targets: [], maxClicks: 1 }),
   Editor: ImagePointEditor,
@@ -919,7 +923,7 @@ function TableEditor({ q, onChange }: { q: TableQuestion; onChange: (q: TableQue
                           return { ...p, cells: p.cells.filter((_, j) => j !== ci), answers: p.answers.filter((_, j) => j !== ci) };
                         }),
                       })}
-                    >✕</button>
+                    ><CloseIcon size={16} aria-hidden /></button>
                   </div>
                 </th>
               ))}
@@ -970,7 +974,7 @@ function TableEditor({ q, onChange }: { q: TableQuestion; onChange: (q: TableQue
                             updateRow(ri, r);
                           }}
                         >
-                          {fixed ? '🔒' : '✏️'}
+                          {fixed ? <Lock size={16} aria-hidden /> : <SquarePen size={16} aria-hidden />}
                         </button>
                       </div>
                     </td>
@@ -981,7 +985,7 @@ function TableEditor({ q, onChange }: { q: TableQuestion; onChange: (q: TableQue
                     className="btn btn-quiet btn-icon btn-sm"
                     aria-label={`Rij ${ri + 1} verwijderen`}
                     onClick={() => onChange({ ...q, rows: q.rows.filter((_, j) => j !== ri) })}
-                  >✕</button>
+                  ><CloseIcon size={16} aria-hidden /></button>
                 </td>
               </tr>
             ))}
@@ -1002,12 +1006,12 @@ function TableEditor({ q, onChange }: { q: TableQuestion; onChange: (q: TableQue
         label="Hoofdlettergevoelig"
       />
       {q.rows.length > 0 && inputCells === 0 && (
-        <p className="hint" style={{ color: 'var(--warn)', fontWeight: 700 }}>
-          ⚠ Er is nog geen enkele invulcel — klik bij een cel op 🔒 om er een invulcel (✏️) van te maken.
+        <p className="hint" style={{ color: 'var(--warn)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <WarningIcon size={16} aria-hidden /> Er is nog geen enkele invulcel — klik bij een cel op <Lock size={14} className="icon-inline" aria-hidden /> om er een invulcel (<SquarePen size={14} className="icon-inline" aria-hidden />) van te maken.
         </p>
       )}
-      <p className="hint">
-        🔒 = vaste tekst (staat er al voor de leerling) · ✏️ = invulcel: de getypte tekst wordt het juiste antwoord.
+      <p className="hint" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <Lock size={14} className="icon-inline" aria-hidden /> = vaste tekst (staat er al voor de leerling) · <SquarePen size={14} className="icon-inline" aria-hidden /> = invulcel: de getypte tekst wordt het juiste antwoord.
         Invulcellen herken je aan de gestreepte rand.
       </p>
     </div>
@@ -1036,7 +1040,7 @@ const tdAnswerStyle: React.CSSProperties = {
 function TableAnswer({ q, value, onChange, review }: AnswerProps<TableQuestion>) {
   const given = (value && typeof value === 'object' && !Array.isArray(value) ? value : {}) as
     Record<string, Record<number, string>>;
-  if (q.columns.length === 0 || q.rows.length === 0) return <p className="hint">⚠ Deze tabel heeft nog geen inhoud.</p>;
+  if (q.columns.length === 0 || q.rows.length === 0) return <p className="hint"><WarningIcon size={16} className="icon-inline" aria-hidden /> Deze tabel heeft nog geen inhoud.</p>;
   return (
     <div style={{ overflowX: 'auto' }}>
       <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: q.columns.length * 130 }}>
@@ -1073,7 +1077,7 @@ function TableAnswer({ q, value, onChange, review }: AnswerProps<TableQuestion>)
                     />
                     {review && (
                       <div style={{ fontSize: '0.8rem', fontWeight: 700, marginTop: 3, color: ok ? 'var(--ok)' : 'var(--err)' }}>
-                        {ok ? '✓ juist' : <>✗ <span style={{ color: 'var(--ok)' }}>juist: {answerAlts(ans, q.caseSensitive).join(' / ')}</span></>}
+                        {ok ? <><CheckIcon size={16} className="icon-inline" aria-hidden /> juist</> : <><CloseIcon size={16} className="icon-inline" aria-hidden /> <span style={{ color: 'var(--ok)' }}>juist: {answerAlts(ans, q.caseSensitive).join(' / ')}</span></>}
                       </div>
                     )}
                   </td>
@@ -1116,7 +1120,7 @@ function gradeTable(q: TableQuestion, answer: unknown): ItemScore {
 const table: ExtraQType<TableQuestion> = {
   type: 'table',
   name: 'Invultabel',
-  icon: '🧮',
+  icon: Table2,
   desc: 'Ontbrekende cellen in een tabel invullen',
   make: (base) => ({ ...base, type: 'table', columns: ['', ''], rows: [], caseSensitive: false }),
   Editor: TableEditor,

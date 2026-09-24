@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
+import { ArrowLeftRight } from 'lucide-react';
 import type { PairsConfig } from '../lib/types';
 import { shuffled, uid } from '../lib/utils';
+import { CheckIcon, CloseIcon, RetryIcon } from '../components/icons';
 import { EditorProps, GameStatus, PlayerProps, ResultHero } from './shared';
 
 export function PairsEditor({ config, onChange }: EditorProps<PairsConfig>) {
@@ -14,11 +16,11 @@ export function PairsEditor({ config, onChange }: EditorProps<PairsConfig>) {
         <div className="option-row" key={p.id}>
           <input className="input input-sm" placeholder="Links (bv. le chien)" value={p.left}
             onChange={(e) => { const next = pairs.slice(); next[i] = { ...p, left: e.target.value }; onChange({ ...config, pairs: next }); }} />
-          <span aria-hidden>↔</span>
+          <ArrowLeftRight size={16} aria-hidden />
           <input className="input input-sm" placeholder="Rechts (bv. de hond)" value={p.right}
             onChange={(e) => { const next = pairs.slice(); next[i] = { ...p, right: e.target.value }; onChange({ ...config, pairs: next }); }} />
           <button className="btn btn-quiet btn-icon btn-sm" aria-label="Paar verwijderen" disabled={pairs.length <= 2}
-            onClick={() => onChange({ ...config, pairs: pairs.filter((_, j) => j !== i) })}>✕</button>
+            onClick={() => onChange({ ...config, pairs: pairs.filter((_, j) => j !== i) })}><CloseIcon size={16} aria-hidden /></button>
         </div>
       ))}
       <button className="btn btn-primary" onClick={() => onChange({ ...config, pairs: [...pairs, { id: uid(), left: '', right: '' }] })}>
@@ -68,12 +70,12 @@ export function PairsPlayer({ widget, onComplete }: PlayerProps<PairsConfig>) {
     return (
       <ResultHero
         earned={pairs.length} max={pairs.length} showScore={false}
-        title="Alles gekoppeld! 🔗"
+        title="Alles gekoppeld!"
         subtitle={`Je vond alle ${pairs.length} paren met ${mistakes} ${mistakes === 1 ? 'fout' : 'fouten'}.`}
       >
         <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => {
           setMatched(new Set()); setMistakes(0); setDone(false); setSelLeft(null); setSelRight(null);
-        }}>🔁 Opnieuw spelen</button>
+        }}><RetryIcon size={16} aria-hidden /> Opnieuw spelen</button>
       </ResultHero>
     );
   }
@@ -106,8 +108,8 @@ export function PairsPlayer({ widget, onComplete }: PlayerProps<PairsConfig>) {
   return (
     <div>
       <GameStatus>
-        <span className="badge badge-ok">✓ {matched.size} / {pairs.length}</span>
-        <span className="badge badge-err">✗ {mistakes} fouten</span>
+        <span className="badge badge-ok"><CheckIcon size={14} className="icon-inline" aria-hidden /> {matched.size} / {pairs.length}</span>
+        <span className="badge badge-err"><CloseIcon size={14} className="icon-inline" aria-hidden /> {mistakes} fouten</span>
       </GameStatus>
       <p style={{ textAlign: 'center', color: 'var(--text-faint)', marginBottom: 14, fontSize: '0.9rem' }}>
         Klik een item links en het bijhorende item rechts aan.

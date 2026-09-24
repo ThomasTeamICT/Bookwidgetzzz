@@ -1,0 +1,34 @@
+/*
+ * Styling eigen aan het pakket "Editors, AI en widgets": de widgeteditor,
+ * de AI-studio en -instellingen, en kleine hulpklasjes die de widgets zelf
+ * gebruiken. Tokens komen uit src/styles/global.css.
+ */
+
+/* Ronddraaiend icoon voor een lopende actie (bv. "Bezig met testen…"). */
+.icon-spin {
+  animation: editor-spin 0.9s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .icon-spin { animation: none; }
+}
+@keyframes editor-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/*
+ * Kopbalk van de widgeteditor: veel acties naast elkaar (terug, titel,
+ * resultaten, afdrukken, AI, sjabloon, delen, uittesten). Op een smal
+ * scherm (gsm) mogen ze best naar een tweede regel doorlopen in plaats
+ * van de pagina breder te maken dan het venster.
+ */
+.editor-topbar {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+@media (max-width: 640px) {
+  .editor-topbar .topbar-spacer {
+    flex-basis: 100%;
+    height: 0;
+  }
+}

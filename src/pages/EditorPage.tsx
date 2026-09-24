@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Bookmark, FileText } from 'lucide-react';
 import { getSubmissions, getWidget, saveWidget } from '../lib/storage';
 import { getTypeDef } from '../widgets/registry';
 import { getCurricula } from '../lib/curriculum';
@@ -12,6 +13,11 @@ import { saveCustomTemplate } from '../lib/customTemplates';
 import { lintQuiz } from '../lib/linter';
 import type { QuizConfig } from '../lib/types';
 import { TypeTile } from '../components/TypeTile';
+import {
+  AIIcon, BackIcon, CheckIcon, CloseIcon, EditIcon, PreviewIcon, ResultsIcon,
+  RetryIcon, SearchIcon, SettingsIcon, ShareIcon, PrintIcon, TryIcon,
+} from '../components/icons';
+import '../styles/editor.css';
 
 export function EditorPage() {
   const { id } = useParams();
@@ -71,7 +77,7 @@ export function EditorPage() {
       <div className="page page-narrow" style={{ textAlign: 'center', paddingTop: 80 }}>
         <h1>Widget niet gevonden</h1>
         <p style={{ color: 'var(--text-soft)' }}>Deze widget bestaat niet (meer) in deze browser.</p>
-        <Link to="/widgets" className="btn btn-primary">← Naar mijn widgets</Link>
+        <Link to="/widgets" className="btn btn-primary"><BackIcon size={18} aria-hidden /> Naar mijn widgets</Link>
       </div>
     );
   }
@@ -81,9 +87,9 @@ export function EditorPage() {
 
   return (
     <div className="appshell">
-      <header className="topbar">
-        <button className="btn btn-quiet btn-sm" onClick={() => navigate('/widgets')} aria-label="Terug naar mijn widgets">
-          ← Terug
+      <header className="topbar editor-topbar">
+        <button className="btn btn-quiet btn-sm" onClick={() => navigate('/widgets')}>
+          <BackIcon size={18} aria-hidden /> Terug
         </button>
         <TypeTile type={def} size="sm" />
         <input
@@ -93,16 +99,16 @@ export function EditorPage() {
           onChange={(e) => setWidget({ ...widget, title: e.target.value })}
           aria-label="Titel van de widget"
         />
-        <span className="hint" aria-live="polite" style={{ minWidth: 86 }}>
-          {savedFlash ? '✓ opgeslagen' : ''}
+        <span className="hint" aria-live="polite" style={{ minWidth: 86, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          {savedFlash && <><CheckIcon size={16} aria-hidden /> Bewaard</>}
         </span>
         <div className="topbar-spacer" />
         <span className="badge" title="Klascode" style={{ fontFamily: 'monospace', letterSpacing: '0.15em' }}>{widget.code}</span>
         {def.hasSubmissions && (
-          <Link to={`/resultaten/${widget.id}`} className="btn btn-sm btn-ghost">📊 Resultaten ({subCount})</Link>
+          <Link to={`/resultaten/${widget.id}`} className="btn btn-sm btn-ghost"><ResultsIcon size={18} aria-hidden /> Resultaten ({subCount})</Link>
         )}
         {['quiz', 'worksheet', 'exitticket'].includes(widget.type) && (
-          <Link to={`/print/${widget.id}`} className="btn btn-sm btn-ghost" title="Afdrukken of als PDF bewaren">🖨 Afdrukken</Link>
+          <Link to={`/print/${widget.id}`} className="btn btn-sm btn-ghost" title="Afdrukken of als PDF bewaren"><PrintIcon size={18} aria-hidden /> Afdrukken</Link>
         )}
         {(AI_GEN_TYPES.includes(widget.type) || widget.type === 'videoquiz') && (
           <button
@@ -110,7 +116,7 @@ export function EditorPage() {
             onClick={() => setAiOpen(true)}
             title="Vragen bijmaken, hints aanvullen, afleiders versterken — met AI"
           >
-            ✨ AI-assistent
+            <AIIcon size={18} aria-hidden /> AI-assistent
           </button>
         )}
         <button
@@ -118,24 +124,24 @@ export function EditorPage() {
           onClick={() => setTemplateOpen(true)}
           title="Bewaar deze widget als eigen sjabloon voor later hergebruik"
         >
-          ⭐ Bewaar als sjabloon
+          <Bookmark size={18} aria-hidden /> Bewaar als sjabloon
         </button>
-        <button className="btn btn-sm btn-ghost" onClick={() => setShareOpen(true)}>📤 Delen</button>
+        <button className="btn btn-sm btn-ghost" onClick={() => setShareOpen(true)}><ShareIcon size={18} aria-hidden /> Delen</button>
         <button
           className={`btn btn-sm ${previewMode ? 'btn-primary' : 'btn-ghost'}`}
           onClick={() => { setPreviewMode((v) => !v); setPreviewKey((k) => k + 1); }}
           aria-pressed={previewMode}
         >
-          {previewMode ? '✏️ Terug naar bewerken' : '▶ Uitproberen'}
+          {previewMode ? <><EditIcon size={18} aria-hidden /> Terug naar bewerken</> : <><TryIcon size={18} aria-hidden /> Uitproberen</>}
         </button>
       </header>
 
       {previewMode ? (
         <main className="player-shell" style={{ flex: 1, ['--player-accent' as any]: widget.settings.accentColor }}>
           <div className="callout warn" style={{ maxWidth: 860, margin: '14px auto 0', width: 'calc(100% - 36px)' }}>
-            <span aria-hidden>👀</span>
+            <PreviewIcon aria-hidden />
             <div>Voorbeeldmodus — zo ziet je leerling de widget. Er wordt niets opgeslagen.
-              <button className="btn btn-sm btn-ghost" style={{ marginLeft: 10 }} onClick={() => setPreviewKey((k) => k + 1)}>↺ Herstart voorbeeld</button>
+              <button className="btn btn-sm btn-ghost" style={{ marginLeft: 10 }} onClick={() => setPreviewKey((k) => k + 1)}><RetryIcon size={16} aria-hidden /> Herstart voorbeeld</button>
             </div>
           </div>
           <div className={`player-main ${def.wide ? 'player-main-wide' : ''}`}>
@@ -147,22 +153,47 @@ export function EditorPage() {
       ) : (
         <main className="page" style={{ paddingTop: 20 }}>
           <div className="editor-layout">
-            <div>
-              <div style={{ display: 'flex', gap: 6, marginBottom: 16 }} role="tablist" aria-label="Editor-onderdelen">
-                <button className={`btn btn-sm ${tab === 'content' ? 'btn-primary' : 'btn-ghost'}`} role="tab" aria-selected={tab === 'content'} onClick={() => setTab('content')}>
-                  📝 Inhoud
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{ display: 'flex', gap: 6, marginBottom: 16 }}
+                role="tablist"
+                aria-label="Editor-onderdelen"
+                onKeyDown={(e) => {
+                  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+                  e.preventDefault();
+                  const next = tab === 'content' ? 'settings' : 'content';
+                  setTab(next);
+                  document.getElementById(`tab-${next}`)?.focus();
+                }}
+              >
+                <button
+                  id="tab-content" role="tab" aria-selected={tab === 'content'} aria-controls="panel-content"
+                  tabIndex={tab === 'content' ? 0 : -1}
+                  className={`btn btn-sm ${tab === 'content' ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => setTab('content')}
+                >
+                  <FileText size={18} aria-hidden /> Inhoud
                 </button>
-                <button className={`btn btn-sm ${tab === 'settings' ? 'btn-primary' : 'btn-ghost'}`} role="tab" aria-selected={tab === 'settings'} onClick={() => setTab('settings')}>
-                  ⚙️ Instellingen
+                <button
+                  id="tab-settings" role="tab" aria-selected={tab === 'settings'} aria-controls="panel-settings"
+                  tabIndex={tab === 'settings' ? 0 : -1}
+                  className={`btn btn-sm ${tab === 'settings' ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => setTab('settings')}
+                >
+                  <SettingsIcon size={18} aria-hidden /> Instellingen
                 </button>
               </div>
               {tab === 'content' ? (
                 // de editormodule wordt lazy geladen (zie registry): even een laadmelding tonen
-                <React.Suspense fallback={<div className="hint" role="status" style={{ textAlign: 'center', padding: '40px 0' }}>Widget laden…</div>}>
-                  <def.Editor config={widget.config} onChange={(config: unknown) => setWidget({ ...widget, config })} />
-                </React.Suspense>
+                <div role="tabpanel" id="panel-content" aria-labelledby="tab-content">
+                  <React.Suspense fallback={<div className="hint" role="status" style={{ textAlign: 'center', padding: '40px 0' }}>Widget laden…</div>}>
+                    <def.Editor config={widget.config} onChange={(config: unknown) => setWidget({ ...widget, config })} />
+                  </React.Suspense>
+                </div>
               ) : (
-                <SettingsPanel widget={widget} onChange={setWidget} />
+                <div role="tabpanel" id="panel-settings" aria-labelledby="tab-settings">
+                  <SettingsPanel widget={widget} onChange={setWidget} />
+                </div>
               )}
             </div>
             <aside className="card card-pad" style={{ position: 'sticky', top: 76 }}>
@@ -178,7 +209,7 @@ export function EditorPage() {
                 {def.hasSubmissions && <li>Volg de inzendingen op via <em>Resultaten</em>.</li>}
               </ol>
               <button className="btn btn-primary" style={{ marginTop: 14, width: '100%' }} onClick={() => setShareOpen(true)}>
-                📤 Delen met je klas
+                <ShareIcon size={18} aria-hidden /> Delen met je klas
               </button>
               {['quiz', 'worksheet', 'exitticket', 'splitworksheet'].includes(widget.type) && (() => {
                 const warnings = lintQuiz(widget.config as QuizConfig);
@@ -186,7 +217,7 @@ export function EditorPage() {
                 return (
                   <>
                     <hr className="divider" />
-                    <h3 style={{ fontSize: '0.95rem' }}>🔍 Vraag-check</h3>
+                    <h3 style={{ fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 8 }}><SearchIcon size={20} aria-hidden /> Vraag-check</h3>
                     <p className="hint" style={{ marginTop: -4 }}>Signalen uit de toetsliteratuur — jij beslist.</p>
                     <ul style={{ paddingLeft: 16, margin: 0, fontSize: '0.85rem', color: 'var(--text-soft)' }}>
                       {warnings.slice(0, 6).map((w, i) => (
@@ -211,7 +242,7 @@ export function EditorPage() {
           onClose={() => setAiOpen(false)}
           onApply={(config: unknown, note: string) => {
             setWidget({ ...widget, config });
-            toast(`✨ ${note}`, 'ok');
+            toast(note, 'ok');
           }}
         />
       )}
@@ -242,7 +273,7 @@ function SaveTemplateModal({ widget, onClose }: { widget: Widget; onClose: () =>
       footer={
         <>
           <button className="btn btn-ghost" onClick={onClose}>Annuleren</button>
-          <button className="btn btn-primary" onClick={save} disabled={!name.trim()}>⭐ Bewaren</button>
+          <button className="btn btn-primary" onClick={save} disabled={!name.trim()}><Bookmark size={18} aria-hidden /> Bewaren</button>
         </>
       }
     >
@@ -325,7 +356,7 @@ function SettingsPanel({ widget, onChange }: { widget: Widget; onChange: (w: Wid
             onChange={(e) => set({ expiresAt: e.target.value || undefined })}
           />
           {s.expiresAt && (
-            <button className="btn btn-sm btn-quiet" onClick={() => set({ expiresAt: undefined })}>✕ Wissen</button>
+            <button className="btn btn-sm btn-quiet" onClick={() => set({ expiresAt: undefined })}><CloseIcon size={16} aria-hidden /> Wissen</button>
           )}
         </div>
       </Field>

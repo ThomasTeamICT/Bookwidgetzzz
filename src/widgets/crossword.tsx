@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
 import type { CrosswordConfig, CrosswordEntry } from '../lib/types';
 import { normalizeAnswer, uid } from '../lib/utils';
+import {
+  CheckIcon, CloseIcon, MoveDownIcon, TipIcon, WarningIcon,
+} from '../components/icons';
 import { EditorProps, GameStatus, PlayerProps, ResultHero } from './shared';
 
 // ── Generator ───────────────────────────────────────────────────────────────
@@ -151,7 +155,7 @@ export function CrosswordEditor({ config, onChange }: EditorProps<CrosswordConfi
           <input className="input input-sm" placeholder="Omschrijving / vraag" value={e.clue}
             onChange={(ev) => { const next = entries.slice(); next[i] = { ...e, clue: ev.target.value }; onChange({ ...config, entries: next }); }} />
           <button className="btn btn-quiet btn-icon btn-sm" aria-label="Woord verwijderen"
-            onClick={() => onChange({ ...config, entries: entries.filter((_, j) => j !== i) })}>✕</button>
+            onClick={() => onChange({ ...config, entries: entries.filter((_, j) => j !== i) })}><CloseIcon size={16} aria-hidden /></button>
         </div>
       ))}
       <button className="btn btn-primary" onClick={() => onChange({ ...config, entries: [...entries, { id: uid(), word: '', clue: '' }] })}>
@@ -159,13 +163,13 @@ export function CrosswordEditor({ config, onChange }: EditorProps<CrosswordConfi
       </button>
       {gen.skipped.length > 0 && (
         <div className="callout warn" style={{ marginTop: 14 }}>
-          <span aria-hidden>⚠️</span>
+          <WarningIcon aria-hidden />
           <div>Deze woorden passen niet in het rooster en worden overgeslagen: <strong>{gen.skipped.join(', ')}</strong>. Voeg woorden toe met gemeenschappelijke letters.</div>
         </div>
       )}
       {gen.placements.length > 0 && (
-        <p className="hint" style={{ marginTop: 10 }}>
-          ✓ Rooster: {gen.placements.length} woorden, {gen.width} × {gen.height} cellen.
+        <p className="hint" style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <CheckIcon size={14} aria-hidden /> Rooster: {gen.placements.length} woorden, {gen.width} × {gen.height} cellen.
         </p>
       )}
     </div>
@@ -317,7 +321,7 @@ export function CrosswordPlayer({ widget, timeUp, onComplete }: PlayerProps<Cros
     </table>
   );
 
-  const clueList = (dir: 'across' | 'down', title: string) => {
+  const clueList = (dir: 'across' | 'down', title: React.ReactNode) => {
     const list = gen.placements.filter((p) => p.dir === dir).sort((a, b) => a.number - b.number);
     if (list.length === 0) return null;
     return (
@@ -362,7 +366,7 @@ export function CrosswordPlayer({ widget, timeUp, onComplete }: PlayerProps<Cros
             <h3 style={{ textAlign: 'center' }}>Jouw rooster</h3>
             {grid}
             <div className="callout" style={{ marginTop: 16 }}>
-              <span aria-hidden>💡</span>
+              <TipIcon aria-hidden />
               <div>
                 <strong>Oplossingen:</strong>{' '}
                 {gen.placements.map((p) => `${p.number}. ${p.word}`).join(' · ')}
@@ -377,16 +381,16 @@ export function CrosswordPlayer({ widget, timeUp, onComplete }: PlayerProps<Cros
   return (
     <div>
       <GameStatus>
-        <span className="badge badge-ok">✓ {solvedCount} / {gen.placements.length} woorden</span>
+        <span className="badge badge-ok"><CheckIcon size={14} className="icon-inline" aria-hidden /> {solvedCount} / {gen.placements.length} woorden</span>
       </GameStatus>
       <div style={{ overflowX: 'auto', paddingBottom: 8 }}>{grid}</div>
       <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginTop: 18 }}>
-        {clueList('across', '→ Horizontaal')}
-        {clueList('down', '↓ Verticaal')}
+        {clueList('across', <><ArrowRight size={18} className="icon-inline" aria-hidden /> Horizontaal</>)}
+        {clueList('down', <><MoveDownIcon size={18} className="icon-inline" aria-hidden /> Verticaal</>)}
       </div>
       <div className="player-nav">
         <span />
-        <button className="btn btn-primary btn-lg" onClick={submit}>Indienen ✓</button>
+        <button className="btn btn-primary btn-lg" onClick={submit}><CheckIcon size={18} aria-hidden /> Indienen</button>
       </div>
     </div>
   );

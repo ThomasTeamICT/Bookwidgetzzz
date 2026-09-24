@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
+import { BookOpen, Brain } from 'lucide-react';
 import type { TimelineConfig, TimelineEvent } from '../lib/types';
 import { shuffled, uid } from '../lib/utils';
 import { Field, ImagePicker } from '../components/ui';
+import { CheckIcon, MoveDownIcon, MoveUpIcon } from '../components/icons';
 import { EditorProps, GameStatus, ItemHeader, moveItem, PlayerProps, ResultHero } from './shared';
 
 export function TimelineEditor({ config, onChange }: EditorProps<TimelineConfig>) {
@@ -16,10 +18,10 @@ export function TimelineEditor({ config, onChange }: EditorProps<TimelineConfig>
       <Field label="Modus">
         <div style={{ display: 'flex', gap: 8 }}>
           <button className={`btn btn-sm ${config.mode === 'view' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => onChange({ ...config, mode: 'view' })}>
-            📖 Bekijken (leren)
+            <BookOpen size={16} aria-hidden /> Bekijken (leren)
           </button>
           <button className={`btn btn-sm ${config.mode === 'exercise' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => onChange({ ...config, mode: 'exercise' })}>
-            🧠 Oefening (rangschikken)
+            <Brain size={16} aria-hidden /> Oefening (rangschikken)
           </button>
         </div>
         <span className="hint">
@@ -96,11 +98,11 @@ function TimelineView({ events, onComplete }: { events: TimelineEvent[]; onCompl
             setCompleted(true);
             onComplete({ answers: { bekeken: true }, itemScores: null, earned: 0, max: 0 });
           }}>
-            Ik heb alles gelezen ✓
+<CheckIcon size={18} aria-hidden /> Ik heb alles gelezen
           </button>
         </div>
       )}
-      {completed && <p style={{ textAlign: 'center', color: 'var(--ok)', fontWeight: 700 }}>✓ Geregistreerd — goed bezig!</p>}
+      {completed && <p style={{ textAlign: 'center', color: 'var(--ok)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckIcon size={16} aria-hidden /> Geregistreerd — goed bezig!</p>}
     </div>
   );
 }
@@ -163,14 +165,14 @@ function TimelineExercise({ widget, events, onComplete }: { widget: PlayerProps<
             {events[orig].description && <div style={{ fontSize: '0.85rem', color: 'var(--text-soft)' }}>{events[orig].description}</div>}
           </div>
           <span className="updown">
-            <button className="btn btn-quiet btn-icon btn-sm" aria-label="Omhoog" disabled={pos === 0} onClick={() => move(pos, pos - 1)}>↑</button>
-            <button className="btn btn-quiet btn-icon btn-sm" aria-label="Omlaag" disabled={pos === order.length - 1} onClick={() => move(pos, pos + 1)}>↓</button>
+            <button className="btn btn-quiet btn-icon btn-sm" aria-label="Omhoog" disabled={pos === 0} onClick={() => move(pos, pos - 1)}><MoveUpIcon size={16} aria-hidden /></button>
+            <button className="btn btn-quiet btn-icon btn-sm" aria-label="Omlaag" disabled={pos === order.length - 1} onClick={() => move(pos, pos + 1)}><MoveDownIcon size={16} aria-hidden /></button>
           </span>
         </div>
       ))}
       <div className="player-nav">
         <span />
-        <button className="btn btn-primary btn-lg" onClick={submit}>Indienen ✓</button>
+        <button className="btn btn-primary btn-lg" onClick={submit}><CheckIcon size={18} aria-hidden /> Indienen</button>
       </div>
     </div>
   );
