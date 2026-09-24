@@ -195,7 +195,7 @@ export function RandomImagesPlayer({ widget, timeUp, onComplete }: PlayerProps<R
             <figcaption style={{ marginTop: 12 }}>
               <span className="sr-only">Nieuwe afbeelding: </span>
               {cur.caption ? (
-                <strong style={{ fontSize: '1.25rem', color: 'var(--player-accent, var(--brand))' }}>
+                <strong style={{ fontSize: '1.25rem', color: 'color-mix(in srgb, var(--player-accent, var(--brand-fill)) 60%, var(--text))' }}>
                   {cur.caption}
                 </strong>
               ) : (

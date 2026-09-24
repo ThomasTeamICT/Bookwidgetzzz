@@ -189,7 +189,7 @@ export function PlannerPlayer({ widget, timeUp, onComplete }: PlayerProps<Planne
       </div>
       <GameStatus>
         <span>
-          <strong style={{ color: 'var(--player-accent, var(--brand))' }}>{checked.size}</strong> van {totalTasks} taken afgevinkt
+          <strong style={{ color: 'color-mix(in srgb, var(--player-accent, var(--brand-fill)) 60%, var(--text))' }}>{checked.size}</strong> van {totalTasks} taken afgevinkt
         </span>
         {checked.size === totalTasks && <span className="badge badge-ok"><CheckIcon size={14} className="icon-inline" aria-hidden /> Alles klaar!</span>}
       </GameStatus>

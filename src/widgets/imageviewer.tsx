@@ -365,7 +365,7 @@ function ViewerStage({
             position: 'absolute', left: 10, bottom: 10, zIndex: 2,
             background: 'var(--bg-raised)', boxShadow: 'var(--shadow-1)',
             border: '1px solid var(--line)',
-            color: 'var(--player-accent, var(--brand))',
+            color: 'color-mix(in srgb, var(--player-accent, var(--brand-fill)) 60%, var(--text))',
           }}
         >
           <SearchIcon size={14} className="icon-inline" aria-hidden /> Zoom: {Math.round(view.scale * 100)}%

@@ -94,6 +94,44 @@ describe('kleurtokens', () => {
   });
 });
 
+describe('accentkleur als tekst (A3)', () => {
+  // Mengt twee sRGB-kleuren zoals color-mix(in srgb, a p%, b) in de browser doet:
+  // per kanaal een gewone (niet-gelineariseerde) menging van de bytewaarden.
+  function mixSrgb(a: string, b: string, pctA: number): string {
+    const parse = (hex: string) => {
+      const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+      if (!m) throw new Error(`Geen geldige hexkleur: ${hex}`);
+      const n = parseInt(m[1], 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    };
+    const [ar, ag, ab] = parse(a);
+    const [br, bg, bb] = parse(b);
+    const mix = (x: number, y: number) => Math.round(x * pctA + y * (1 - pctA));
+    const toHex = (v: number) => v.toString(16).padStart(2, '0');
+    return `#${toHex(mix(ar, br))}${toHex(mix(ag, bg))}${toHex(mix(ab, bb))}`;
+  }
+
+  // Enkele typische, door leerkrachten gekozen accentkleuren, waaronder #096b97
+  // dat kaal op --bg-raised in het donkere thema maar 2,95 : 1 haalt.
+  const ACCENTS = ['#096b97', '#4f46e5', '#5b3df5', '#d97706', '#16a34a', '#dc2626'];
+  const MIX_PCT = 0.6; // 60 % accent, 40 % --text — zie global.css (--player-accent als tekst)
+
+  it.each(Object.entries(THEMES))(
+    'color-mix(accent 60%%, tekst) haalt 4,5 : 1 op --bg en --bg-raised (%s)',
+    (naam, tk) => {
+      for (const accent of ACCENTS) {
+        const mixed = mixSrgb(accent, tk.text, MIX_PCT);
+        for (const bgKey of ['bg', 'bg-raised']) {
+          expect(
+            contrastRatio(mixed, tk[bgKey]),
+            `${naam}: ${accent} gemengd (${mixed}) op ${bgKey}`
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    }
+  );
+});
+
 describe('knoppen', () => {
   it('geen donkere tekst op de primaire knop in het donkere thema', () => {
     // --brand-fill is in beide thema's donker genoeg voor witte tekst; een

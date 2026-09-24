@@ -111,7 +111,7 @@ export function SpinnerPlayer({ widget }: PlayerProps<SpinnerConfig>) {
       <div aria-live="assertive" style={{ minHeight: 54, textAlign: 'center' }}>
         {winner && !spinning && (
           <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <GoalIcon aria-hidden /> <span style={{ color: 'var(--player-accent, var(--brand))' }}>{winner}</span>
+            <GoalIcon aria-hidden /> <span style={{ color: 'color-mix(in srgb, var(--player-accent, var(--brand-fill)) 60%, var(--text))' }}>{winner}</span>
           </p>
         )}
       </div>
