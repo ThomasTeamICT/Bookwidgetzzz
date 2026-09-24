@@ -97,9 +97,9 @@ export function TimerPlayer({ widget }: PlayerProps<TimerConfig>) {
         {running ? (
           <button className="btn btn-lg" onClick={() => setRunning(false)}><Pause size={18} aria-hidden /> Pauze</button>
         ) : (
-          <button className="btn btn-primary btn-lg" onClick={start} disabled={left <= 0}><TryIcon size={18} aria-hidden /> Start</button>
+          <button className="btn btn-primary btn-lg" onClick={start} disabled={left <= 0}><TryIcon size={18} aria-hidden /> Starten</button>
         )}
-        <button className="btn btn-ghost btn-lg" onClick={() => { setRunning(false); setLeft(total); }}><RetryIcon size={18} aria-hidden /> Reset</button>
+        <button className="btn btn-ghost btn-lg" onClick={() => { setRunning(false); setLeft(total); }}><RetryIcon size={18} aria-hidden /> Terugzetten</button>
       </div>
     </div>
   );

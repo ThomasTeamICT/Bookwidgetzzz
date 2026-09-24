@@ -114,6 +114,28 @@
     min-height: 44px;
     min-width: 44px;
   }
+  /* Zelfinschattingsknoppen (procesdoel kiezen) op het startscherm van de speler. */
+  .proces-doel-chip {
+    min-height: 44px;
+  }
+  /*
+   * "Ik sta er niet bij" op de leerlinghub: normaal een kleine (32px) knop
+   * via .btn-sm. Even specifiek (0,1,0) als .btn-sm zelf, dus zonder de
+   * .player-shell-voorvoegsel wint de bron-volgorde in de bundel — en die
+   * legt leerling.css hier vóór global.css. Met de voorvoegsel-selector
+   * (0,2,0) wint deze regel altijd, ongeacht die volgorde.
+   */
+  .player-shell .leerling-tap-target {
+    min-height: 44px;
+  }
+}
+
+/* ── Meedoen-pagina: linkjes onder de knop als volwaardig tikdoel ───────── */
+
+.join-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }
 
 /* ── Resultaatcode: leesbare tekst naast de QR ──────────────────────────── */

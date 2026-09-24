@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getWidgetByCode } from '../lib/storage';
 import { BrandMark } from '../components/Brand';
+import '../styles/leerling.css';
 
 export function JoinPage() {
   const [code, setCode] = useState('');
@@ -65,15 +66,15 @@ export function JoinPage() {
               />
               {error && <p role="alert" style={{ color: 'var(--err)', fontWeight: 600, marginTop: 10 }}>{error}</p>}
               <button className="btn btn-primary btn-lg" style={{ width: '100%', marginTop: 14 }} type="submit" disabled={code.length < 6}>
-                Start
+                Starten
               </button>
             </form>
           </div>
-          <p style={{ textAlign: 'center', marginTop: 14, marginBottom: 0, display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link to="/voortgang" style={{ color: 'var(--text-soft)', fontSize: '0.9rem' }}>
+          <p className="join-links" style={{ textAlign: 'center', marginTop: 14, marginBottom: 0, display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link to="/voortgang" className="join-link" style={{ color: 'var(--text-soft)', fontSize: '0.9rem' }}>
               Mijn voortgang
             </Link>
-            <Link to="/klas/open" style={{ color: 'var(--text-soft)', fontSize: '0.9rem' }}>
+            <Link to="/klas/open" className="join-link" style={{ color: 'var(--text-soft)', fontSize: '0.9rem' }}>
               Klaspakket openen
             </Link>
           </p>

@@ -830,7 +830,7 @@ export function ActivePlotPlayer({ widget }: PlayerProps<ActivePlotConfig>) {
                   htmlFor={sliderId}
                   style={{
                     fontVariantNumeric: 'tabular-nums', fontWeight: 800, minWidth: 64, textAlign: 'center',
-                    color: 'var(--player-accent, var(--brand))',
+                    color: 'color-mix(in srgb, var(--player-accent, var(--brand-fill)) 60%, var(--text))',
                     background: 'color-mix(in srgb, var(--player-accent, var(--brand)) 10%, transparent)',
                     borderRadius: 8, padding: '3px 8px', flex: 'none',
                   }}

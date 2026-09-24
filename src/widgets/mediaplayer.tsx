@@ -409,7 +409,7 @@ export function MediaPlayerPlayer({ widget, timeUp, onComplete }: PlayerProps<Me
     <div>
       {title && <h2 style={{ textAlign: 'center', marginBottom: 6 }}>{title}</h2>}
       {frag && (
-        <p style={{ textAlign: 'center', color: 'var(--player-accent, var(--brand))', fontWeight: 700, fontSize: '0.9rem', margin: '0 0 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        <p style={{ textAlign: 'center', color: 'color-mix(in srgb, var(--player-accent, var(--brand-fill)) 60%, var(--text))', fontWeight: 700, fontSize: '0.9rem', margin: '0 0 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
           <Clock size={16} aria-hidden /> {frag}
         </p>
       )}

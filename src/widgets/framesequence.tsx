@@ -210,7 +210,7 @@ export function FrameSequencePlayer({ widget, timeUp, onComplete }: PlayerProps<
           />
         )}
         {frame.title && (
-          <h2 style={{ margin: '0 0 8px', color: 'var(--player-accent, var(--brand))' }}>
+          <h2 style={{ margin: '0 0 8px', color: 'color-mix(in srgb, var(--player-accent, var(--brand-fill)) 60%, var(--text))' }}>
             {frame.title}
           </h2>
         )}

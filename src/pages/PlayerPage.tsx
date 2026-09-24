@@ -47,9 +47,9 @@ export function PlayerPage() {
     return (
       <div className="player-shell" style={{ minHeight: '100vh' }}>
         <main id="main" className="player-main" style={{ textAlign: 'center', paddingTop: 80 }}>
-          <h1>Widget niet gevonden</h1>
+          <h1>Oefening niet gevonden</h1>
           <p style={{ color: 'var(--text-soft)' }}>
-            Er bestaat geen widget met code <strong style={{ fontFamily: 'monospace' }}>{code}</strong> op dit toestel.<br />
+            Er bestaat geen oefening met code <strong style={{ fontFamily: 'monospace' }}>{code}</strong> op dit toestel.<br />
             Controleer de code, of vraag je leerkracht om de <em>draagbare link</em> als je op een ander toestel werkt.
           </p>
           <Link to="/meedoen" className="btn btn-primary">Code opnieuw invoeren</Link>
@@ -364,7 +364,7 @@ export function WidgetRunner({ widget, recordSubmission }: { widget: Widget; rec
                     <button
                       key={d}
                       type="button"
-                      className={`chip ${doelProces === d ? 'placed' : ''}`}
+                      className={`chip proces-doel-chip ${doelProces === d ? 'placed' : ''}`}
                       style={{ padding: '4px 10px', fontSize: '0.83rem' }}
                       aria-pressed={doelProces === d}
                       onClick={() => setDoelProces((cur) => (cur === d ? '' : d))}
@@ -419,7 +419,7 @@ export function WidgetRunner({ widget, recordSubmission }: { widget: Widget; rec
               </div>
             )}
             {/* de widgetmodule wordt lazy geladen (zie registry): even een laadmelding tonen */}
-            <React.Suspense fallback={<div className="hint" role="status" style={{ textAlign: 'center', padding: '40px 0' }}>Widget laden…</div>}>
+            <React.Suspense fallback={<div className="hint" role="status" style={{ textAlign: 'center', padding: '40px 0' }}>Oefening laden…</div>}>
               {playerNode}
             </React.Suspense>
             <React.Suspense fallback={null}>

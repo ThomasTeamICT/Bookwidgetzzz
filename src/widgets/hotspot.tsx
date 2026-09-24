@@ -86,7 +86,7 @@ export function HotspotEditor({ config, onChange }: EditorProps<HotspotConfig>) 
 export function HotspotPlayer({ widget, onComplete }: PlayerProps<HotspotConfig>) {
   const config = widget.config;
   if (!config.imageUrl || config.hotspots.length === 0) {
-    return <p style={{ textAlign: 'center', color: 'var(--text-soft)' }}>Deze widget heeft nog geen afbeelding of stippen.</p>;
+    return <p style={{ textAlign: 'center', color: 'var(--text-soft)' }}>Deze oefening heeft nog geen afbeelding of stippen.</p>;
   }
   return config.mode === 'explore'
     ? <HotspotExplore widget={widget} onComplete={onComplete} />
@@ -196,7 +196,7 @@ function HotspotQuiz({ widget, onComplete }: { widget: PlayerProps<HotspotConfig
         <span className="badge badge-err"><CloseIcon size={14} className="icon-inline" aria-hidden /> {wrongClicks} fout</span>
       </GameStatus>
       <p style={{ fontSize: '1.25rem', fontWeight: 700, minHeight: 34 }} aria-live="assertive">
-        Waar is: <span style={{ color: flash === 'nok' ? 'var(--err)' : 'var(--player-accent, var(--brand))' }}>{target.label}</span>?
+        Waar is: <span style={{ color: flash === 'nok' ? 'var(--err)' : 'color-mix(in srgb, var(--player-accent, var(--brand-fill)) 60%, var(--text))' }}>{target.label}</span>?
         {flash === 'ok' && <span style={{ color: 'var(--ok)' }}> <CheckIcon size={18} className="icon-inline" aria-hidden /></span>}
         {flash === 'nok' && <span style={{ color: 'var(--err)' }}> — probeer nog eens!</span>}
       </p>

@@ -231,7 +231,7 @@ function NamePicker({ cls, onPick }: { cls: ClassGroup; onPick: (name: string, i
           </button>
         </div>
       ) : (
-        <button className="btn btn-quiet btn-sm" onClick={() => setShowFree(true)}>
+        <button className="btn btn-quiet btn-sm leerling-tap-target" onClick={() => setShowFree(true)}>
           Ik sta er niet bij
         </button>
       )}

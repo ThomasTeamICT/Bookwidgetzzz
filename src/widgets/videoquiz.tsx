@@ -597,7 +597,7 @@ export function VideoQuizPlayer({ widget, timeUp, onComplete }: PlayerProps<Vide
             <h2 style={{ textAlign: 'center' }}>Overzicht van je antwoorden</h2>
             {checkpoints.map((cp, i) => (
               <div key={cp.id}>
-                <p style={{ margin: '16px 0 6px', fontWeight: 800, fontSize: '0.82rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--player-accent, var(--brand))' }}>
+                <p style={{ margin: '16px 0 6px', fontWeight: 800, fontSize: '0.82rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'color-mix(in srgb, var(--player-accent, var(--brand-fill)) 60%, var(--text))' }}>
                   <Clock size={14} className="icon-inline" aria-hidden /> Vraag bij {fmtTime(cp.timeSec)}
                 </p>
                 <QuestionView
@@ -645,7 +645,7 @@ export function VideoQuizPlayer({ widget, timeUp, onComplete }: PlayerProps<Vide
         )}
         {checkpoints.map((cp, i) => (
           <div key={cp.id}>
-            <p style={{ margin: '16px 0 6px', fontWeight: 800, fontSize: '0.82rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--player-accent, var(--brand))' }}>
+            <p style={{ margin: '16px 0 6px', fontWeight: 800, fontSize: '0.82rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'color-mix(in srgb, var(--player-accent, var(--brand-fill)) 60%, var(--text))' }}>
               <Clock size={14} className="icon-inline" aria-hidden /> Vraag bij {fmtTime(cp.timeSec)}
             </p>
             <QuestionView

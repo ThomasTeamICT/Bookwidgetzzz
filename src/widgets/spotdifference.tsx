@@ -30,7 +30,7 @@ const SD_CSS = `
 .spotdifference-edit {
   border: 3px solid var(--player-accent, var(--brand));
   background: color-mix(in srgb, var(--player-accent, var(--brand)) 18%, transparent);
-  color: var(--player-accent, var(--brand));
+  color: color-mix(in srgb, var(--player-accent, var(--brand-fill)) 60%, var(--text));
 }
 .spotdifference-missflash {
   position: absolute; transform: translate(-50%, -50%);
@@ -358,7 +358,7 @@ export function SpotDifferencePlayer({ widget, timeUp, onComplete }: PlayerProps
           </div>
         </div>
         <div>
-          <p style={{ ...caption, color: 'var(--player-accent, var(--brand))' }}>Afbeelding B — klik op de verschillen</p>
+          <p style={{ ...caption, color: 'color-mix(in srgb, var(--player-accent, var(--brand-fill)) 60%, var(--text))' }}>Afbeelding B — klik op de verschillen</p>
           <div
             ref={stageRef}
             className={`hotspot-stage ${missFlash ? 'spotdifference-shake' : ''}`}

@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CloseIcon } from './icons';
 import '../styles/leerling.css';
@@ -57,6 +57,10 @@ export function A11yMenu({ value, onChange }: { value: A11yPrefs; onChange: (p: 
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<React.CSSProperties | null>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  // Voorkomt dat een resize (die pos opnieuw zet) de focus weer wegkaapt
+  // terwijl de leerling al ergens anders in het paneel staat.
+  const didFocusRef = useRef(false);
 
   const set = (patch: Partial<A11yPrefs>) => {
     const next = { ...value, ...patch };
@@ -82,15 +86,41 @@ export function A11yMenu({ value, onChange }: { value: A11yPrefs; onChange: (p: 
       if (btn.contains(target) || panel?.contains(target)) return;
       setOpen(false); // buiten klikken sluit zonder focus te verplaatsen
     };
+    // Tab (of shift+Tab) buiten het paneel én de knop: ook dan sluiten, maar
+    // zonder de focus te verplaatsen — die staat door de toetsnavigatie al
+    // ergens anders, terecht.
+    const onFocusIn = (e: FocusEvent) => {
+      const panel = document.getElementById('a11y-panel');
+      const target = e.target as Node;
+      if (btn.contains(target) || panel?.contains(target)) return;
+      setOpen(false);
+    };
     document.addEventListener('keydown', onKey);
     document.addEventListener('pointerdown', onPointer);
+    document.addEventListener('focusin', onFocusIn);
     window.addEventListener('resize', reposition);
     return () => {
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('pointerdown', onPointer);
+      document.removeEventListener('focusin', onFocusIn);
       window.removeEventListener('resize', reposition);
+      didFocusRef.current = false;
     };
   }, [open]);
+
+  // Bij openen de focus meteen in het paneel zetten (eerste knop, of het
+  // paneel zelf als terugval): anders komt Tab pas na de rest van de kopbalk
+  // in het paneel terecht (regressie na de portal naar document.body).
+  useEffect(() => {
+    if (!open || !pos || didFocusRef.current) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    didFocusRef.current = true;
+    const first = panel.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    (first ?? panel).focus();
+  }, [open, pos]);
 
   return (
     <div className="a11y-wrap">
@@ -108,10 +138,12 @@ export function A11yMenu({ value, onChange }: { value: A11yPrefs; onChange: (p: 
       {open && pos && createPortal(
         <div
           id="a11y-panel"
+          ref={panelRef}
           className="card a11y-panel"
           style={pos}
           role="group"
           aria-label="Leesinstellingen"
+          tabIndex={-1}
         >
           <div className="a11y-panel-head">
             <strong>Leesinstellingen</strong>

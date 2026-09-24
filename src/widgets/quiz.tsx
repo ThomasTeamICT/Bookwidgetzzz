@@ -1488,7 +1488,7 @@ function SliderAnswer({ q, value, onChange, review }: { q: SliderQuestion; value
           onChange={(e) => onChange(parseFloat(e.target.value))}
         />
         <span style={{ color: 'var(--text-soft)' }}>{q.max}</span>
-        <output style={{ fontWeight: 800, minWidth: 52, textAlign: 'center', fontSize: '1.15rem', color: 'var(--player-accent, var(--brand))' }}>
+        <output style={{ fontWeight: 800, minWidth: 52, textAlign: 'center', fontSize: '1.15rem', color: 'color-mix(in srgb, var(--player-accent, var(--brand-fill)) 60%, var(--text))' }}>
           {typeof value === 'number' ? value : '—'}
         </output>
       </div>
@@ -1784,7 +1784,7 @@ export function QuizPlayer({ widget, studentName, preview, timeUp, onComplete }:
   }, [timeUp]);
 
   if (questions.length === 0 && phase !== 'route') {
-    return <p style={{ textAlign: 'center', color: 'var(--text-soft)' }}>Deze widget bevat nog geen vragen.</p>;
+    return <p style={{ textAlign: 'center', color: 'var(--text-soft)' }}>Deze oefening bevat nog geen vragen.</p>;
   }
 
   const review = phase === 'done' && widget.settings.showFeedback;
