@@ -2,6 +2,8 @@
 
 **Geef je les een boost.** Een volledig functionele webapplicatie om **interactieve oefeningen, toetsen, spelletjes én digitale cursussen** voor je klas te maken, te delen en op te volgen. Alles draait 100% in de browser: geen server, geen account, geen installatie.
 
+**Live:** https://thomasteamict.github.io/Boosterz/ · repository `ThomasTeamICT/Boosterz` (tot 24 september 2026 `Bookwidgetzzz`).
+
 > Boosterz heette tot september 2026 *WidgetFabriek*. De naam en de huisstijl zijn veranderd; de opslag niet: bestaande widgets, cursussen en inzendingen (`wf.*`-sleutels in localStorage, `wf-files` in IndexedDB) blijven gewoon werken, en exportbestanden van vóór de naamsverandering importeren zonder omweg.
 
 ## ✨ Functies

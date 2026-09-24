@@ -1,6 +1,6 @@
 # Boosterz: afspraken voor Claude
 
-Boosterz is een volledig client-side leerplatform: React 18 en TypeScript strict, Vite, hash router, opslag in localStorage en IndexedDB, geen server. De app draait op GitHub Pages en wordt uitgerold vanaf de branch `claude/bookwidgets-web-app-kvcfim`.
+Boosterz is een volledig client-side leerplatform: React 18 en TypeScript strict, Vite, hash router, opslag in localStorage en IndexedDB, geen server. De repository is `ThomasTeamICT/Boosterz` (tot 24 september 2026 `Bookwidgetzzz`). De app draait op https://thomasteamict.github.io/Boosterz/ en wordt uitgerold vanaf de branch `claude/bookwidgets-web-app-kvcfim`.
 
 - Alle tekst in de app en alle rapportage aan de gebruiker in Vlaams Nederlands. Toegankelijkheid telt: labels, toetsenbord, contrast.
 - Nooit API-sleutels of persoonsgegevens in de repo. De AI-functies gebruiken de eigen sleutel van de leerkracht, en de app blijft bruikbaar zonder sleutel.

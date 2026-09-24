@@ -1,6 +1,8 @@
 # Van Bookwidgetzzz naar Boosterz: de repository hernoemen
 
-De app heet al Boosterz; alleen de repository en dus het webadres dragen nog de oude naam.
+**Status: hernoemd op 24 september 2026.** De repository is nu `ThomasTeamICT/Boosterz` en de app
+staat op https://thomasteamict.github.io/Boosterz/. Stap 3 hieronder, de doorverwijzing van het oude
+adres, is nog niet gebeurd en blijft optioneel.
 
 ## Wat er gebeurt bij het hernoemen
 
