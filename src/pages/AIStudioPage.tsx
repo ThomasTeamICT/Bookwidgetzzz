@@ -247,7 +247,8 @@ export function AIStudioPage() {
       system,
       prompt,
       task: 'widgets uit bron',
-      maxTokens: 16000,
+      // Meer widgettypes in één aanvraag = meer uitvoer: de limiet schaalt mee.
+      maxTokens: Math.min(64000, 8000 + 5000 * types.length),
       signal: ctrl.signal,
       onDelta: (t) => { acc += t; setStream(acc); },
     })

@@ -80,3 +80,32 @@ describe('buildWidgetGenPrompt — leerplandoelen', () => {
     expect(prompt).not.toContain('Leerplandoelen:');
   });
 });
+
+describe('sanitizeQuestion: varianten van het antwoordveld (gezien bij Gemini)', () => {
+  const opts = ['De dunne darm', 'De maag', 'De slokdarm', 'De dikke darm'];
+  it('mc: "correctAnswer" als nummer, als optietekst of als letter', () => {
+    const a = sanitizeQuestion({ type: 'mc', prompt: 'p', options: opts, correctAnswer: 0 });
+    const b = sanitizeQuestion({ type: 'mc', prompt: 'p', options: opts, correctAnswer: 'de maag' });
+    const c = sanitizeQuestion({ type: 'mc', prompt: 'p', options: opts, answer: 'C' });
+    expect(a && a.type === 'mc' && a.correctIndex).toBe(0);
+    expect(b && b.type === 'mc' && b.correctIndex).toBe(1);
+    expect(c && c.type === 'mc' && c.correctIndex).toBe(2);
+  });
+  it('mc: een antwoord dat bij geen optie past, keurt de vraag af', () => {
+    expect(sanitizeQuestion({ type: 'mc', prompt: 'p', options: opts, correctAnswer: 'de lever' })).toBeNull();
+    expect(sanitizeQuestion({ type: 'mc', prompt: 'p', options: opts })).toBeNull();
+  });
+  it('multi: "correctAnswers" met optieteksten', () => {
+    const q = sanitizeQuestion({ type: 'multi', prompt: 'p', options: opts, correctAnswers: ['De maag', 'De dunne darm'] });
+    expect(q && q.type === 'multi' && q.correctIndices).toEqual([0, 1]);
+  });
+  it('tf: "correct", "waar"/"onjuist" worden herkend; zonder antwoord valt de vraag weg in plaats van stil "onjuist"', () => {
+    const t1 = sanitizeQuestion({ type: 'tf', prompt: 'p', correct: true });
+    const t2 = sanitizeQuestion({ type: 'tf', prompt: 'p', answer: 'waar' });
+    const t3 = sanitizeQuestion({ type: 'tf', prompt: 'p', correctAnswer: 'onjuist' });
+    expect(t1 && t1.type === 'tf' && t1.answer).toBe(true);
+    expect(t2 && t2.type === 'tf' && t2.answer).toBe(true);
+    expect(t3 && t3.type === 'tf' && t3.answer).toBe(false);
+    expect(sanitizeQuestion({ type: 'tf', prompt: 'p' })).toBeNull();
+  });
+});

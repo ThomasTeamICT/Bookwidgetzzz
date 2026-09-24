@@ -173,6 +173,46 @@ function mapOptions(raw: unknown): { options: string[]; map: Map<number, number>
   return { options, map };
 }
 
+/**
+ * Welke optie is juist? Modellen noemen dat veld niet altijd "correctIndex"
+ * (Gemini schreef in tests ook "correctAnswer"), en geven soms de tekst van de
+ * optie in plaats van het nummer. Beide vangen we op; een waarde die naar geen
+ * enkele (overgebleven) optie wijst, geeft undefined en keurt de vraag af.
+ */
+function resolveOptionIndex(raw: unknown, rawOptions: unknown, map: Map<number, number>, options: string[]): number | undefined {
+  if (typeof raw === 'number' || (typeof raw === 'string' && /^\s*\d+\s*$/.test(raw))) {
+    return map.get(Math.round(num(raw, NaN)));
+  }
+  if (typeof raw === 'string' && raw.trim()) {
+    const want = raw.trim().toLowerCase();
+    const i = options.findIndex((o) => o.toLowerCase() === want);
+    if (i >= 0) return i;
+    // "B" of "b)" als letter van de optie
+    const letter = /^([a-h])\)?$/i.exec(raw.trim());
+    if (letter && Array.isArray(rawOptions)) return map.get(letter[1].toLowerCase().charCodeAt(0) - 97);
+  }
+  return undefined;
+}
+
+/** Eerste gedefinieerde waarde van een reeks mogelijke veldnamen. */
+function firstDefined(q: Record<string, unknown>, keys: string[]): unknown {
+  for (const k of keys) if (q[k] !== undefined && q[k] !== null) return q[k];
+  return undefined;
+}
+
+/** Juist/onjuist uit de gangbare vormen; undefined als het niet eenduidig is. */
+function resolveBoolean(raw: unknown): boolean | undefined {
+  if (typeof raw === 'boolean') return raw;
+  if (typeof raw === 'string') {
+    const t = raw.trim().toLowerCase();
+    if (['true', 'juist', 'waar', 'ja', 'correct'].includes(t)) return true;
+    if (['false', 'onjuist', 'fout', 'onwaar', 'nee', 'incorrect'].includes(t)) return false;
+  }
+  if (raw === 1) return true;
+  if (raw === 0) return false;
+  return undefined;
+}
+
 /** Opties die de sanering strenger maken dan de AI zelf is. */
 export interface SanitizeOptions {
   /**
@@ -229,23 +269,32 @@ export function sanitizeQuestion(raw: unknown, opts?: SanitizeOptions): Question
       // (stilzwijgend een afleider juist rekenen is erger dan overslaan).
       const { options, map } = mapOptions(q.options);
       if (options.length < 2) return null;
-      const ci = map.get(Math.round(num(q.correctIndex, NaN)));
+      const ci = resolveOptionIndex(
+        firstDefined(q, ['correctIndex', 'correctAnswer', 'correctOption', 'answerIndex', 'correct', 'answer']),
+        q.options, map, options
+      );
       if (ci === undefined) return null;
       return { ...base, type, options, correctIndex: ci };
     }
     case 'multi': {
       const { options, map } = mapOptions(q.options);
       if (options.length < 2) return null;
-      const idx = Array.isArray(q.correctIndices)
-        ? q.correctIndices
-            .map((i) => map.get(Math.round(num(i, NaN))))
+      const rawIdx = firstDefined(q, ['correctIndices', 'correctAnswers', 'correctOptions', 'answers', 'correct']);
+      const idx = Array.isArray(rawIdx)
+        ? rawIdx
+            .map((i) => resolveOptionIndex(i, q.options, map, options))
             .filter((i): i is number => i !== undefined)
         : [];
       if (idx.length === 0) return null;
       return { ...base, type, options, correctIndices: [...new Set(idx)].sort((a, b) => a - b) };
     }
-    case 'tf':
-      return { ...base, type, answer: q.answer === true || q.answer === 'true' || q.answer === 'juist' };
+    case 'tf': {
+      // Nooit stilzwijgend "onjuist" invullen: een ware stelling die als
+      // onjuist nagekeken wordt, is erger dan een vraag die wegvalt.
+      const answer = resolveBoolean(firstDefined(q, ['answer', 'correct', 'correctAnswer', 'isTrue', 'value']));
+      if (answer === undefined) return null;
+      return { ...base, type, answer };
+    }
     case 'short': {
       const accepted = strArr(q.accepted ?? q.answers ?? q.answer);
       if (accepted.length === 0) return null;
