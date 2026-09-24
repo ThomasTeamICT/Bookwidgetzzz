@@ -226,6 +226,7 @@ async function askAnthropic(s: AISettings, opts: AskAIOptions): Promise<string> 
   let inputTokens = 0;
   let outputTokens = 0;
   let refused = false;
+  let truncated = false;
   try {
     await readSSE(res, (data) => {
       try {
@@ -239,6 +240,7 @@ async function askAnthropic(s: AISettings, opts: AskAIOptions): Promise<string> 
         if (ev.type === 'message_delta' && ev.delta?.stop_reason === 'refusal') {
           refused = true;
         }
+        if (ev.type === 'message_delta' && ev.delta?.stop_reason === 'max_tokens') truncated = true;
         if (ev.type === 'error') throw new AIError(ev.error?.message ?? 'De AI-dienst meldde een fout tijdens het genereren.');
       } catch (e) {
         if (e instanceof AIError) throw e;
@@ -257,7 +259,30 @@ async function askAnthropic(s: AISettings, opts: AskAIOptions): Promise<string> 
       'blijft het misgaan, probeer dan een ander model bij de AI-instellingen.'
     );
   }
+  if (truncated) throw truncatedError();
   return full;
+}
+
+/**
+ * Tokenlimiet per aanvraag. Gemini 3.x-modellen denken eerst na, en dat
+ * denkwerk telt mee in max_tokens: met de krappe limiet van een korte taak
+ * (bv. 250 voor een feedbackvoorstel) bleef er soms maar een handvol woorden
+ * over voor het antwoord. Een hogere limiet kost niets extra (de aanbieder
+ * rekent alleen verbruikte tokens aan); Gemini's eigen denkbudget op nul
+ * zetten wordt door die modellen genegeerd. Plafond: 65.536 uitvoertokens.
+ */
+export function effectiveMaxTokens(provider: AIProviderId, requested: number | undefined): number {
+  const wanted = requested ?? 16000;
+  if (provider !== 'gemini') return wanted;
+  return Math.min(65536, Math.max(8192, wanted * 2));
+}
+
+/** Leesbare fout als de aanbieder het antwoord afkapte op de tokenlimiet. */
+function truncatedError(): AIError {
+  return new AIError(
+    'Het antwoord van de AI werd afgekapt omdat het te lang werd. Probeer het opnieuw, vraag minder tegelijk ' +
+    '(bv. minder widgettypes of een kleiner stuk tekst), of kies een ander model bij de AI-instellingen.'
+  );
 }
 
 async function askOpenAICompatible(s: AISettings, opts: AskAIOptions): Promise<string> {
@@ -280,7 +305,7 @@ async function askOpenAICompatible(s: AISettings, opts: AskAIOptions): Promise<s
       },
       body: JSON.stringify({
         model: s.model,
-        max_tokens: opts.maxTokens ?? 16000,
+        max_tokens: effectiveMaxTokens(s.provider, opts.maxTokens),
         messages: [
           ...(opts.system ? [{ role: 'system', content: opts.system }] : []),
           { role: 'user', content: opts.prompt },
@@ -302,6 +327,7 @@ async function askOpenAICompatible(s: AISettings, opts: AskAIOptions): Promise<s
   let inputTokens = 0;
   let outputTokens = 0;
   let blocked = false;
+  let truncated = false;
   try {
     await readSSE(res, (data) => {
       if (data === '[DONE]') return;
@@ -309,6 +335,7 @@ async function askOpenAICompatible(s: AISettings, opts: AskAIOptions): Promise<s
         const ev = JSON.parse(data);
         const finish = ev.choices?.[0]?.finish_reason;
         if (finish === 'content_filter' || finish === 'safety') blocked = true;
+        if (finish === 'length' || finish === 'max_tokens') truncated = true;
         const delta = ev.choices?.[0]?.delta?.content;
         if (typeof delta === 'string' && delta) {
           full += delta;
@@ -334,6 +361,7 @@ async function askOpenAICompatible(s: AISettings, opts: AskAIOptions): Promise<s
       'opdracht of bronmateriaal, of probeer een ander model bij de AI-instellingen.'
     );
   }
+  if (truncated) throw truncatedError();
   return full;
 }
 

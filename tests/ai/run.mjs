@@ -23,7 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BASE, lastUsage, makeReport, sleep, startBrowser, usageCount } from './helpers.mjs';
+import { BASE, lastUsage, makeReport, sleep, startBrowser, usageCount, waitForAI } from './helpers.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '../..');
@@ -57,9 +57,7 @@ async function runAIStep(page, aiCalls, flow, task, clickFn, { timeout = AI_TIME
   const before = await usageCount(page);
   const t0 = Date.now();
   await clickFn();
-  await page.waitForFunction((n) => {
-    try { return JSON.parse(localStorage.getItem('wf.aiusage.v1') || '[]').length > n; } catch { return false; }
-  }, before, { timeout });
+  await waitForAI(page, before, { timeout });
   const durationMs = Date.now() - t0;
   const usage = await lastUsage(page);
   aiCalls.push({

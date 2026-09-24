@@ -66,14 +66,53 @@ export function CurriculaPage() {
     }
   };
 
+  // Het AI-venster hoort bij beide weergaven: de lijst (nieuw leerplan) én de
+  // editor (doelen toevoegen). Vroeger stond het alleen in de lijst, waardoor
+  // "Doelen uit tekst of pdf" in de editor niets deed.
+  const aiModal = aiTarget ? (
+    <CurriculumAIModal
+      curriculum={aiTarget.mode === 'add' ? aiTarget.curriculum : undefined}
+      onClose={() => setAiTarget(null)}
+      onApply={(goals, meta) => {
+        if (aiTarget.mode === 'add') {
+          const merged = mergeGoals(aiTarget.curriculum.goals, goals);
+          save({ ...aiTarget.curriculum, goals: merged });
+          // Dubbele codes slaat mergeGoals over: tel wat er echt bij kwam.
+          const added = merged.length - aiTarget.curriculum.goals.length;
+          const skipped = goals.length - added;
+          toast(
+            `${added} doel(en) toegevoegd${skipped > 0 ? `, ${skipped} overgeslagen omdat de code al bestond` : ''} — kijk ze na`,
+            'ok'
+          );
+        } else {
+          const cur = createCurriculum({
+            title: meta.title || `Doelenlijst ${meta.subject || ''}`.trim(),
+            net: meta.net,
+            subject: meta.subject,
+            level: meta.level,
+            source: meta.source || undefined,
+            goals,
+          });
+          save(cur);
+          setEditingId(cur.id);
+          toast(`Leerplan aangemaakt met ${goals.length} doelen — kijk ze na`, 'ok');
+        }
+        setAiTarget(null);
+      }}
+    />
+  ) : null;
+
   if (editing) {
     return (
-      <CurriculumEditor
-        curriculum={editing}
-        onChange={save}
-        onBack={() => setEditingId(null)}
-        onAskAI={() => setAiTarget({ mode: 'add', curriculum: editing })}
-      />
+      <>
+        <CurriculumEditor
+          curriculum={editing}
+          onChange={save}
+          onBack={() => setEditingId(null)}
+          onAskAI={() => setAiTarget({ mode: 'add', curriculum: editing })}
+        />
+        {aiModal}
+      </>
     );
   }
 
@@ -156,38 +195,7 @@ export function CurriculaPage() {
         />
       )}
 
-      {aiTarget && (
-        <CurriculumAIModal
-          curriculum={aiTarget.mode === 'add' ? aiTarget.curriculum : undefined}
-          onClose={() => setAiTarget(null)}
-          onApply={(goals, meta) => {
-            if (aiTarget.mode === 'add') {
-              const merged = mergeGoals(aiTarget.curriculum.goals, goals);
-              save({ ...aiTarget.curriculum, goals: merged });
-              // Dubbele codes slaat mergeGoals over: tel wat er echt bij kwam.
-              const added = merged.length - aiTarget.curriculum.goals.length;
-              const skipped = goals.length - added;
-              toast(
-                `${added} doel(en) toegevoegd${skipped > 0 ? `, ${skipped} overgeslagen omdat de code al bestond` : ''} — kijk ze na`,
-                'ok'
-              );
-            } else {
-              const cur = createCurriculum({
-                title: meta.title || `Doelenlijst ${meta.subject || ''}`.trim(),
-                net: meta.net,
-                subject: meta.subject,
-                level: meta.level,
-                source: meta.source || undefined,
-                goals,
-              });
-              save(cur);
-              setEditingId(cur.id);
-              toast(`Leerplan aangemaakt met ${goals.length} doelen — kijk ze na`, 'ok');
-            }
-            setAiTarget(null);
-          }}
-        />
-      )}
+      {aiModal}
 
       {deleteTarget && (
         <ConfirmModal
