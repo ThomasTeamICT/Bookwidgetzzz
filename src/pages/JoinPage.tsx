@@ -46,10 +46,9 @@ export function JoinPage() {
           <span className="wordmark">Booster<b>z</b></span>
         </Link>
       </header>
-      <div style={{ flex: 1, display: 'grid', placeItems: 'center', padding: 20 }}>
+      <main id="main" style={{ flex: 1, display: 'grid', placeItems: 'center', padding: 20 }}>
         <div style={{ maxWidth: 440, width: '100%' }}>
           <div className="card card-pad" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2.8rem' }} aria-hidden>🎓</div>
             <h1 style={{ fontSize: '1.45rem' }}>Meedoen met een opdracht</h1>
             <p style={{ color: 'var(--text-soft)' }}>
               Typ de code die je van je leerkracht kreeg: van een oefening, een cursus of van je klas.
@@ -66,20 +65,20 @@ export function JoinPage() {
               />
               {error && <p role="alert" style={{ color: 'var(--err)', fontWeight: 600, marginTop: 10 }}>{error}</p>}
               <button className="btn btn-primary btn-lg" style={{ width: '100%', marginTop: 14 }} type="submit" disabled={code.length < 6}>
-                Start →
+                Start
               </button>
             </form>
           </div>
           <p style={{ textAlign: 'center', marginTop: 14, marginBottom: 0, display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link to="/voortgang" style={{ color: 'var(--text-soft)', fontSize: '0.9rem' }}>
-              📈 Mijn voortgang
+              Mijn voortgang
             </Link>
             <Link to="/klas/open" style={{ color: 'var(--text-soft)', fontSize: '0.9rem' }}>
-              📦 Klaspakket openen
+              Klaspakket openen
             </Link>
           </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

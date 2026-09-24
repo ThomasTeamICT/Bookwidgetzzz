@@ -1,0 +1,170 @@
+/*
+ * Leerlingpakket — herontwerp september 2026.
+ *
+ * Gedeeld door alle leerlingschermen (speler, klashub, cursuslezer,
+ * voortgang) én door de widgetmodules die op gsm getest zijn (flitskaarten,
+ * woordzoeker). Dit bestand wordt zowel vanuit PlayerPage/JoinPage/
+ * OpenSharedPage geïmporteerd (komt dan in de css van de hoofdbundel — klein
+ * houden) als vanuit lazy geladen pagina's en widgets (komt dan mee met hun
+ * eigen chunk). Alleen tokens uit global.css, geen losse kleurcodes.
+ */
+
+/*
+ * Specificiteit: alle overrides van bestaande global.css-klassen (.player-
+ * topbar, .flashcard, .ws-cell) krijgen hier de voorvoegsel-selector
+ * ".player-shell" (of ".course-block" voor de cursusblokken), niet omdat de
+ * cascade dat vereist — leerling.css laadt altijd ná global.css — maar zodat
+ * de regel ook blijft winnen als een andere pagina dit bestand ooit vóór
+ * global.css zou laden.
+ */
+
+/* ── Spelerkop op twee regels (gsm loopt anders over) ───────────────────── */
+
+.player-shell .player-topbar {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.player-topbar-row1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 100%;
+  min-width: 0;
+}
+.player-topbar-row2 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 1 1 100%;
+  min-width: 0;
+}
+/*
+ * De titel mag op gsm over twee regels lopen i.p.v. afgekapt te worden. Ze is
+ * nu de h1 van het scherm (zie PlayerPage/CourseViewerPage/ClassStudentPage):
+ * de generieke h1-regel uit global.css geeft een marge en een grotere
+ * lettergrootte mee die hier niet passen.
+ */
+.player-shell .player-topbar .title {
+  margin: 0;
+  font-size: 1rem;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.3;
+}
+.player-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--bg-sunken);
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+.player-chip.chip-warn { background: var(--warn-soft); color: var(--warn-text); }
+.player-chip.chip-err { background: var(--err-soft); color: var(--err-text); }
+.player-chip.chip-brand { background: var(--brand-soft); color: var(--brand); }
+.player-topbar-row1 .sp { flex: 1; }
+
+/* ── Leespaneel "Aa": altijd volledig in beeld ──────────────────────────── */
+/*
+ * Positie (top/right/left/bottom) wordt in JS berekend (A11yMenu.tsx) en als
+ * inline style meegegeven — niet via media queries. Het paneel gaat via een
+ * portal naar document.body: .player-topbar heeft backdrop-filter, en dat
+ * maakt er (net als transform/filter/will-change) een containing block van
+ * voor position:fixed-nakomelingen, waardoor een genest paneel niet t.o.v.
+ * het scherm zou verschijnen maar t.o.v. de (lage) kopbalk. Hier staan enkel
+ * de cosmetische eigenschappen.
+ */
+.a11y-wrap { position: relative; display: inline-flex; flex: none; }
+.a11y-panel {
+  max-width: calc(100vw - 24px);
+  z-index: 60;
+  box-shadow: var(--shadow-2);
+  padding: 12px;
+}
+.a11y-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.a11y-panel-head strong { font-size: 0.85rem; flex: 1; }
+
+@media (max-width: 640px) {
+  .a11y-panel {
+    max-height: min(70vh, 480px);
+    overflow-y: auto;
+  }
+}
+
+/* ── Tikdoelen: minstens 44×44 op gsm ────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .player-shell .player-topbar .btn-icon,
+  .player-shell .player-nav .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ── Resultaatcode: leesbare tekst naast de QR ──────────────────────────── */
+
+.result-code-text {
+  font-family: var(--font-mono, monospace);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  word-break: break-all;
+}
+
+/* ── Woordzoeker: cellen zo groot als de breedte toelaat op gsm ─────────── */
+
+@media (max-width: 640px) {
+  .player-shell .ws-cell {
+    width: min(29px, calc((100vw - 64px) / var(--ws-size, 12)));
+    height: min(29px, calc((100vw - 64px) / var(--ws-size, 12)));
+    font-size: 0.82rem;
+  }
+}
+
+/* ── Flitskaarten: nooit tekst laten verdwijnen ──────────────────────────── */
+/*
+ * global.css geeft de kaart een vaste 16:10-verhouding met overflow:hidden op
+ * elke zijde: bij een lang antwoord op gsm valt tekst dan gewoon weg. Hier
+ * laten we de kaart groeien met haar inhoud (met een minimumhoogte) door er
+ * een grid van te maken: beide zijden delen dezelfde grid-cel (ze overlappen
+ * dus nog altijd, nodig voor de flip), maar de cel — en dus de kaart — schaalt
+ * mee met de hoogste van de twee. De flip-animatie (transform op .flashcard,
+ * backface-visibility op .face) blijft ongewijzigd.
+ */
+.player-shell .flashcard-stage {
+  perspective: 1100px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+.player-shell .flashcard {
+  aspect-ratio: auto;
+  min-height: 220px;
+  height: auto;
+  display: grid;
+}
+.player-shell .flashcard .face {
+  position: relative;
+  inset: auto;
+  grid-area: 1 / 1;
+  overflow: visible;
+  min-height: 220px;
+  /* trapsgewijs kleiner bij smallere schermen, nooit zo klein dat het onleesbaar wordt */
+  font-size: clamp(1rem, 0.85rem + 1vw, 1.35rem);
+}
+.player-shell .flashcard .face span:last-child { overflow-wrap: anywhere; }
+.player-shell .flashcard .face.back { transform: rotateY(180deg); }

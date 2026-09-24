@@ -35,11 +35,12 @@
   --brand-fill-strong: #4a2fd9;
   --accent-fill: #c2410c;
   --boost-fill: linear-gradient(120deg, var(--brand-fill), var(--accent-fill));
-  --ok: #16a34a;
+  /* Ook als tekstkleur op wit bruikbaar (4,5 : 1); zie color.test.ts. */
+  --ok: #15803d;
   --ok-soft: #dcfce7;
-  --warn: #d97706;
+  --warn: #b45309;
   --warn-soft: #fef3c7;
-  --err: #dc2626;
+  --err: #d11f1f;
   --err-soft: #fee2e2;
   /* Tekst op de zachte statusvlakken (badges, meldingen): minstens 4,5 : 1. */
   --ok-text: #166534;

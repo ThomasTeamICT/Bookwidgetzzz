@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  Circle, CircleCheck, CircleDot, Inbox, Menu as MenuIcon, RefreshCw, StickyNote, Target, User, X,
+} from 'lucide-react';
 import type { Course, CourseProgress, CourseSection } from '../lib/courseTypes';
 import { allSections, progressPercent } from '../lib/courseTypes';
 import type { DecodedCourse } from '../lib/courses';
@@ -15,6 +18,10 @@ import { BlockRenderer } from '../components/course/BlockRenderer';
 import { CodeQr } from '../components/CodeQr';
 import { EmptyState } from '../components/ui';
 import { A11yMenu, loadA11y } from '../components/A11yMenu';
+import {
+  CheckIcon, CourseIcon, DownloadIcon, PrivacyIcon, QrIcon, SearchIcon, WarningIcon,
+} from '../components/icons';
+import '../styles/leerling.css';
 
 // ── /cursus/open?d=… — gedeelde link openen ─────────────────────────────────
 
@@ -68,18 +75,21 @@ export function CourseOpenPage() {
 
   return (
     <div className="player-shell" style={{ minHeight: '100vh' }}>
-      <div className="player-main" style={{ maxWidth: 560 }}>
+      <main id="main" className="player-main" style={{ maxWidth: 560 }}>
         {invalid ? (
-          <EmptyState icon="⚠️" title="Deze cursuslink werkt niet">
-            <p>
-              De link is onvolledig of beschadigd (misschien is hij afgebroken bij het kopiëren).
-              Vraag je leerkracht om een nieuwe deellink.
-            </p>
-            <Link to="/" className="btn btn-primary">Naar de startpagina</Link>
-          </EmptyState>
+          <>
+            <h1 className="sr-only">Deze cursuslink werkt niet</h1>
+            <EmptyState icon={<WarningIcon size={40} />} title="Deze cursuslink werkt niet">
+              <p>
+                De link is onvolledig of beschadigd (misschien is hij afgebroken bij het kopiëren).
+                Vraag je leerkracht om een nieuwe deellink.
+              </p>
+              <Link to="/" className="btn btn-primary">Naar de startpagina</Link>
+            </EmptyState>
+          </>
         ) : pending ? (
           <div className="card card-pad" style={{ maxWidth: 480, margin: '60px auto 0', textAlign: 'center' }}>
-            <div style={{ fontSize: '2.6rem' }} aria-hidden>🔄</div>
+            <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--brand)' }} aria-hidden><RefreshCw size={42} /></div>
             <h1 style={{ fontSize: '1.3rem' }}>Cursus bijwerken?</h1>
             <p style={{ color: 'var(--text-soft)' }}>
               Deze link bevat {pending.partial ? 'een deel van' : 'een andere versie van'} de cursus{' '}
@@ -87,17 +97,20 @@ export function CourseOpenPage() {
               Je leesvoortgang blijft in beide gevallen bewaard.
             </p>
             <div style={{ display: 'grid', gap: 8 }}>
-              <button className="btn btn-primary" onClick={accept}>✔ Bijwerken en openen</button>
+              <button className="btn btn-primary" onClick={accept}><CheckIcon size={16} aria-hidden /> Bijwerken en openen</button>
               <button className="btn btn-ghost" onClick={keepLocal}>Huidige versie behouden en openen</button>
             </div>
           </div>
         ) : (
-          <div style={{ textAlign: 'center', paddingTop: 80 }}>
-            <div style={{ fontSize: '3rem' }} aria-hidden>📖</div>
-            <p style={{ color: 'var(--text-soft)' }}>Cursus wordt geopend…</p>
-          </div>
+          <>
+            <h1 className="sr-only">Cursus wordt geopend</h1>
+            <div style={{ textAlign: 'center', paddingTop: 80 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--brand)' }} aria-hidden><CourseIcon size={42} /></div>
+              <p style={{ color: 'var(--text-soft)' }}>Cursus wordt geopend…</p>
+            </div>
+          </>
         )}
-      </div>
+      </main>
     </div>
   );
 }
@@ -130,8 +143,9 @@ function CourseNotFound({ code }: { code?: string }) {
   };
   return (
     <div className="player-shell" style={{ minHeight: '100vh' }}>
-      <div className="player-main" style={{ maxWidth: 560 }}>
-        <EmptyState icon="🔎" title="Cursus niet gevonden">
+      <main id="main" className="player-main" style={{ maxWidth: 560 }}>
+        <h1 className="sr-only">Cursus niet gevonden</h1>
+        <EmptyState icon={<SearchIcon size={40} />} title="Cursus niet gevonden">
           <p>
             Er staat geen cursus met code{' '}
             <strong style={{ fontFamily: 'monospace' }}>{code}</strong> op dit toestel.<br />
@@ -151,7 +165,7 @@ function CourseNotFound({ code }: { code?: string }) {
             <button className="btn btn-primary" disabled={!draft.trim()} onClick={open}>Openen</button>
           </div>
         </EmptyState>
-      </div>
+      </main>
     </div>
   );
 }
@@ -521,7 +535,7 @@ function CourseReader({ course }: { course: Course }) {
   if (!progress || !name) {
     return (
       <div className={shellClass} style={shellStyle}>
-        <div className="player-main" style={{ maxWidth: 520 }}>
+        <main id="main" className="player-main" style={{ maxWidth: 520 }}>
           <div className="card card-pad" style={{ maxWidth: 480, margin: '40px auto 0', textAlign: 'center' }}>
             <div style={{ fontSize: '3.4rem' }} aria-hidden>{course.coverEmoji}</div>
             <h1 style={{ fontSize: '1.6rem', margin: '6px 0 2px' }}>{course.title}</h1>
@@ -546,13 +560,13 @@ function CourseReader({ course }: { course: Course }) {
               disabled={!draftName.trim()}
               onClick={() => begin(draftName)}
             >
-              📖 Start met lezen
+              <CourseIcon size={16} aria-hidden /> Start met lezen
             </button>
-            <p className="hint" style={{ marginTop: 12, marginBottom: 0 }}>
-              🔒 Je voortgang blijft op dit toestel en is alleen voor jou en je leerkracht.
+            <p className="hint" style={{ marginTop: 12, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <PrivacyIcon size={13} aria-hidden /> Je voortgang blijft op dit toestel en is alleen voor jou en je leerkracht.
             </p>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -595,7 +609,7 @@ function CourseReader({ course }: { course: Course }) {
           type="search"
           className="input input-sm"
           aria-label="Zoeken in de cursus"
-          placeholder="🔍 Zoek in de cursus…"
+          placeholder="Zoek in de cursus…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           style={{ width: '100%' }}
@@ -628,7 +642,7 @@ function CourseReader({ course }: { course: Course }) {
             {visibleSections.map((s) => {
               const sp = progress.sections[s.id];
               const status = sp?.completedAt ? 'afgewerkt' : sp ? 'geopend' : 'nog niet gelezen';
-              const icon = sp?.completedAt ? '✅' : sp ? '◐' : '○';
+              const StatusIcon = sp?.completedAt ? CircleCheck : sp ? CircleDot : Circle;
               const active = s.id === sectionId;
               const hasNote = (notes[s.id] ?? '').trim() !== '';
               return (
@@ -647,11 +661,11 @@ function CourseReader({ course }: { course: Course }) {
                     fontWeight: active ? 700 : 500,
                   }}
                 >
-                  <span aria-hidden style={{ flex: 'none' }}>{icon}</span>
+                  <StatusIcon size={15} aria-hidden style={{ flex: 'none', marginTop: 2 }} />
                   <span style={{ flex: 1, minWidth: 0 }}>
                     {s.title}
                     {hasNote && (
-                      <span role="img" aria-label="heeft notitie" style={{ marginLeft: 5, fontSize: '0.82rem' }}>🗒️</span>
+                      <StickyNote size={13} aria-label="heeft notitie" role="img" style={{ marginLeft: 5, verticalAlign: '-2px' }} />
                     )}
                     {s.optional && (
                       <span style={{ color: 'var(--text-faint)', fontSize: '0.82rem' }}> · keuze</span>
@@ -679,7 +693,9 @@ function CourseReader({ course }: { course: Course }) {
         </div>
       )}
       <div className="card" style={{ padding: '12px 14px', flex: 'none' }}>
-        <strong style={{ fontSize: '0.9rem' }}>📨 Voortgangscode</strong>
+        <strong style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <QrIcon size={16} aria-hidden /> Voortgangscode
+        </strong>
         <p className="hint" style={{ margin: '4px 0 8px' }}>
           Werk je op je eigen toestel? Toon deze code aan je leerkracht (scannen) of kopieer ze.
         </p>
@@ -687,7 +703,7 @@ function CourseReader({ course }: { course: Course }) {
       </div>
       {noteCount > 0 && (
         <button className="btn btn-ghost btn-sm" style={{ flex: 'none' }} onClick={exportNotes}>
-          🗒️ Mijn notities exporteren
+          <DownloadIcon size={15} aria-hidden /> Mijn notities exporteren
         </button>
       )}
     </div>
@@ -696,28 +712,33 @@ function CourseReader({ course }: { course: Course }) {
   return (
     <div className={shellClass} style={shellStyle}>
       <header className="player-topbar">
-        {narrow && (
-          <button
-            ref={navToggleRef}
-            className="btn btn-quiet btn-icon"
-            aria-label={navOpen ? 'Inhoudstafel verbergen' : 'Inhoudstafel tonen'}
-            aria-expanded={navOpen}
-            onClick={() => setNavOpen((v) => !v)}
-          >
-            ☰
-          </button>
-        )}
-        <span aria-hidden style={{ fontSize: '1.3rem' }}>{course.coverEmoji}</span>
-        <span className="title">{course.title}</span>
-        {course.settings.showProgressToStudent && (
-          <span className="badge badge-brand" aria-label={`Voortgang: ${pctDone} procent`}>{pctDone}%</span>
-        )}
-        <span className="badge">👤 {name}</span>
-        {studentCtx && (
-          <Link to={`/leerling/${studentCtx.classCode}`} className="btn btn-sm btn-ghost">
-            ← Mijn klas
-          </Link>
-        )}
+        <div className="player-topbar-row1">
+          {narrow && (
+            <button
+              ref={navToggleRef}
+              className="btn btn-quiet btn-icon"
+              aria-label={navOpen ? 'Inhoudstafel verbergen' : 'Inhoudstafel tonen'}
+              aria-expanded={navOpen}
+              onClick={() => setNavOpen((v) => !v)}
+            >
+              <MenuIcon size={20} aria-hidden />
+            </button>
+          )}
+          {course.settings.showProgressToStudent && (
+            <span className="player-chip chip-brand" aria-label={`Voortgang: ${pctDone} procent`}>{pctDone}%</span>
+          )}
+          <span className="player-chip"><User size={12} aria-hidden /> {name}</span>
+          <span className="sp" />
+          {studentCtx && (
+            <Link to={`/leerling/${studentCtx.classCode}`} className="btn btn-sm btn-ghost">
+              Mijn klas
+            </Link>
+          )}
+        </div>
+        <div className="player-topbar-row2">
+          <span aria-hidden style={{ fontSize: '1.3rem' }}>{course.coverEmoji}</span>
+          <span className="title">{course.title}</span>
+        </div>
       </header>
 
       <div style={{ display: 'flex', flex: 1, alignItems: 'stretch', minHeight: 0 }}>
@@ -739,7 +760,7 @@ function CourseReader({ course }: { course: Course }) {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 8px 0' }}>
-                  <button className="btn btn-quiet btn-icon" aria-label="Inhoudstafel sluiten" onClick={closeNav}>✕</button>
+                  <button className="btn btn-quiet btn-icon" aria-label="Inhoudstafel sluiten" onClick={closeNav}><X size={18} aria-hidden /></button>
                 </div>
                 {sidebar}
               </aside>
@@ -759,12 +780,15 @@ function CourseReader({ course }: { course: Course }) {
           </aside>
         )}
 
-        <main style={{ flex: 1, minWidth: 0 }}>
+        <main id="main" style={{ flex: 1, minWidth: 0 }}>
           <div style={{ maxWidth: 760, margin: '0 auto', padding: '28px 20px 90px', lineHeight: 1.7 }}>
             {!cur ? (
-              <EmptyState icon="📭" title="Deze cursus heeft nog geen inhoud">
-                <p>Vraag je leerkracht om de cursus aan te vullen.</p>
-              </EmptyState>
+              <>
+                <h1 className="sr-only">Deze cursus heeft nog geen inhoud</h1>
+                <EmptyState icon={<Inbox size={40} />} title="Deze cursus heeft nog geen inhoud">
+                  <p>Vraag je leerkracht om de cursus aan te vullen.</p>
+                </EmptyState>
+              </>
             ) : (
               <>
                 <nav aria-label="Kruimelpad" style={{ color: 'var(--text-soft)', fontSize: '0.88rem', marginBottom: 4 }}>
@@ -775,14 +799,14 @@ function CourseReader({ course }: { course: Course }) {
                   {cur.section.title}
                   {cur.section.optional && (
                     <span className="badge badge-brand" style={{ marginLeft: 10, verticalAlign: 'middle' }}>
-                      ✦ verdieping (keuze)
+                      verdieping (keuze)
                     </span>
                   )}
                 </h1>
 
                 {(cur.section.goals?.length ?? 0) > 0 && (
                   <div className="callout" role="note" style={{ marginTop: 14 }}>
-                    <span aria-hidden>🎯</span>
+                    <Target size={18} aria-hidden />
                     <div>
                       <strong>Wat leer je hier?</strong>
                       <ul style={{ margin: '4px 0 0', paddingLeft: '1.2em' }}>
@@ -812,13 +836,15 @@ function CourseReader({ course }: { course: Course }) {
                 {/* Mijn notities: privé kladblok bij deze sectie */}
                 <div className="card" style={{ marginTop: 26, padding: '14px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                    <strong>🗒️ Mijn notities</strong>
+                    <strong style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <StickyNote size={16} aria-hidden /> Mijn notities
+                    </strong>
                     <span
                       className="hint"
                       role="status"
-                      style={{ color: 'var(--ok)', visibility: noteSaved ? 'visible' : 'hidden' }}
+                      style={{ color: 'var(--ok)', visibility: noteSaved ? 'visible' : 'hidden', display: 'flex', alignItems: 'center', gap: 4 }}
                     >
-                      ✓ bewaard
+                      <CheckIcon size={13} aria-hidden /> bewaard
                     </span>
                   </div>
                   <textarea
@@ -839,10 +865,10 @@ function CourseReader({ course }: { course: Course }) {
                 <div style={{ textAlign: 'center', marginTop: 30 }}>
                   {progress.sections[cur.section.id]?.completedAt ? (
                     <span className="badge badge-ok" style={{ fontSize: '0.95rem', padding: '8px 16px' }}>
-                      ✔ Gelezen — je mag altijd nog eens nalezen
+                      <CheckIcon size={15} aria-hidden /> Gelezen — je mag altijd nog eens nalezen
                     </span>
                   ) : (
-                    <button className="btn btn-primary" onClick={markRead}>✔ Markeer als gelezen</button>
+                    <button className="btn btn-primary" onClick={markRead}><CheckIcon size={16} aria-hidden /> Markeer als gelezen</button>
                   )}
                 </div>
                 <div className="player-nav">

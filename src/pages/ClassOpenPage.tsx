@@ -1,9 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Package } from 'lucide-react';
 import type { ClassPack } from '../lib/classPack';
 import { adoptClassPack, decodeClassPack, importClassPackJson } from '../lib/classPack';
 import { BrandMark } from '../components/Brand';
 import { EmptyState } from '../components/ui';
+import { CheckIcon, ImportIcon, WarningIcon } from '../components/icons';
+import '../styles/leerling.css';
 
 /**
  * /klas/open?d=… — het klaspakket binnenhalen op het toestel van de leerling.
@@ -86,23 +89,31 @@ export function ClassOpenPage() {
         <span className="title">Klaspakket openen</span>
       </header>
 
-      <div className="player-main" style={{ maxWidth: 560 }}>
+      <main id="main" className="player-main" style={{ maxWidth: 560 }}>
         {error ? (
-          <EmptyState icon="⚠️" title="Dit pakket kon niet geopend worden">
-            <p>{error}</p>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link to="/meedoen" className="btn btn-primary">Met een code meedoen</Link>
-              <button className="btn btn-ghost" onClick={() => setError('')}>Opnieuw proberen</button>
-            </div>
-          </EmptyState>
+          <>
+            <h1 className="sr-only">Dit pakket kon niet geopend worden</h1>
+            <EmptyState icon={<WarningIcon size={40} />} title="Dit pakket kon niet geopend worden">
+              <p>{error}</p>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Link to="/meedoen" className="btn btn-primary">Met een code meedoen</Link>
+                <button className="btn btn-ghost" onClick={() => setError('')}>Opnieuw proberen</button>
+              </div>
+            </EmptyState>
+          </>
         ) : d && !pack ? (
-          <div style={{ textAlign: 'center', paddingTop: 70 }}>
-            <div style={{ fontSize: '3rem' }} aria-hidden>📦</div>
-            <p role="status" style={{ color: 'var(--text-soft)' }}>Je klas wordt klaargezet…</p>
-          </div>
+          <>
+            <h1 className="sr-only">Je klas wordt klaargezet</h1>
+            <div style={{ textAlign: 'center', paddingTop: 70 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--brand)' }} aria-hidden><Package size={42} /></div>
+              <p role="status" style={{ color: 'var(--text-soft)' }}>Je klas wordt klaargezet…</p>
+            </div>
+          </>
         ) : (
           <div className="card card-pad">
-            <h1 style={{ fontSize: '1.35rem', marginTop: 0 }}>📦 Klaspakket openen</h1>
+            <h1 style={{ fontSize: '1.35rem', marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Package size={22} aria-hidden /> Klaspakket openen
+            </h1>
             <p style={{ color: 'var(--text-soft)' }}>
               Kreeg je van je leerkracht een <strong>klaslink</strong> of een <strong>pakketbestand</strong>?
               Open het hier: je cursussen en oefeningen komen dan op dit toestel te staan, ook zonder
@@ -123,10 +134,10 @@ export function ClassOpenPage() {
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button className="btn btn-primary" disabled={!paste.trim()} onClick={openGeplakt}>
-                ✔ Openen
+                <CheckIcon size={16} aria-hidden /> Openen
               </button>
               <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>
-                📂 Pakketbestand kiezen…
+                <ImportIcon size={16} aria-hidden /> Pakketbestand kiezen…
               </button>
               <input
                 ref={fileRef}
@@ -149,7 +160,7 @@ export function ClassOpenPage() {
             </p>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }

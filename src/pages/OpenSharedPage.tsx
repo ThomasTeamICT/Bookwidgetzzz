@@ -1,5 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+// Check is al onderdeel van de hoofdbundel (components/ui.tsx, via
+// CopyButton dat WidgetRunner gebruikt): hergebruiken hier kost geen extra kB.
+import { Check } from 'lucide-react';
 import { decodeWidgetFromParam } from '../lib/share';
 import { getWidget, saveWidget } from '../lib/storage';
 import { WidgetRunner } from './PlayerPage';
@@ -20,19 +23,18 @@ export function OpenSharedPage() {
   if (!widget) {
     return (
       <div className="player-shell" style={{ minHeight: '100vh' }}>
-        <div className="player-main" style={{ textAlign: 'center', paddingTop: 80 }}>
-          <div style={{ fontSize: '3rem' }} aria-hidden>🔗</div>
+        <main id="main" className="player-main" style={{ textAlign: 'center', paddingTop: 80 }}>
           <h1>Ongeldige link</h1>
           <p style={{ color: 'var(--text-soft)' }}>Deze deellink is onvolledig of beschadigd. Vraag een nieuwe link.</p>
           <Link to="/" className="btn btn-primary">Naar de startpagina</Link>
-        </div>
+        </main>
       </div>
     );
   }
 
   return (
     <div style={{ position: 'relative' }}>
-      <WidgetRunner widget={widget} recordSubmission offerResultCode />
+      <WidgetRunner widget={widget} recordSubmission />
       <div style={{ position: 'fixed', bottom: 14, right: 14, zIndex: 60 }}>
         <button
           className="btn btn-sm btn-ghost"
@@ -46,7 +48,7 @@ export function OpenSharedPage() {
             toast('Widget bewaard bij “Mijn widgets”', 'ok');
           }}
         >
-          {saved ? '✓ Bewaard' : '💾 Bewaar in mijn widgets'}
+          {saved ? <><Check size={14} aria-hidden /> Bewaard</> : 'Bewaar in mijn widgets'}
         </button>
       </div>
     </div>

@@ -70,6 +70,13 @@ describe('kleurtokens', () => {
     ['text-faint', 'bg-sunken', 4.5],
     ['brand', 'bg-raised', 4.5],
     ['brand', 'brand-soft', 4.5],
+    // ok, warn en err dienen op veel plaatsen als tekstkleur
+    ['ok', 'bg-raised', 4.5],
+    ['warn', 'bg-raised', 4.5],
+    ['err', 'bg-raised', 4.5],
+    ['ok', 'bg', 4.5],
+    ['warn', 'bg', 4.5],
+    ['err', 'bg', 4.5],
     ['ok-text', 'ok-soft', 4.5],
     ['warn-text', 'warn-soft', 4.5],
     ['err-text', 'err-soft', 4.5],

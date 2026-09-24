@@ -1,12 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BrandMark } from '../components/Brand';
 import { Link } from 'react-router-dom';
+import { PenLine, Sprout, TrendingDown, TrendingUp, Users } from 'lucide-react';
 import { getSubmissions, getWidgets, onStorageChange } from '../lib/storage';
 import type { Submission } from '../lib/types';
 import { EmptyState, useToast } from '../components/ui';
 import { downloadFile, formatDate, pct } from '../lib/utils';
 import { exportProgress, importProgress } from '../lib/progressTransfer';
 import { getStudentContext } from '../lib/studentContext';
+import { ExportIcon, ImportIcon, SearchIcon, StudentIcon } from '../components/icons';
+import '../styles/leerling.css';
 
 /**
  * "Mijn voortgang" voor de leerling op dit toestel.
@@ -143,21 +146,25 @@ export function ProgressPage() {
           <span className="wordmark">Booster<b>z</b></span>
         </Link>
         <span className="title">Mijn voortgang</span>
-        <Link to="/meedoen" className="btn btn-sm btn-ghost">🎓 Meedoen</Link>
+        <Link to="/meedoen" className="btn btn-sm btn-ghost"><StudentIcon size={15} aria-hidden /> Meedoen</Link>
       </header>
 
-      <div className="player-main">
-        <h1 style={{ fontSize: '1.5rem' }}>📈 Mijn voortgang</h1>
+      <main id="main" className="player-main">
+        <h1 style={{ fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: 9 }}>
+          <TrendingUp size={24} aria-hidden /> Mijn voortgang
+        </h1>
 
         {studentCtx && (
           <section className="card card-pad" style={{ marginBottom: 16 }} aria-label="Mijn klas">
-            <h2 style={{ margin: 0, fontSize: '1.05rem' }}>👥 Mijn klas</h2>
+            <h2 style={{ margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: 7 }}>
+              <Users size={18} aria-hidden /> Mijn klas
+            </h2>
             <p style={{ color: 'var(--text-soft)', margin: '6px 0 10px' }}>
               Je werkt als <strong>{studentCtx.studentName}</strong> in {studentCtx.className}. Daar
               staan je opdrachten én de codes die je nog moet doorgeven.
             </p>
             <Link to={`/leerling/${studentCtx.classCode}`} className="btn btn-primary">
-              → Naar mijn klas
+              Naar mijn klas
             </Link>
           </section>
         )}
@@ -176,7 +183,7 @@ export function ProgressPage() {
         />
 
         {subs.length === 0 ? (
-          <EmptyState icon="🌱" title="Nog geen voortgang op dit toestel">
+          <EmptyState icon={<Sprout size={40} />} title="Nog geen voortgang op dit toestel">
             <p>
               Zodra je hier een opdracht maakt, zie je op deze pagina al je pogingen en hoe je groeit.
               Je voortgang wordt <strong>per toestel</strong> bewaard: werkte je eerder op een ander
@@ -184,9 +191,9 @@ export function ProgressPage() {
               Importeer het hier.
             </p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link to="/meedoen" className="btn btn-primary">🎓 Meedoen met een opdracht</Link>
+              <Link to="/meedoen" className="btn btn-primary"><StudentIcon size={16} aria-hidden /> Meedoen met een opdracht</Link>
               <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>
-                📥 Voortgang importeren
+                <ImportIcon size={16} aria-hidden /> Voortgang importeren
               </button>
             </div>
           </EmptyState>
@@ -219,14 +226,14 @@ export function ProgressPage() {
                   onClick={exporteerVoortgang}
                   aria-label={`Voortgang van ${actieveNaam} exporteren als bestand`}
                 >
-                  💾 Voortgang exporteren
+                  <ExportIcon size={15} aria-hidden /> Voortgang exporteren
                 </button>
                 <button
                   className="btn btn-sm btn-ghost"
                   onClick={() => fileRef.current?.click()}
                   aria-label="Voortgangsbestand importeren"
                 >
-                  📥 Voortgang importeren
+                  <ImportIcon size={15} aria-hidden /> Voortgang importeren
                 </button>
               </div>
               <span className="hint">
@@ -237,7 +244,7 @@ export function ProgressPage() {
             </div>
 
             {groepen.length === 0 ? (
-              <EmptyState icon="🔎" title="Geen inzendingen voor deze naam">
+              <EmptyState icon={<SearchIcon size={40} />} title="Geen inzendingen voor deze naam">
                 <p>Kies hierboven een andere naam.</p>
               </EmptyState>
             ) : (
@@ -245,7 +252,7 @@ export function ProgressPage() {
             )}
           </>
         )}
-      </div>
+      </main>
     </div>
   );
 }
@@ -279,10 +286,10 @@ function WidgetGroepKaart({ groep }: { groep: WidgetGroep }) {
             role="status"
           >
             {groei > 0
-              ? `↗ +${groei}% t.o.v. je eerste poging`
+              ? <><TrendingUp size={13} aria-hidden /> +{groei}% t.o.v. je eerste poging</>
               : groei < 0
-                ? `↘ ${groei}% t.o.v. je eerste poging`
-                : '→ gelijk aan je eerste poging'}
+                ? <><TrendingDown size={13} aria-hidden /> {groei}% t.o.v. je eerste poging</>
+                : 'gelijk aan je eerste poging'}
           </span>
         )}
       </div>
@@ -331,7 +338,7 @@ function WidgetGroepKaart({ groep }: { groep: WidgetGroep }) {
               )}
               {p.status === 'submitted' && p.totalMax > 0 && (
                 <span className="badge badge-warn" title="Je leerkracht moet nog een deel verbeteren; je score kan nog veranderen">
-                  ✍️ nog niet volledig verbeterd
+                  <PenLine size={12} aria-hidden /> nog niet volledig verbeterd
                 </span>
               )}
             </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { QR_MAX_CHARS } from '../lib/qrLimits';
 import { CopyButton, Modal } from './ui';
+import { InfoIcon } from './icons';
 
 /**
  * QR-code van een tekst (meestal een resultaat- of voortgangscode, of een
@@ -47,7 +48,7 @@ export function CodeQr({
   if (tooLong || failed) {
     return (
       <div className="callout" role="note">
-        <span aria-hidden>📋</span>
+        <InfoIcon size={18} />
         <div>
           <strong>Te groot voor een QR-code.</strong> Deze code bevat te veel (bv. een tekening of
           foto) om ze te laten scannen. Kopieer ze en stuur ze door via je gewone kanaal.

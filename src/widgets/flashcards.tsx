@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Check, RotateCcw } from 'lucide-react';
 import type { Flashcard, FlashcardsConfig } from '../lib/types';
 import { shuffled, uid } from '../lib/utils';
 import { Field, ImagePicker } from '../components/ui';
 import { EditorProps, GameStatus, ItemHeader, moveItem, PlayerProps, ResultHero } from './shared';
+import '../styles/leerling.css';
 
 export function FlashcardsEditor({ config, onChange }: EditorProps<FlashcardsConfig>) {
   const cards = config.cards;
@@ -70,9 +72,9 @@ function saveBoxes(widgetId: string, boxes: Record<string, number>) {
 }
 
 const BOX_META = [
-  { box: 1, icon: '📕', label: 'nog lastig' },
-  { box: 2, icon: '📙', label: 'bijna' },
-  { box: 3, icon: '📗', label: 'gekend' },
+  { box: 1, badge: 'badge-err', label: 'nog lastig' },
+  { box: 2, badge: 'badge-warn', label: 'bijna' },
+  { box: 3, badge: 'badge-ok', label: 'gekend' },
 ];
 
 export function FlashcardsPlayer({ widget, preview, onComplete }: PlayerProps<FlashcardsConfig>) {
@@ -156,8 +158,8 @@ export function FlashcardsPlayer({ widget, preview, onComplete }: PlayerProps<Fl
         subtitle={`Je kende ${known.size} van de ${cards.length} kaarten.`}
       >
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10, flexWrap: 'wrap' }}>
-          {BOX_META.map(({ box, icon, label }, i) => (
-            <span key={box} className="badge">{icon} {counts[i]} {label}</span>
+          {BOX_META.map(({ box, badge, label }, i) => (
+            <span key={box} className={`badge ${badge}`}>{counts[i]} {label}</span>
           ))}
         </div>
         <p className="hint" style={{ marginTop: 8 }}>
@@ -166,7 +168,7 @@ export function FlashcardsPlayer({ widget, preview, onComplete }: PlayerProps<Fl
         <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={() => {
           setIdx(0); setFlipped(false); setKnown(new Set()); setAgain(new Set()); setDone(false);
         }}>
-          🔁 Opnieuw oefenen
+          <RotateCcw size={16} aria-hidden /> Opnieuw oefenen
         </button>
         {Object.keys(boxes).length > 0 && (
           <button className="btn btn-quiet btn-sm" style={{ marginTop: 8 }} onClick={() => {
@@ -184,11 +186,11 @@ export function FlashcardsPlayer({ widget, preview, onComplete }: PlayerProps<Fl
     <div>
       <GameStatus>
         <span>Kaart {idx + 1} / {cards.length}</span>
-        <span className="badge badge-ok">✓ {known.size} gekend</span>
-        <span className="badge badge-warn">↻ {again.size} herhalen</span>
+        <span className="badge badge-ok"><Check size={13} aria-hidden /> {known.size} gekend</span>
+        <span className="badge badge-warn"><RotateCcw size={13} aria-hidden /> {again.size} herhalen</span>
         {card && (boxes[card.id] ?? 1) > 1 && (
-          <span className="badge" title="Leitner-bakje van deze kaart">
-            {BOX_META[(boxes[card.id] ?? 1) - 1].icon} bakje {boxes[card.id] ?? 1}
+          <span className={`badge ${BOX_META[(boxes[card.id] ?? 1) - 1].badge}`} title="Leitner-bakje van deze kaart">
+            bakje {boxes[card.id] ?? 1}
           </span>
         )}
       </GameStatus>
@@ -214,11 +216,11 @@ export function FlashcardsPlayer({ widget, preview, onComplete }: PlayerProps<Fl
         Klik op de kaart (of druk op spatie) om ze om te draaien.
       </p>
       <div className="player-nav" style={{ justifyContent: 'center', gap: 14 }}>
-        <button className="btn btn-lg" style={{ background: 'var(--warn-soft)', color: 'var(--warn)' }} onClick={() => next(false)}>
-          ↻ Nog eens herhalen
+        <button className="btn btn-lg" style={{ background: 'var(--warn-soft)', color: 'var(--warn-text)', flex: '1 1 0', maxWidth: 240 }} onClick={() => next(false)}>
+          <RotateCcw size={18} aria-hidden /> Nog eens herhalen
         </button>
-        <button className="btn btn-lg" style={{ background: 'var(--ok-soft)', color: 'var(--ok)' }} onClick={() => next(true)}>
-          ✓ Die ken ik!
+        <button className="btn btn-lg" style={{ background: 'var(--ok-soft)', color: 'var(--ok-text)', flex: '1 1 0', maxWidth: 240 }} onClick={() => next(true)}>
+          <Check size={18} aria-hidden /> Die ken ik!
         </button>
       </div>
     </div>

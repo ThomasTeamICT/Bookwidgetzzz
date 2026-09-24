@@ -1,4 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Clock, Download, FileText, Globe, Hand, Headphones, ImageOff, Info, Lightbulb, ListChecks,
+  MessageSquare, Paperclip, PenLine, Puzzle, RotateCcw, Square, SquareCheck, Target, TriangleAlert,
+  Video, type LucideIcon,
+} from 'lucide-react';
 import type {
   AccordionBlock, AttachmentBlock, AudioBlock, CalloutBlock, ChecklistBlock,
   ColumnsBlock, CourseBlock, EmbedBlock, HeadingBlock, ImageBlock, PdfBlock,
@@ -13,6 +18,8 @@ import type { Submission } from '../../lib/types';
 import { pct, uid } from '../../lib/utils';
 import { deletePdf, getPdf, savePdf } from '../../lib/pdfStore';
 import { TypeTile } from '../TypeTile';
+import { CheckIcon } from '../icons';
+import '../../styles/leerling.css';
 
 // De pdf-viewer (en via hem pdf.js) hoort niet bij het leesnetwerk van een
 // cursus zonder pdf-blok: lui laden i.p.v. statisch meesturen.
@@ -90,7 +97,11 @@ const IMAGE_WIDTHS: Record<string, string> = { small: '380px', normal: '680px', 
 
 function ImageView({ block }: { block: ImageBlock }) {
   if (!block.url) {
-    return <p className="hint" style={{ margin: 0 }}>🖼️ (geen afbeelding gekozen)</p>;
+    return (
+      <p className="hint" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <ImageOff size={16} aria-hidden /> (geen afbeelding gekozen)
+      </p>
+    );
   }
   return (
     <figure style={{ maxWidth: IMAGE_WIDTHS[block.size ?? 'normal'], margin: '0 auto' }}>
@@ -121,7 +132,7 @@ function VideoView({ block, interactive }: { block: VideoBlock; interactive: boo
   if (!src) {
     return (
       <div className="callout warn" style={{ marginBottom: 0 }}>
-        <span aria-hidden>🎬</span>
+        <TriangleAlert size={18} aria-hidden />
         <div>Deze video-URL wordt niet herkend. Alleen YouTube- en Vimeo-links werken.</div>
       </div>
     );
@@ -129,7 +140,7 @@ function VideoView({ block, interactive }: { block: VideoBlock; interactive: boo
   if (!interactive) {
     return (
       <div className="card" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
-        <span aria-hidden style={{ fontSize: '1.4rem' }}>🎬</span>
+        <Video size={22} aria-hidden style={{ color: 'var(--text-soft)' }} />
         <div>
           <strong>Video{block.caption ? `: ${block.caption}` : ''}</strong>
           <div className="hint" style={{ wordBreak: 'break-all' }}>{block.url}</div>
@@ -154,11 +165,17 @@ function VideoView({ block, interactive }: { block: VideoBlock; interactive: boo
 }
 
 function AudioView({ block, interactive }: { block: AudioBlock; interactive: boolean }) {
-  if (!block.url) return <p className="hint" style={{ margin: 0 }}>🎧 (geen audiofragment gekozen)</p>;
+  if (!block.url) {
+    return (
+      <p className="hint" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <Headphones size={16} aria-hidden /> (geen audiofragment gekozen)
+      </p>
+    );
+  }
   if (!interactive) {
     return (
       <div className="card" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
-        <span aria-hidden style={{ fontSize: '1.4rem' }}>🎧</span>
+        <Headphones size={22} aria-hidden style={{ color: 'var(--text-soft)' }} />
         <strong>Audiofragment{block.caption ? `: ${block.caption}` : ''}</strong>
       </div>
     );
@@ -193,7 +210,11 @@ function PdfBlockView({ block, interactive }: { block: PdfBlock; interactive: bo
   }, [block.pdfId]);
 
   if (!block.pdfId && !block.url) {
-    return <p className="hint" style={{ margin: 0 }}>📄 (geen pdf gekozen)</p>;
+    return (
+      <p className="hint" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <FileText size={16} aria-hidden /> (geen pdf gekozen)
+      </p>
+    );
   }
 
   const displayName = block.name || (state.kind === 'blob' ? state.name : '') || 'Pdf-document';
@@ -201,7 +222,7 @@ function PdfBlockView({ block, interactive }: { block: PdfBlock; interactive: bo
   if (!interactive) {
     return (
       <div className="card" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
-        <span aria-hidden style={{ fontSize: '1.4rem' }}>📄</span>
+        <FileText size={22} aria-hidden style={{ color: 'var(--text-soft)' }} />
         <div style={{ minWidth: 0 }}>
           <strong>Pdf: {displayName}</strong>
           {block.caption && <div className="hint">{block.caption}</div>}
@@ -215,7 +236,11 @@ function PdfBlockView({ block, interactive }: { block: PdfBlock; interactive: bo
   let src: Blob | string | null = null;
   if (block.pdfId) {
     if (state.kind === 'laden') {
-      return <div className="hint" role="status" style={{ margin: 0 }}>📄 Pdf laden…</div>;
+      return (
+        <div className="hint" role="status" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <FileText size={16} aria-hidden /> Pdf laden…
+        </div>
+      );
     }
     if (state.kind === 'blob') src = state.blob;
     else if (block.url) src = block.url; // upload ontbreekt, maar er is een URL-reserve
@@ -229,7 +254,11 @@ function PdfBlockView({ block, interactive }: { block: PdfBlock; interactive: bo
 
   return (
     <figure style={{ margin: 0 }}>
-      <React.Suspense fallback={<div className="hint" role="status" style={{ margin: 0 }}>📄 Pdf-lezer laden…</div>}>
+      <React.Suspense fallback={(
+        <div className="hint" role="status" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <FileText size={16} aria-hidden /> Pdf-lezer laden…
+        </div>
+      )}>
         <PdfViewer src={src} title={block.name || block.caption || 'Pdf-document'} height={block.height ?? 560} />
       </React.Suspense>
       {block.caption && <figcaption>{block.caption}</figcaption>}
@@ -278,7 +307,7 @@ function MissingPdfCard({ block, onRestored }: { block: PdfBlock; onRestored: (b
   return (
     <div className="card" style={{ padding: '14px 18px' }}>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-        <span aria-hidden style={{ fontSize: '1.5rem' }}>📄</span>
+        <FileText size={24} aria-hidden style={{ color: 'var(--text-soft)' }} />
         <div style={{ flex: 1, minWidth: 200 }}>
           <strong>{block.name || 'Pdf-document'}</strong>
           <div className="hint">
@@ -287,10 +316,14 @@ function MissingPdfCard({ block, onRestored }: { block: PdfBlock; onRestored: (b
           </div>
         </div>
         <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => inputRef.current?.click()}>
-          {busy ? 'Bezig…' : '📄 Pdf-bestand kiezen…'}
+          {busy ? 'Bezig…' : (<><FileText size={16} aria-hidden /> Pdf-bestand kiezen…</>)}
         </button>
       </div>
-      {err && <p className="hint" style={{ color: 'var(--err)', margin: '8px 0 0' }}>⚠ {err}</p>}
+      {err && (
+        <p className="hint" style={{ color: 'var(--err)', margin: '8px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <TriangleAlert size={15} aria-hidden /> {err}
+        </p>
+      )}
       <input
         ref={inputRef}
         type="file"
@@ -309,7 +342,7 @@ function EmbedView({ block, interactive }: { block: EmbedBlock; interactive: boo
   if (!ok) {
     return (
       <div className="callout warn" style={{ marginBottom: 0 }}>
-        <span aria-hidden>🌐</span>
+        <TriangleAlert size={18} aria-hidden />
         <div>Dit kader kan niet getoond worden: alleen veilige <code>https://</code>-adressen zijn toegelaten.</div>
       </div>
     );
@@ -317,7 +350,7 @@ function EmbedView({ block, interactive }: { block: EmbedBlock; interactive: boo
   if (!interactive) {
     return (
       <div className="card" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
-        <span aria-hidden style={{ fontSize: '1.4rem' }}>🌐</span>
+        <Globe size={22} aria-hidden style={{ color: 'var(--text-soft)' }} />
         <div>
           <strong>{block.title || 'Extern kader'}</strong>
           <div className="hint" style={{ wordBreak: 'break-all' }}>{block.url}</div>
@@ -339,11 +372,11 @@ function EmbedView({ block, interactive }: { block: EmbedBlock; interactive: boo
   );
 }
 
-const CALLOUT_STYLE: Record<CalloutBlock['kind'], { icon: string; bg: string; border: string; label: string }> = {
-  info: { icon: 'ℹ️', bg: 'var(--brand-soft)', border: 'var(--brand)', label: 'Info' },
-  tip: { icon: '💡', bg: 'var(--ok-soft)', border: 'var(--ok)', label: 'Tip' },
-  warn: { icon: '⚠️', bg: 'var(--warn-soft)', border: 'var(--warn)', label: 'Let op' },
-  goal: { icon: '🎯', bg: 'var(--brand-soft)', border: 'var(--brand)', label: 'Leerdoel' },
+const CALLOUT_STYLE: Record<CalloutBlock['kind'], { Icon: LucideIcon; bg: string; border: string; label: string }> = {
+  info: { Icon: Info, bg: 'var(--brand-soft)', border: 'var(--brand)', label: 'Info' },
+  tip: { Icon: Lightbulb, bg: 'var(--ok-soft)', border: 'var(--ok)', label: 'Tip' },
+  warn: { Icon: TriangleAlert, bg: 'var(--warn-soft)', border: 'var(--warn)', label: 'Let op' },
+  goal: { Icon: Target, bg: 'var(--brand-soft)', border: 'var(--brand)', label: 'Leerdoel' },
 };
 
 function CalloutView({ block }: { block: CalloutBlock }) {
@@ -357,7 +390,7 @@ function CalloutView({ block }: { block: CalloutBlock }) {
         background: st.bg, border: `1px solid color-mix(in srgb, ${st.border} 35%, transparent)`,
       }}
     >
-      <span aria-hidden style={{ fontSize: '1.15rem', lineHeight: 1.4 }}>{st.icon}</span>
+      <st.Icon size={19} aria-hidden style={{ flex: 'none', marginTop: 2, color: st.border }} />
       <div style={{ minWidth: 0 }}>
         <strong>{block.title || st.label}</strong>
         <div className="md-body" style={{ fontSize: '0.95rem' }} dangerouslySetInnerHTML={{ __html: html }} />
@@ -388,9 +421,13 @@ function QuoteView({ block }: { block: QuoteBlock }) {
 function AttachmentView({ block, interactive }: { block: AttachmentBlock; interactive: boolean }) {
   const inner = (
     <>
-      <span aria-hidden style={{ fontSize: '1.5rem' }}>📎</span>
+      <Paperclip size={20} aria-hidden style={{ flex: 'none', color: 'var(--text-soft)' }} />
       <span style={{ fontWeight: 650, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{block.name || 'bestand'}</span>
-      {interactive && <span className="badge badge-brand" style={{ marginLeft: 'auto', flex: 'none' }}>⬇ downloaden</span>}
+      {interactive && (
+        <span className="badge badge-brand" style={{ marginLeft: 'auto', flex: 'none' }}>
+          <Download size={13} aria-hidden /> downloaden
+        </span>
+      )}
     </>
   );
   const style: React.CSSProperties = {
@@ -475,7 +512,8 @@ function ChecklistView({ block, interactive, props }: { block: ChecklistBlock; i
   return (
     <div className="card" style={{ padding: '14px 16px' }}>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
-        <strong>{block.title || '✅ Checklist'}</strong>
+        <ListChecks size={18} aria-hidden style={{ color: 'var(--text-soft)' }} />
+        <strong>{block.title || 'Checklist'}</strong>
         <span
           className={`badge ${done === block.items.length && block.items.length > 0 ? 'badge-ok' : 'badge-brand'}`}
           aria-label={`${done} van ${block.items.length} afgevinkt`}
@@ -498,8 +536,11 @@ function ChecklistView({ block, interactive, props }: { block: ChecklistBlock; i
       ) : (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
           {block.items.map((it) => (
-            <li key={it.id} style={{ margin: '5px 0' }}>
-              <span aria-hidden>{checked.includes(it.id) ? '☑' : '☐'}</span> {it.text}
+            <li key={it.id} style={{ margin: '5px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+              {checked.includes(it.id)
+                ? <SquareCheck size={16} aria-hidden style={{ color: 'var(--ok)' }} />
+                : <Square size={16} aria-hidden style={{ color: 'var(--text-faint)' }} />}
+              {it.text}
             </li>
           ))}
         </ul>
@@ -601,7 +642,7 @@ function WidgetBlockView({
   if (!widget || !def) {
     return (
       <div className="callout warn" style={{ marginBottom: 0 }}>
-        <span aria-hidden>🧩</span>
+        <Puzzle size={18} aria-hidden />
         <div>
           <strong>Oefening niet gevonden.</strong><br />
           De oefening hoort bij dit toestel/deze link te reizen — vraag je leerkracht om een nieuwe link.
@@ -613,7 +654,7 @@ function WidgetBlockView({
   if (!interactive) {
     return (
       <div className="card" style={{ padding: '14px 18px', borderLeft: `4px solid ${accent ?? def.color}` }}>
-        <strong>🧩 Oefening: {widget.title}</strong>
+        <strong>Oefening: {widget.title}</strong>
         <div className="hint">{def.name} — wordt digitaal gemaakt in de cursus.</div>
         {block.note && <p style={{ margin: '6px 0 0', fontSize: '0.92rem' }}>{block.note}</p>}
       </div>
@@ -656,24 +697,24 @@ function WidgetBlockView({
         </div>
         {alreadySubmitted && !sub && (
           <span className="badge badge-ok" title="Er staat al een inzending met jouw naam op dit toestel">
-            ✔ eerder ingediend
+            <CheckIcon size={13} aria-hidden /> eerder ingediend
           </span>
         )}
       </div>
       {block.note && (
-        <p style={{ margin: 0, padding: '10px 18px 0', color: 'var(--text-soft)', fontSize: '0.92rem' }}>
-          💬 {block.note}
+        <p style={{ margin: 0, padding: '10px 18px 0', color: 'var(--text-soft)', fontSize: '0.92rem', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+          <MessageSquare size={15} aria-hidden style={{ flex: 'none', marginTop: 2 }} /> {block.note}
         </p>
       )}
       <div style={{ padding: '16px 18px' }}>
         {expired ? (
           <div className="callout warn" style={{ marginBottom: 0 }}>
-            <span aria-hidden>⏰</span>
+            <Clock size={18} aria-hidden />
             <div>Deze oefening is afgesloten — de deadline is verstreken.</div>
           </div>
         ) : !sub && attemptsLeft <= 0 ? (
           <div className="callout" style={{ marginBottom: 0 }}>
-            <span aria-hidden>✋</span>
+            <Hand size={18} aria-hidden />
             <div>
               Je gebruikte al je {maxAttempts} poging{maxAttempts === 1 ? '' : 'en'} voor deze oefening.
               {alreadySubmitted && ' Je eerdere inzending is bewaard.'}
@@ -695,21 +736,21 @@ function WidgetBlockView({
             }}
           >
             <div style={{ flex: 1, minWidth: 180 }}>
-              <strong>✔ Ingediend — goed gedaan!</strong>
+              <strong><CheckIcon size={15} aria-hidden /> Ingediend — goed gedaan!</strong>
               {showScore && (
                 <div style={{ fontSize: '0.92rem' }}>
                   Score: {sub.totalEarned}/{sub.totalMax} ({pct(sub.totalEarned, sub.totalMax)}%)
                 </div>
               )}
               {hasPending && (
-                <div style={{ fontSize: '0.88rem', color: 'var(--text-soft)' }}>
-                  Open vragen worden nog door je leerkracht bekeken.
+                <div style={{ fontSize: '0.88rem', color: 'var(--text-soft)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <PenLine size={14} aria-hidden /> Open vragen worden nog nagekeken. Je score kan dus nog stijgen.
                 </div>
               )}
             </div>
             {!expired && attemptsLeft > 0 && (
               <button className="btn btn-sm btn-ghost" onClick={retry}>
-                ↺ Opnieuw proberen{maxAttempts > 0 && ` (nog ${attemptsLeft})`}
+                <RotateCcw size={14} aria-hidden /> Opnieuw proberen{maxAttempts > 0 && ` (nog ${attemptsLeft})`}
               </button>
             )}
           </div>

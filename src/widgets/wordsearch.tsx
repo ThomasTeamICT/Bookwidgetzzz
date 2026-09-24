@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, RotateCcw, SearchCheck, TriangleAlert } from 'lucide-react';
 import type { WordsearchConfig } from '../lib/types';
 import { normalizeAnswer } from '../lib/utils';
 import { CheckRow, Field } from '../components/ui';
 import { EditorProps, GameStatus, PlayerProps, ResultHero } from './shared';
+import '../styles/leerling.css';
 
 // ── Generator ───────────────────────────────────────────────────────────────
 
@@ -89,7 +91,7 @@ export function WordsearchEditor({ config, onChange }: EditorProps<WordsearchCon
       <CheckRow checked={config.allowReverse} onChange={(v) => onChange({ ...config, allowReverse: v })} label="Omgekeerde woorden toestaan" />
       {gen.skipped.length > 0 && (
         <div className="callout warn" style={{ marginTop: 10 }}>
-          <span aria-hidden>⚠️</span>
+          <TriangleAlert size={18} aria-hidden />
           <div>Passen niet in het rooster: <strong>{gen.skipped.join(', ')}</strong>. Maak het rooster groter.</div>
         </div>
       )}
@@ -178,7 +180,7 @@ export function WordsearchPlayer({ widget, timeUp, onComplete }: PlayerProps<Wor
         <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => {
           submittedRef.current = false;
           setFound(new Map()); setDone(false); setStart(null); setHover(null);
-        }}>🔁 Opnieuw</button>
+        }}><RotateCcw size={16} aria-hidden /> Opnieuw</button>
       </ResultHero>
     );
   }
@@ -186,12 +188,13 @@ export function WordsearchPlayer({ widget, timeUp, onComplete }: PlayerProps<Wor
   return (
     <div>
       <GameStatus>
-        <span className="badge badge-ok">🔍 {found.size} / {gen.placed.length} gevonden</span>
+        <span className="badge badge-ok"><SearchCheck size={14} aria-hidden /> {found.size} / {gen.placed.length} gevonden</span>
       </GameStatus>
       <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
         <table
           className="ws-grid"
           aria-label="Woordzoeker"
+          style={{ ['--ws-size' as any]: gen.size }}
           onPointerDown={(e) => {
             const c = cellFromPoint(e.clientX, e.clientY);
             if (!c) return;
@@ -241,7 +244,7 @@ export function WordsearchPlayer({ widget, timeUp, onComplete }: PlayerProps<Wor
       </div>
       <div className="player-nav">
         <span />
-        <button className="btn btn-primary" onClick={() => finish(false, found)}>Stoppen & indienen ✓</button>
+        <button className="btn btn-primary" onClick={() => finish(false, found)}><Check size={16} aria-hidden /> Stoppen en indienen</button>
       </div>
     </div>
   );

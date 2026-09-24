@@ -1,7 +1,9 @@
 import React from 'react';
+import { PenLine } from 'lucide-react';
 import type { ItemScore, Widget } from '../lib/types';
 import { ScoreRing } from '../components/ui';
 import { pct } from '../lib/utils';
+import { DeleteIcon, DuplicateIcon, MoveDownIcon, MoveUpIcon } from '../components/icons';
 
 // ── Contract tussen PlayerPage en widget-spelers ────────────────────────────
 
@@ -57,12 +59,12 @@ export function ItemHeader({
       <strong style={{ fontSize: '0.9rem', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {label}
       </strong>
-      <button className="btn btn-quiet btn-icon btn-sm" onClick={onMoveUp} disabled={!canUp} aria-label="Omhoog" title="Omhoog">↑</button>
-      <button className="btn btn-quiet btn-icon btn-sm" onClick={onMoveDown} disabled={!canDown} aria-label="Omlaag" title="Omlaag">↓</button>
+      <button className="btn btn-quiet btn-icon btn-sm" onClick={onMoveUp} disabled={!canUp} aria-label="Omhoog" title="Omhoog"><MoveUpIcon size={16} /></button>
+      <button className="btn btn-quiet btn-icon btn-sm" onClick={onMoveDown} disabled={!canDown} aria-label="Omlaag" title="Omlaag"><MoveDownIcon size={16} /></button>
       {onDuplicate && (
-        <button className="btn btn-quiet btn-icon btn-sm" onClick={onDuplicate} aria-label="Dupliceren" title="Dupliceren">⧉</button>
+        <button className="btn btn-quiet btn-icon btn-sm" onClick={onDuplicate} aria-label="Dupliceren" title="Dupliceren"><DuplicateIcon size={16} /></button>
       )}
-      <button className="btn btn-quiet btn-icon btn-sm" onClick={onDelete} aria-label="Verwijderen" title="Verwijderen" style={{ color: 'var(--err)' }}>🗑</button>
+      <button className="btn btn-quiet btn-icon btn-sm" onClick={onDelete} aria-label="Verwijderen" title="Verwijderen" style={{ color: 'var(--err)' }}><DeleteIcon size={16} /></button>
     </div>
   );
 }
@@ -99,9 +101,12 @@ export function ResultHero({
         </>
       )}
       {hasPending && (
-        <p className="badge badge-warn" style={{ marginTop: 6 }}>
-          Open vragen worden nog door je leerkracht beoordeeld
-        </p>
+        <div className="callout" role="status" style={{ marginTop: 14, textAlign: 'left' }}>
+          <PenLine size={18} />
+          <div>
+            <strong>Open vragen worden nog nagekeken.</strong> Je score kan dus nog stijgen.
+          </div>
+        </div>
       )}
       {children}
     </div>
