@@ -100,7 +100,7 @@ export function CurriculaPage() {
           );
         } else {
           const cur = createCurriculum({
-            title: meta.title || `Doelenlijst ${meta.subject || ''}`.trim(),
+            title: meta.title || `Leerplan ${meta.subject || ''}`.trim(),
             net: meta.net,
             subject: meta.subject,
             level: meta.level,
@@ -136,7 +136,7 @@ export function CurriculaPage() {
         <div>
           <h1>Leerplannen</h1>
           <p className="sub">
-            Je doelenlijsten met codes. Een code koppelt een cursussectie, een quizvraag en een
+            Je leerplannen met doelcodes. Een code koppelt een cursussectie, een quizvraag en een
             resultaat aan hetzelfde doel — zo weet je meteen wat gedekt is en wat nog niet.
           </p>
         </div>
@@ -149,7 +149,7 @@ export function CurriculaPage() {
           <button className="btn btn-ai" onClick={() => setAiTarget({ mode: 'new' })}>
             <AIIcon size={18} /> Uit tekst of pdf
           </button>
-          <button className="btn btn-primary" onClick={() => setNewOpen(true)}><AddIcon size={18} /> Blanco doelenlijst</button>
+          <button className="btn btn-primary" onClick={() => setNewOpen(true)}><AddIcon size={18} /> Blanco leerplan</button>
         </div>
       </div>
 
@@ -158,13 +158,13 @@ export function CurriculaPage() {
       {curricula.length === 0 ? (
         <EmptyState icon={<ListTree size={40} />} title="Nog geen leerplannen">
           <p>
-            Zet je leerplan- of minimumdoelen één keer om in een doelenlijst. Daarna kan je elke
+            Neem de doelen uit je leerplan of de minimumdoelen één keer over in Boosterz. Daarna kan je elke
             cursussectie en elke oefening eraan koppelen — en zie je in één oogopslag welke doelen
             nog niet aan bod komen.
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button className="btn btn-ai" onClick={() => setAiTarget({ mode: 'new' })}><AIIcon size={18} /> Uit tekst of pdf</button>
-            <button className="btn btn-primary" onClick={() => setNewOpen(true)}><AddIcon size={18} /> Blanco doelenlijst</button>
+            <button className="btn btn-primary" onClick={() => setNewOpen(true)}><AddIcon size={18} /> Blanco leerplan</button>
           </div>
         </EmptyState>
       ) : (
@@ -290,7 +290,7 @@ function NewCurriculumModal({ onClose, onCreate }: { onClose: () => void; onCrea
 
   return (
     <Modal
-      title="Nieuwe doelenlijst"
+      title="Nieuw leerplan"
       onClose={onClose}
       footer={
         <>
@@ -302,7 +302,7 @@ function NewCurriculumModal({ onClose, onCreate }: { onClose: () => void; onCrea
       <Field label="Titel">
         <input
           className="input" value={title} autoFocus
-          placeholder="bv. Natuurwetenschappen 1e graad A — eigen doelenlijst"
+          placeholder="bv. Natuurwetenschappen 1e graad A — eigen leerplan"
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
         />
@@ -379,7 +379,7 @@ function CurriculumEditor({
       <div className="page-head">
         <div>
           <button className="btn btn-sm btn-quiet" onClick={onBack}><BackIcon size={16} /> Alle leerplannen</button>
-          <h1 style={{ marginTop: 6 }}>{curriculum.title || 'Doelenlijst'}</h1>
+          <h1 style={{ marginTop: 6 }}>{curriculum.title || 'Leerplan'}</h1>
           <p className="sub">
             {netLabel(curriculum.net)} · {goals.length} doel{goals.length === 1 ? '' : 'en'}
             {curriculum.example ? ' · voorbeeldmateriaal, geen officieel document' : ''}
@@ -581,7 +581,7 @@ function CurriculumAIModal({
   const apply = () => {
     if (!preview) return;
     onApply(preview.goals, {
-      title: title.trim() || `Doelenlijst ${subject.trim()}`.trim(),
+      title: title.trim() || `Leerplan ${subject.trim()}`.trim(),
       net,
       subject: subject.trim(),
       level: level.trim(),
@@ -618,7 +618,7 @@ function CurriculumAIModal({
             </div>
             {!curriculum && (
               <>
-                <Field label="Titel van de doelenlijst">
+                <Field label="Titel van het leerplan">
                   <input
                     className="input" value={title}
                     placeholder="bv. Minimumdoelen natuurwetenschappen 1e graad"

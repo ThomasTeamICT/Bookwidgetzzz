@@ -46,7 +46,7 @@ export function HelpPage() {
           {FAQ.map((item) => (
             <details key={item.q} className="card" style={{ padding: '12px 16px' }}>
               <summary>{item.q}</summary>
-              <p>{item.a}</p>
+              {typeof item.a === 'string' ? <p>{item.a}</p> : item.a}
             </details>
           ))}
         </div>
@@ -84,7 +84,7 @@ const PARTS: { title: string; Icon: LucideIcon; text: string }[] = [
   },
   {
     title: 'Klassen', Icon: AssignIcon,
-    text: 'Een klaslijst met een klascode. Je koppelt er opdrachten aan — een cursus of widget, met een deadline — en één klaslink brengt elke leerling naar zijn eigen overzicht.',
+    text: 'Een klaslijst met een klascode. Je wijst er opdrachten aan toe — een cursus of widget, met een deadline — en één klaslink brengt elke leerling naar zijn eigen overzicht.',
   },
   {
     title: 'Resultaten', Icon: ChartColumn,
@@ -107,14 +107,14 @@ const PARTS: { title: string; Icon: LucideIcon; text: string }[] = [
 const STEPS: string[] = [
   'Maak een oefening of cursus — zelf, of laat de AI-studio een voorzet schrijven vanuit je lesmateriaal.',
   'Maak een klas aan en plak je klaslijst.',
-  'Koppel de oefening of cursus als opdracht aan de klas, eventueel met een deadline.',
+  'Wijs de oefening of cursus toe als opdracht aan de klas, eventueel met een deadline.',
   'Deel de klaslink met je leerlingen, of laat ze de code intikken op de leerlingpagina.',
   'Volg de resultaten op en kijk openstaande vragen na.',
 ];
 
 // ── Veelgestelde vragen (ongewijzigde inhoud, zonder emoji in de vraag) ─────
 
-const FAQ: { q: string; a: string }[] = [
+const FAQ: { q: string; a: React.ReactNode }[] = [
   {
     q: 'Waar staan mijn gegevens?',
     a: 'Alles staat lokaal in de browser van dit toestel — er is geen server en geen account. Dat betekent ook: een ander toestel of een andere browser ziet je widgets niet vanzelf. Exporteer belangrijke widgets of cursussen als bestand (back-up!) of deel ze via de draagbare link.',
@@ -145,7 +145,14 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Hoe werk ik met een klas op meerdere toestellen?',
-    a: 'Maak bij Klassen een klas (plak je klaslijst) en geef opdrachten (een cursus of widget, met deadline). Deel dan de klaslink of de QR-code: op elk toestel opent die de leerlinghub, waar de leerling zijn naam kiest en zijn opdrachten ziet. Resultaten en leesvoortgang komen terug als code: de leerling toont de QR-code in de sectie Inleveren, jij scant ze op het Inleverpunt (of plakt de codes in bulk). Het klasoverzicht telt alles op per leerling, ook per leerplandoel.',
+    a: (
+      <ol>
+        <li>Maak bij Klassen een klas en plak je klaslijst.</li>
+        <li>Wijs opdrachten toe: een cursus of widget, met een deadline.</li>
+        <li>Deel de klaslink of de QR-code met je leerlingen: op elk toestel opent die het overzicht van de leerling, waar hij zijn naam kiest en zijn opdrachten ziet.</li>
+        <li>Inleveren: de leerling toont zijn QR-code in de sectie Inleveren, jij scant of plakt ze op het Inleverpunt. Het klasoverzicht telt alles op per leerling, ook per leerplandoel.</li>
+      </ol>
+    ),
   },
   {
     q: 'Hoe bouw ik een cursus die het leerplan dekt?',
@@ -157,7 +164,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Mijn cursus is één pdf per hoofdstuk. Kan dat in één keer?',
-    a: 'Ja. Kies bij Importeren alle pdf\'s tegelijk (in de goede volgorde), geef de cursus een titel en klik "Samenvoegen tot één cursus": elk bestand wordt een hoofdstuk. Uit een pdf haalt de app de titels (op lettergrootte), vet, opsommingen en vette labels als "Voorbeeld:" of "Oefening:" — die worden kadertjes — en een begrippenlijst wordt een termenblok. Alleen de afbeeldingen reizen niet mee: die voeg je daarna toe met een afbeeldingsblok. Laat je het vinkje "Oefeningen afleiden" aan, dan krijgt elk hoofdstuk er meteen een begrippenquiz, een koppelspel, invuloefeningen en een werkblad met je eigen opdrachten bij, zonder AI. Wil je eerst zien hoe zoiets eruitziet? Klik bij Cursussen op "Voorbeeldcursus laden": een echte cursus natuurwetenschappen van 14 hoofdstukken die precies zo binnenkwam, aangevuld met oefeningen in allerlei vormen.',
+    a: 'Ja. Kies bij Importeren alle pdf\'s tegelijk (in de goede volgorde), geef de cursus een titel en klik "Samenvoegen tot één cursus": elk bestand wordt een hoofdstuk. Alleen de afbeeldingen reizen niet mee: die voeg je daarna toe met een afbeeldingsblok. Laat je het vinkje "Oefeningen afleiden" aan, dan krijgt elk hoofdstuk er meteen een begrippenquiz, een koppelspel, invuloefeningen en een werkblad met je eigen opdrachten bij, zonder AI. Wil je eerst zien hoe zoiets eruitziet? Klik bij Cursussen op "Voorbeeldcursus laden": een echte cursus natuurwetenschappen van 14 hoofdstukken die precies zo binnenkwam, aangevuld met oefeningen in allerlei vormen.',
   },
   {
     q: 'De opslag zit vol — wat nu?',

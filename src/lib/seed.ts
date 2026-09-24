@@ -62,13 +62,38 @@ const EXAMPLE_GOALS: { code: string; text: string; theme: string; level?: 'basis
 ];
 
 /**
+ * Eén keer het voorbeeldleerplan plaatsen; verwijderen blijft dan ook
+ * verwijderd (zelfde patroon als 'wf.classes.seeded.v1' in lib/classes.ts).
+ */
+const CURRICULUM_SEEDED_KEY = 'wf.curriculum.seeded.v1';
+
+function readCurriculumSeeded(): boolean {
+  try {
+    return localStorage.getItem(CURRICULUM_SEEDED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markCurriculumSeeded() {
+  try {
+    localStorage.setItem(CURRICULUM_SEEDED_KEY, '1');
+  } catch {
+    // genegeerd: dan wordt het voorbeeld hooguit nog eens geplaatst
+  }
+}
+
+/**
  * Plaatst het voorbeeldleerplan als er nog geen enkel leerplan is. Idempotent:
  * bestaat het al (op id), dan gebeurt er niets; werkt de leerkracht al met
- * eigen leerplannen, dan dringen we ons voorbeeld niet op.
+ * eigen leerplannen, dan dringen we ons voorbeeld niet op. Verwijderde de
+ * leerkracht het voorbeeld zelf, dan komt het niet terug — ook niet als hij
+ * daarna zonder leerplan achterblijft (de vlag hierboven onthoudt dat).
  */
 export function ensureExampleCurriculum(): Curriculum | undefined {
   const existing = getCurriculum(EXAMPLE_CURRICULUM_ID);
   if (existing) {
+    markCurriculumSeeded();
     // Het voorbeeld groeide (nieuwe thema's voor de voorbeeldcursus): doelen
     // die nog ontbreken erbij zetten, zonder eigen wijzigingen te overschrijven.
     const have = new Set(existing.goals.map((g) => g.code));
@@ -82,7 +107,7 @@ export function ensureExampleCurriculum(): Curriculum | undefined {
     saveCurriculum(updated);
     return updated;
   }
-  if (getCurricula().length > 0) return undefined;
+  if (readCurriculumSeeded() || getCurricula().length > 0) return undefined;
   const now = Date.now();
   const cur: Curriculum = {
     id: EXAMPLE_CURRICULUM_ID,
@@ -97,6 +122,7 @@ export function ensureExampleCurriculum(): Curriculum | undefined {
     updatedAt: now,
   };
   saveCurriculum(cur);
+  markCurriculumSeeded();
   return cur;
 }
 

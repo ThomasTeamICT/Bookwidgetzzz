@@ -88,7 +88,7 @@ function CurriculumCoverage({
   if (result.total === 0) {
     return (
       <EmptyState icon={<GoalIcon size={40} />} title="Dit leerplan bevat nog geen doelen">
-        <p>Vul de doelenlijst aan, dan verschijnt hier de dekking van je cursus.</p>
+        <p>Vul het leerplan aan, dan verschijnt hier de dekking van je cursus.</p>
         <Link to="/leerplannen" className="btn btn-primary"><GoalIcon size={16} /> Naar Leerplannen</Link>
       </EmptyState>
     );

@@ -173,7 +173,7 @@ const NAV: NavItem[] = [
 ];
 
 const NEW_ITEMS: MenuItem[] = [
-  { label: 'Oefening of spel', hint: 'Kies uit 38 soorten', Icon: Shapes, to: '/nieuw' },
+  { label: 'Widget', hint: 'Oefening, spel of hulpmiddel · 38 soorten', Icon: Shapes, to: '/nieuw' },
   { label: 'Met AI, uit je leerstof', hint: 'Plak tekst of kies een pdf', Icon: Sparkles, to: '/ai-studio' },
   { label: 'Cursus', hint: 'Hoofdstukken met uitleg en oefeningen', Icon: BookOpen, to: '/cursussen?nieuw=1' },
   { label: 'Klas', hint: 'Klaslijst en één link voor je leerlingen', Icon: Users, to: '/klassen?nieuw=1' },
@@ -324,6 +324,15 @@ export function Layout() {
 
   // Lade sluiten bij elke navigatie (ook via terugknop van de browser).
   useEffect(() => { setDrawer(false); }, [pathname]);
+
+  // Voorbeeldinhoud is puur leerkrachtmateriaal: ze hoort thuis in deze schil,
+  // niet in App.tsx. Een leerling die met een code of klaslink binnenkomt
+  // (/speel, /meedoen, /leerling/…) laadt deze Layout nooit en krijgt de
+  // voorbeeldwidgets en -klas dus ook nooit ongevraagd op zijn toestel. Lui
+  // geladen en één keer per bezoek aan de leerkrachtschil.
+  useEffect(() => {
+    void import('../lib/seed').then((m) => m.seedIfEmpty());
+  }, []);
 
   const more: MenuItem[] = useMemo(() => [
     { label: 'Ik ben leerling', hint: 'Een code of klaslink openen', Icon: GraduationCap, to: '/meedoen' },

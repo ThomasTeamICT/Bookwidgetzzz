@@ -81,7 +81,7 @@ export function CurriculumPicker({
       <div className="callout">
         <strong>Nog geen leerplan op dit toestel</strong>
         <p style={{ margin: '4px 0 8px' }}>
-          Maak eerst een doelenlijst aan: blanco, uit een geplakte leerplantekst of pdf, of uit een
+          Maak eerst een leerplan aan: blanco, uit een geplakte leerplantekst of pdf, of uit een
           JSON-bestand van een collega.
         </p>
         <Link to="/leerplannen" className="btn btn-sm btn-primary"><GoalIcon size={16} /> Naar Leerplannen</Link>

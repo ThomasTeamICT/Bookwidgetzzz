@@ -14,7 +14,7 @@ export const CURRICULUM_NETS: { id: CurriculumNet; label: string; hint: string }
   { id: 'kov', label: 'Katholiek Onderwijs Vlaanderen', hint: 'leerplannen KOV / ZILL (basis)' },
   { id: 'ovsg', label: 'OVSG (stedelijk & gemeentelijk)', hint: 'ovsg.be' },
   { id: 'pov', label: 'POV (provinciaal)', hint: 'pov.be' },
-  { id: 'eigen', label: 'Eigen doelenlijst', hint: 'vakgroep, school of jezelf' },
+  { id: 'eigen', label: 'Eigen leerplan', hint: 'vakgroep, school of jezelf' },
 ];
 
 export interface CurriculumGoal {

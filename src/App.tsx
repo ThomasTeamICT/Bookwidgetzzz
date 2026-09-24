@@ -139,13 +139,6 @@ const router = createHashRouter([
 
 export default function App() {
   useEffect(() => {
-    // De voorbeeldinhoud is puur leerkrachtmateriaal; een leerling die met een
-    // code binnenkomt heeft ze nooit nodig. Lui laden houdt ~3 kB gzip uit de
-    // hoofdbundel die iedereen op /speel/:code binnenhaalt.
-    void import('./lib/seed').then((m) => m.seedIfEmpty());
-  }, []);
-
-  useEffect(() => {
     // Media-onderhoud, altijd buiten het kritieke pad:
     //  – data-URL's die nog in localStorage staan (oude opslag, import, link,
     //    resultaatcode, AI) verhuizen naar IndexedDB — kort na elke wijziging,

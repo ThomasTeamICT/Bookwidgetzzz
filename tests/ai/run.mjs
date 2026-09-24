@@ -319,7 +319,7 @@ async function flowLeerplan(page, report, aiCalls) {
   await page.getByRole('button', { name: '✨ Uit tekst of pdf' }).first().click();
   const dialog = page.getByRole('dialog', { name: '✨ Leerplan uit tekst of pdf' });
   await dialog.getByLabel('Leerplantekst').fill(AARDRIJKSKUNDE_TEKST);
-  await dialog.getByLabel('Titel van de doelenlijst').fill('AI-test: aardrijkskunde 1e graad');
+  await dialog.getByLabel('Titel van het leerplan').fill('AI-test: aardrijkskunde 1e graad');
   await dialog.getByLabel('Vak').fill('Aardrijkskunde');
   await dialog.getByLabel('Niveau').fill('1e graad A-stroom');
 

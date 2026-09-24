@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ensureExampleCurriculum } from './seed';
-import { EXAMPLE_CURRICULUM_ID, getCurriculum, saveCurriculum } from './curriculum';
+import { deleteCurriculum, EXAMPLE_CURRICULUM_ID, getCurriculum, saveCurriculum } from './curriculum';
 
 function memoryStorage(): Storage {
   const data = new Map<string, string>();
@@ -47,5 +47,17 @@ describe('ensureExampleCurriculum', () => {
     if (!first) throw new Error('geen voorbeeld');
     saveCurriculum({ ...first, example: false, goals: first.goals.slice(0, 3) });
     expect(ensureExampleCurriculum()?.goals.length).toBe(3);
+  });
+
+  it('komt niet terug nadat de leerkracht het verwijderde, ook al heeft ze geen ander leerplan (X1)', () => {
+    const first = ensureExampleCurriculum();
+    if (!first) throw new Error('geen voorbeeld');
+    deleteCurriculum(EXAMPLE_CURRICULUM_ID);
+    expect(getCurriculum(EXAMPLE_CURRICULUM_ID)).toBeUndefined();
+    // Opnieuw seeden (zoals bij elk bezoek aan de leerkrachtschil): het
+    // voorbeeld mag niet terugkomen, ook al is de leerplannenlijst nu leeg.
+    const second = ensureExampleCurriculum();
+    expect(second).toBeUndefined();
+    expect(getCurriculum(EXAMPLE_CURRICULUM_ID)).toBeUndefined();
   });
 });

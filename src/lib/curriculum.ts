@@ -105,7 +105,7 @@ export const EXAMPLE_CURRICULUM_ID = 'wf-voorbeeld-nw-1egraad';
 
 /** Leesbare naam van een net/uitgever. */
 export function netLabel(net: string): string {
-  return CURRICULUM_NETS.find((n) => n.id === net)?.label ?? 'Eigen doelenlijst';
+  return CURRICULUM_NETS.find((n) => n.id === net)?.label ?? 'Eigen leerplan';
 }
 
 /** Korte omschrijving van een leerplan voor lijsten en keuzevelden. */
