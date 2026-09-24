@@ -7,9 +7,9 @@ import type { Assignment, ClassGroup, ClassStudent } from '../lib/classTypes';
 import type { Course } from '../lib/courseTypes';
 import type { Widget } from '../lib/types';
 import {
-  applyStudentList, assignmentsForClass, createAssignment, deleteAssignment, dueBadge, getClass,
-  goalScoresForStudent, loadClassContext, saveAssignment, saveClass, sortedStudents, statusForAssignment,
-  statusSummary, submissionsFor, type AssignmentStatus, type ClassDataContext,
+  applyStudentList, assignmentsForClass, deleteAssignment, dueBadge, getClass,
+  goalScoresForStudent, loadClassContext, saveClass, sortedStudents, statusForAssignment,
+  statusSummary, submissionsFor, upsertAssignment, type AssignmentStatus, type ClassDataContext,
 } from '../lib/classes';
 import { classPackFileName, classPackToJson, encodeClassPackToUrl, QR_MAX_CHARS } from '../lib/classPack';
 import { getCourses } from '../lib/courses';
@@ -235,7 +235,13 @@ export function ClassDashboardPage() {
           <button className="btn btn-primary" onClick={() => setEditList(true)}><EditIcon size={16} /> Klaslijst invullen</button>
         </EmptyState>
       ) : assignments.length > 0 ? (
-        <div className="card" style={{ overflowX: 'auto', marginBottom: 20 }}>
+        <div
+          className="card"
+          style={{ overflowX: 'auto', marginBottom: 20 }}
+          tabIndex={0}
+          role="region"
+          aria-label="Status per leerling en per opdracht"
+        >
           <table className="data" style={{ minWidth: 520, borderCollapse: 'collapse', width: '100%' }}>
             <caption className="sr-only">Status per leerling en per opdracht</caption>
             <thead>
@@ -307,9 +313,8 @@ export function ClassDashboardPage() {
           cls={cls}
           existing={assignments}
           onClose={() => setNewAssignment(false)}
-          onCreate={(a) => {
-            saveAssignment(a);
-            toast('Opdracht toegevoegd', 'ok');
+          onSaved={(created) => {
+            toast(created ? 'Opdracht toegevoegd' : 'Opdracht bijgewerkt', 'ok');
             setTick((t) => t + 1);
           }}
         />
@@ -547,12 +552,12 @@ function ClassShareModal({
 // ── Opdracht toevoegen ──────────────────────────────────────────────────────
 
 function NewAssignmentModal({
-  cls, existing, onClose, onCreate,
+  cls, existing, onClose, onSaved,
 }: {
   cls: ClassGroup;
   existing: Assignment[];
   onClose: () => void;
-  onCreate: (a: Assignment) => void;
+  onSaved: (created: boolean) => void;
 }) {
   const courses = useMemo<Course[]>(() => getCourses(), []);
   const widgets = useMemo<Widget[]>(
@@ -570,15 +575,14 @@ function NewAssignmentModal({
     if (!targetId) return;
     // Deadline = einde van de gekozen dag; zo is "vandaag" ook echt vandaag nog.
     const dueAt = due ? new Date(`${due}T23:59:59`).getTime() : null;
-    onCreate(
-      createAssignment({
-        classId: cls.id,
-        kind,
-        targetId,
-        dueAt: Number.isFinite(dueAt) ? dueAt : null,
-        note,
-      })
-    );
+    const { created } = upsertAssignment({
+      classId: cls.id,
+      kind,
+      targetId,
+      dueAt: Number.isFinite(dueAt) ? dueAt : null,
+      note,
+    });
+    onSaved(created);
     onClose();
   };
 
@@ -613,7 +617,7 @@ function NewAssignmentModal({
               <option value="">— kies een cursus —</option>
               {courses.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.coverEmoji} {c.title}{alReeds(c.id) ? ' (staat er al)' : ''}
+                  {c.coverEmoji} {c.title}{alReeds(c.id) ? ' (staat er al, wordt bijgewerkt)' : ''}
                 </option>
               ))}
             </select>
@@ -627,7 +631,7 @@ function NewAssignmentModal({
             <option value="">— kies een oefening —</option>
             {widgets.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.title} ({getTypeDef(w.type).name}){alReeds(w.id) ? ', staat er al' : ''}
+                {w.title} ({getTypeDef(w.type).name}){alReeds(w.id) ? ' (staat er al, wordt bijgewerkt)' : ''}
               </option>
             ))}
           </select>

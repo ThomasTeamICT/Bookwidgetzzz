@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import { Accessibility, ArrowRight, Globe, Mail, School } from 'lucide-react';
 import type { Widget } from '../lib/types';
 import { encodeWidgetToUrl, exportWidgetJson, playUrlForCode } from '../lib/share';
-import { assignmentsForClass, createAssignment, dueBadge, getClasses, saveAssignment } from '../lib/classes';
+import { assignmentsForClass, dueBadge, getClasses, upsertAssignment } from '../lib/classes';
 import { countUnresolvedMedia, inlineMedia } from '../lib/mediaStore';
 import { downloadFile } from '../lib/utils';
 import {
@@ -98,7 +98,7 @@ export function ShareModal({ widget, onClose }: { widget: Widget; onClose: () =>
             <span className="hint">(zelfde toestel) — opent de widget meteen met deze code al ingevuld.</span>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
-            <input className="input input-sm" readOnly value={codeUrl} aria-label="Directe link met de klascode" onFocus={(e) => e.target.select()} />
+            <input className="input input-sm" readOnly value={codeUrl} aria-label="Directe link met de code" onFocus={(e) => e.target.select()} />
             <CopyButton text={codeUrl} label="Kopiëren" />
           </div>
 
@@ -234,6 +234,14 @@ function AdaptedLinkSection({ widget, inlined }: { widget: Widget; inlined: Widg
 
 // ── Toewijzen aan een klas ──────────────────────────────────────────────────
 
+/** Timestamp naar lokale JJJJ-MM-DD voor <input type="date"> — geen UTC-afkapping. */
+function toDateInputValue(ts: number): string {
+  const d = new Date(ts);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
 /**
  * Van "delen" naar "opgeven": dezelfde cursus of oefening als opdracht in een
  * klas zetten, met een deadline. De leerling ziet ze meteen in zijn klaslink,
@@ -255,6 +263,17 @@ export function AssignToClassSection({
     ? assignmentsForClass(classId).find((a) => a.kind === kind && a.targetId === targetId)
     : undefined;
 
+  // Bij het kiezen van een klas (en bij het openen als er maar één klas is,
+  // via de initiële classId hierboven) de al ingevulde deadline en instructie
+  // overnemen — anders lijkt het alsof "bijwerken" ze zou wissen.
+  useEffect(() => {
+    if (!classId) return;
+    const a = assignmentsForClass(classId).find((x) => x.kind === kind && x.targetId === targetId);
+    setDue(a?.dueAt ? toDateInputValue(a.dueAt) : '');
+    setNote(a?.note ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classId]);
+
   if (classes.length === 0) {
     return (
       <div className="callout">
@@ -273,14 +292,15 @@ export function AssignToClassSection({
     if (!classId) return;
     const dueAt = due ? new Date(`${due}T23:59:59`).getTime() : null;
     const cls = classes.find((c) => c.id === classId);
-    const opdracht = bestaande
-      ? { ...bestaande, dueAt: Number.isFinite(dueAt) ? dueAt : null, note: note.trim() || bestaande.note }
-      : createAssignment({ classId, kind, targetId, dueAt: Number.isFinite(dueAt) ? dueAt : null, note });
-    saveAssignment(opdracht);
-    const badge = dueBadge(opdracht.dueAt);
+    const { assignment, created } = upsertAssignment({
+      classId, kind, targetId,
+      dueAt: Number.isFinite(dueAt) ? dueAt : null,
+      note: note.trim() || undefined,
+    });
+    const badge = dueBadge(assignment.dueAt);
     const tekst = `“${title}” staat nu in ${cls?.name ?? 'de klas'}${badge ? ` (deadline: ${badge.label})` : ''}.`;
     setMelding(tekst);
-    toast(bestaande ? 'Opdracht bijgewerkt' : 'Toegewezen aan de klas', 'ok');
+    toast(created ? 'Toegewezen aan de klas' : 'Opdracht bijgewerkt', 'ok');
   };
 
   return (

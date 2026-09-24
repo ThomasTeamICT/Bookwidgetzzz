@@ -1,12 +1,30 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  applyStudentList, dueBadge, emptyClassContext, goalScoresForStudent, matchesStudent,
-  parseStudentList, sortedStudents, statusForAssignment, statusSummary, studentsToText,
+  applyStudentList, assignmentsForClass, dueBadge, emptyClassContext, goalScoresForStudent, matchesStudent,
+  parseStudentList, sortedStudents, statusForAssignment, statusSummary, studentsToText, upsertAssignment,
   type ClassDataContext,
 } from './classes';
 import type { Assignment, ClassStudent } from './classTypes';
 import type { Course, CourseProgress } from './courseTypes';
 import type { Submission, Widget } from './types';
+
+// ── Nep-localStorage: de opslaglaag van de app draait hier in het geheugen ───
+
+function memoryStorage(): Storage {
+  const data = new Map<string, string>();
+  return {
+    get length() { return data.size; },
+    key: (i: number) => [...data.keys()][i] ?? null,
+    getItem: (k: string) => data.get(k) ?? null,
+    setItem: (k: string, v: string) => { data.set(k, String(v)); },
+    removeItem: (k: string) => { data.delete(k); },
+    clear: () => data.clear(),
+  } as Storage;
+}
+
+beforeEach(() => {
+  (globalThis as unknown as { localStorage: Storage }).localStorage = memoryStorage();
+});
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -279,6 +297,52 @@ describe('goalScoresForStudent', () => {
     const goals = goalScoresForStudent([widgetAssignment, courseAssignment], emma, ctx);
     expect(goals.get('WIS 2.3')).toEqual({ code: 'WIS 2.3', earned: 1, max: 2, items: 2 });
     expect(goals.get('WIS 1.1')).toEqual({ code: 'WIS 1.1', earned: 2, max: 4, items: 1 });
+  });
+});
+
+// ── Opdracht toewijzen zonder dubbels ────────────────────────────────────────
+
+describe('upsertAssignment', () => {
+  it('maakt een nieuwe opdracht aan als er nog geen bestaat', () => {
+    const { assignment, created } = upsertAssignment({
+      classId: 'k1', kind: 'widget', targetId: 'w1', dueAt: 1000, note: 'Eerste keer',
+    });
+    expect(created).toBe(true);
+    expect(assignment.classId).toBe('k1');
+    expect(assignment.dueAt).toBe(1000);
+    expect(assignment.note).toBe('Eerste keer');
+    expect(assignmentsForClass('k1')).toHaveLength(1);
+  });
+
+  it('werkt de bestaande opdracht bij (deadline en instructie) in plaats van een tweede aan te maken', () => {
+    const eerste = upsertAssignment({ classId: 'k1', kind: 'widget', targetId: 'w1', dueAt: 1000, note: 'Oude instructie' });
+    const tweede = upsertAssignment({ classId: 'k1', kind: 'widget', targetId: 'w1', dueAt: 2000, note: 'Nieuwe instructie' });
+    expect(tweede.created).toBe(false);
+    expect(tweede.assignment.id).toBe(eerste.assignment.id);
+    expect(tweede.assignment.dueAt).toBe(2000);
+    expect(tweede.assignment.note).toBe('Nieuwe instructie');
+    expect(assignmentsForClass('k1')).toHaveLength(1);
+  });
+
+  it('maakt een aparte opdracht aan voor een andere klas', () => {
+    upsertAssignment({ classId: 'k1', kind: 'widget', targetId: 'w1', dueAt: null });
+    const { created } = upsertAssignment({ classId: 'k2', kind: 'widget', targetId: 'w1', dueAt: null });
+    expect(created).toBe(true);
+    expect(assignmentsForClass('k1')).toHaveLength(1);
+    expect(assignmentsForClass('k2')).toHaveLength(1);
+  });
+
+  it('maakt een aparte opdracht aan voor een andere soort (cursus i.p.v. widget) op hetzelfde doel-id', () => {
+    upsertAssignment({ classId: 'k1', kind: 'widget', targetId: 'x1', dueAt: null });
+    const { created } = upsertAssignment({ classId: 'k1', kind: 'course', targetId: 'x1', dueAt: null });
+    expect(created).toBe(true);
+    expect(assignmentsForClass('k1')).toHaveLength(2);
+  });
+
+  it('wist de deadline wanneer dueAt expliciet null is', () => {
+    upsertAssignment({ classId: 'k1', kind: 'widget', targetId: 'w1', dueAt: 1000, note: 'iets' });
+    const { assignment } = upsertAssignment({ classId: 'k1', kind: 'widget', targetId: 'w1', dueAt: null, note: 'iets' });
+    expect(assignment.dueAt).toBeNull();
   });
 });
 

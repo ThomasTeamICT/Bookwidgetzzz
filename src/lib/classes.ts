@@ -336,6 +336,36 @@ export function createAssignment(init: {
   };
 }
 
+/**
+ * Toewijzen zonder dubbels: bestaat er in deze klas al een opdracht met
+ * dezelfde soort en hetzelfde doel (cursus/widget), dan wordt die bijgewerkt
+ * (deadline, instructie) in plaats van dat er een tweede bijkomt. `dueAt: null`
+ * wist de deadline expliciet. Gebruikt door ShareModal en ClassDashboardPage.
+ */
+export function upsertAssignment(init: {
+  classId: string;
+  kind: Assignment['kind'];
+  targetId: string;
+  dueAt?: number | null;
+  note?: string;
+}): { assignment: Assignment; created: boolean } {
+  const bestaande = assignmentsForClass(init.classId).find(
+    (a) => a.kind === init.kind && a.targetId === init.targetId
+  );
+  if (!bestaande) {
+    const assignment = createAssignment(init);
+    saveAssignment(assignment);
+    return { assignment, created: true };
+  }
+  const assignment: Assignment = {
+    ...bestaande,
+    dueAt: init.dueAt ?? null,
+    note: init.note?.trim() || undefined,
+  };
+  saveAssignment(assignment);
+  return { assignment, created: false };
+}
+
 export function deleteAssignment(id: string): boolean {
   return writeJson(ASSIGNMENTS_KEY, getAssignments().filter((a) => a.id !== id));
 }
