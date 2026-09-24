@@ -15,6 +15,8 @@ export default tseslint.config(
   {
     ignores: [
       'dist/**',
+      // worktrees van parallelle agents: eigen kopie van de repo, eigen lint
+      '.claude/**',
       'node_modules/**',
       // Playwright-rooktest: ander runtime-profiel (browser + node-script), draait lokaal.
       'tests/**',
