@@ -11,6 +11,7 @@ import { AI_GEN_TYPES } from '../lib/aiWidgetGen';
 import { saveCustomTemplate } from '../lib/customTemplates';
 import { lintQuiz } from '../lib/linter';
 import type { QuizConfig } from '../lib/types';
+import { TypeTile } from '../components/TypeTile';
 
 export function EditorPage() {
   const { id } = useParams();
@@ -84,9 +85,7 @@ export function EditorPage() {
         <button className="btn btn-quiet btn-sm" onClick={() => navigate('/widgets')} aria-label="Terug naar mijn widgets">
           ← Terug
         </button>
-        <span className="type-icon" style={{ background: def.color, width: 34, height: 34, fontSize: '1.05rem', borderRadius: 9 }} aria-hidden>
-          {def.icon}
-        </span>
+        <TypeTile type={def} size="sm" />
         <input
           className="input input-sm"
           style={{ maxWidth: 340, fontWeight: 700 }}
@@ -167,7 +166,7 @@ export function EditorPage() {
               )}
             </div>
             <aside className="card card-pad" style={{ position: 'sticky', top: 76 }}>
-              <h3>{def.icon} {def.name}</h3>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: 10 }}><TypeTile type={def} size="sm" /> {def.name}</h3>
               <p style={{ color: 'var(--text-soft)', fontSize: '0.9rem' }}>{def.tagline}</p>
               <hr className="divider" />
               <p style={{ fontSize: '0.9rem', color: 'var(--text-soft)', marginBottom: 8 }}>

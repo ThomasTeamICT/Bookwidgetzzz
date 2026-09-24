@@ -8,6 +8,7 @@ import { getTypeDef, WIDGET_TYPES } from '../widgets/registry';
 import { CheckRow, ConfirmModal, EmptyState, Field, Modal, useToast } from '../components/ui';
 import type { Folder, Widget } from '../lib/types';
 import { ShareModal } from '../components/ShareModal';
+import { TypeTile } from '../components/TypeTile';
 
 const FOLDER_COLORS = ['#4f46e5', '#0ea5e9', '#16a34a', '#d97706', '#dc2626', '#9333ea'];
 
@@ -185,16 +186,15 @@ export function TeacherDashboard() {
               <div key={w.id} className="card widget-card" onClick={() => navigate(`/bewerk/${w.id}`)} role="button" tabIndex={0}
                 onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/bewerk/${w.id}`); }}
                 aria-label={`${w.title} (${def.name}) bewerken`}>
-                <div className="widget-card-banner" style={{ background: `linear-gradient(120deg, ${def.color}, ${def.color}bb)` }}>
-                  <span className="icon" aria-hidden>{def.icon}</span>
+                <div className="widget-card-banner">
+                  <TypeTile type={def} size="md" />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 800, fontSize: '0.82rem', opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{def.name}</div>
-                    <div style={{ fontFamily: 'monospace', fontSize: '0.95rem', fontWeight: 700, letterSpacing: '0.12em' }}>{w.code}</div>
+                    <div className="widget-card-kind">{def.name}</div>
+                    <div className="widget-card-code">{w.code}</div>
                   </div>
                   <div style={{ marginLeft: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                     <button
                       className="btn btn-icon btn-sm"
-                      style={{ background: 'rgba(255,255,255,0.22)', color: '#fff' }}
                       aria-label={`Acties voor ${w.title}`}
                       aria-expanded={menuFor === w.id}
                       onClick={() => setMenuFor(menuFor === w.id ? null : w.id)}
@@ -403,7 +403,7 @@ function PackImportModal({ pack, onClose, onImported }: {
                 onChange={(e) => toggle(r.index, e.target.checked)}
               />
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
-                <span aria-hidden>{r.def?.icon ?? '❔'}</span>
+                {r.def ? <TypeTile type={r.def} size="xs" /> : <span aria-hidden>❔</span>}
                 <span>{r.widget.title}</span>
                 <span className="hint">({r.def ? r.def.name : 'onbekend type'})</span>
                 {r.duplicate && <span className="badge badge-warn">bestaat al</span>}

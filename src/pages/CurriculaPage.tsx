@@ -24,6 +24,7 @@ import { PdfImportButton } from '../components/PdfImportButton';
 import { ConfirmModal, EmptyState, Field, Modal, useToast } from '../components/ui';
 import { downloadFile, formatDateShort, uid } from '../lib/utils';
 import { onStorageChange } from '../lib/storage';
+import { useNewParam } from '../lib/useNewParam';
 
 type AITarget = { mode: 'new' } | { mode: 'add'; curriculum: Curriculum };
 
@@ -33,6 +34,7 @@ export function CurriculaPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [aiTarget, setAiTarget] = useState<AITarget | null>(null);
   const [newOpen, setNewOpen] = useState(false);
+  useNewParam(() => setNewOpen(true));
   const [deleteTarget, setDeleteTarget] = useState<Curriculum | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 

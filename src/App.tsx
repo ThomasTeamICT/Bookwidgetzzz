@@ -1,8 +1,6 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { createHashRouter, RouterProvider } from 'react-router-dom';
 import { ToastProvider } from './components/ui';
-import { Layout } from './components/Layout';
-import { Landing } from './pages/Landing';
 import { PlayerPage } from './pages/PlayerPage';
 import { OpenSharedPage } from './pages/OpenSharedPage';
 import { JoinPage } from './pages/JoinPage';
@@ -37,6 +35,10 @@ function lazyRetry<T extends React.ComponentType<any>>(load: () => Promise<{ def
   });
 }
 
+// De leerkrachtschil (navigatie, menu's, startpagina) hoort niet op het
+// leerlingpad: een leerling met een code laadt ze nooit.
+const Layout = lazyRetry(() => import('./components/Layout').then((m) => ({ default: m.Layout })), 'Layout');
+const Landing = lazyRetry(() => import('./pages/Landing').then((m) => ({ default: m.Landing })), 'Landing');
 const TeacherDashboard = lazyRetry(() => import('./pages/TeacherDashboard').then((m) => ({ default: m.TeacherDashboard })), 'TeacherDashboard');
 const NewWidgetPage = lazyRetry(() => import('./pages/NewWidgetPage').then((m) => ({ default: m.NewWidgetPage })), 'NewWidgetPage');
 const EditorPage = lazyRetry(() => import('./pages/EditorPage').then((m) => ({ default: m.EditorPage })), 'EditorPage');
@@ -99,10 +101,10 @@ const router = createHashRouter([
   { path: '/klas/open', element: lz(<ClassOpenPage />), errorElement },
   { path: '/leerling/:classCode', element: lz(<ClassStudentPage />), errorElement },
   {
-    element: <Layout />,
+    element: lz(<Layout />),
     errorElement,
     children: [
-      { path: '/', element: <Landing /> },
+      { path: '/', element: lz(<Landing />) },
       { path: '/widgets', element: lz(<TeacherDashboard />) },
       { path: '/nieuw', element: lz(<NewWidgetPage />) },
       { path: '/resultaten', element: lz(<ResultsOverviewPage />) },

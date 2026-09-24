@@ -10,6 +10,7 @@ import type { CustomTemplate } from '../lib/customTemplates';
 import { formatDateShort } from '../lib/utils';
 import { ConfirmModal, Field, Modal } from '../components/ui';
 import type { Widget, WidgetTypeId } from '../lib/types';
+import { TypeTile } from '../components/TypeTile';
 
 /** "HERHAALVRAAG 1" → "Herhaalvraag 1": leesbaar label voor een invulveld. */
 function readableLabel(placeholder: string): string {
@@ -131,9 +132,7 @@ export function NewWidgetPage() {
                     style={{ width: '100%', height: '100%' }}
                     onClick={() => startFromTemplate(t)}
                   >
-                    <span className="type-icon" style={{ background: def?.color ?? 'var(--brand)' }} aria-hidden>
-                      {def?.icon ?? '⭐'}
-                    </span>
+                    {def ? <TypeTile type={def} size="lg" /> : <span className="type-icon" style={{ background: 'var(--brand)' }} aria-hidden>⭐</span>}
                     <span>
                       <h3>{t.name}</h3>
                       <p>{def?.name ?? t.typeId} · bewaard op {formatDateShort(t.savedAt)}</p>
@@ -221,11 +220,11 @@ export function NewWidgetPage() {
         const types = WIDGET_TYPES.filter((t) => t.category === cat.id);
         return (
           <section key={cat.id} style={{ marginBottom: 26 }} aria-labelledby={`cat-${cat.id}`}>
-            <h2 id={`cat-${cat.id}`} style={{ fontSize: '1.1rem', marginBottom: 12 }}>{cat.icon} {cat.name}</h2>
+            <h2 id={`cat-${cat.id}`} style={{ fontSize: '1.1rem', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}><cat.Icon size={20} aria-hidden /> {cat.name}</h2>
             <div className="type-grid">
               {types.map((t) => (
                 <button key={t.id} className="card type-card" onClick={() => create(t.id)}>
-                  <span className="type-icon" style={{ background: t.color }} aria-hidden>{t.icon}</span>
+                  <TypeTile type={t} size="lg" />
                   <span>
                     <h3>{t.name}</h3>
                     <p>{t.tagline}</p>

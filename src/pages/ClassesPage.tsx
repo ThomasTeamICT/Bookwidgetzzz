@@ -7,6 +7,7 @@ import {
 import { onStorageChange } from '../lib/storage';
 import { ConfirmModal, EmptyState, Field, Modal, useToast } from '../components/ui';
 import { formatDateShort } from '../lib/utils';
+import { useNewParam } from '../lib/useNewParam';
 
 /**
  * /klassen — het overzicht van de leerkracht.
@@ -20,6 +21,7 @@ export function ClassesPage() {
   const toast = useToast();
   const [tick, setTick] = useState(0);
   const [newOpen, setNewOpen] = useState(false);
+  useNewParam(() => setNewOpen(true));
   const [deleteTarget, setDeleteTarget] = useState<ClassGroup | null>(null);
 
   useEffect(() => {

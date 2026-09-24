@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Check, Copy, ImagePlus, TriangleAlert, X } from 'lucide-react';
 import { fileToMediaUrl } from '../lib/utils';
 
 // ── Toasts ──────────────────────────────────────────────────────────────────
@@ -25,7 +26,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         <div className="toast-stack" role="status" aria-live="polite">
           {toasts.map((t) => (
             <div key={t.id} className={`toast ${t.kind === 'ok' ? 'toast-ok' : t.kind === 'err' ? 'toast-err' : ''}`}>
-              {t.kind === 'ok' ? '✓ ' : t.kind === 'err' ? '⚠ ' : ''}{t.text}
+              {t.kind === 'ok' ? <Check size={17} /> : t.kind === 'err' ? <TriangleAlert size={17} /> : null}
+              <span>{t.text}</span>
             </div>
           ))}
         </div>,
@@ -81,7 +83,7 @@ export function Modal({
       <div className={`modal ${wide ? 'modal-lg' : ''}`} role="dialog" aria-modal="true" aria-label={title} ref={ref}>
         <div className="modal-header">
           <h2 style={{ margin: 0, fontSize: '1.15rem' }}>{title}</h2>
-          <button className="btn btn-quiet btn-icon" onClick={onClose} aria-label="Sluiten">✕</button>
+          <button className="btn btn-quiet btn-icon" onClick={onClose} aria-label="Sluiten"><X size={20} /></button>
         </div>
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-footer">{footer}</div>}
@@ -126,23 +128,31 @@ export function ConfirmModal({
 
 // ── Formulier-hulpjes ───────────────────────────────────────────────────────
 
+const FORM_TAGS = new Set(['input', 'textarea', 'select']);
+
+/**
+ * Label met invoerveld. Het label wordt gekoppeld aan het eerste
+ * formulierelement tussen de kinderen, ook als er een hulpregel of knop
+ * naast staat. Is het enige kind een component, dan krijgt die de id (hij
+ * geeft ze door aan zijn invoerveld). Heeft het veld al een id, dan koppelt
+ * het label daaraan.
+ */
 export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  const id = useId();
-  // label aan het invoerveld koppelen (a11y): alleen bij precies één kind dat
-  // een formulier-element is (of een component die zijn props doorgeeft) en
-  // nog geen eigen id heeft; in alle andere gevallen blijft alles zoals het was
-  let child: React.ReactNode = children;
+  const autoId = useId();
   let htmlFor: string | undefined;
-  if (React.Children.count(children) === 1 && React.isValidElement(children) && children.type !== React.Fragment) {
-    const el = children as React.ReactElement<{ id?: string }>;
-    const koppelbaar = typeof el.type === 'string'
-      ? el.type === 'input' || el.type === 'textarea' || el.type === 'select'
-      : true;
-    if (koppelbaar && !el.props.id) {
-      htmlFor = id;
-      child = React.cloneElement(el, { id });
+  const single = React.Children.count(children) === 1;
+  const child = React.Children.map(children, (c) => {
+    if (htmlFor || !React.isValidElement(c) || c.type === React.Fragment) return c;
+    const el = c as React.ReactElement<{ id?: string }>;
+    const koppelbaar = typeof el.type === 'string' ? FORM_TAGS.has(el.type) : single;
+    if (!koppelbaar) return c;
+    if (el.props.id) {
+      htmlFor = el.props.id;
+      return c;
     }
-  }
+    htmlFor = autoId;
+    return React.cloneElement(el, { id: autoId });
+  });
   return (
     <div className="field">
       <label htmlFor={htmlFor}>{label}</label>
@@ -163,7 +173,7 @@ export function CheckRow({
   );
 }
 
-export function EmptyState({ icon, title, children }: { icon: string; title: string; children?: React.ReactNode }) {
+export function EmptyState({ icon, title, children }: { icon: React.ReactNode; title: string; children?: React.ReactNode }) {
   return (
     <div className="empty-state">
       <div className="big" aria-hidden>{icon}</div>
@@ -212,7 +222,7 @@ export function ImagePicker({
       ) : (
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-sm btn-ghost" onClick={() => inputRef.current?.click()}>
-            📷 Afbeelding kiezen…
+            <ImagePlus size={17} /> Afbeelding kiezen…
           </button>
         </div>
       )}
@@ -248,7 +258,7 @@ export function CopyButton({ text, label = 'Kopiëren' }: { text: string; label?
         }
       }}
     >
-      📋 {label}
+      <Copy size={16} /> {label}
     </button>
   );
 }

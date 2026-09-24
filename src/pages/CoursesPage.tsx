@@ -16,6 +16,7 @@ import { downloadFile, formatDateShort, makeCode, uid } from '../lib/utils';
 import { ConfirmModal, EmptyState, Field, Modal, useToast } from '../components/ui';
 import { CourseShareModal } from '../components/course/CourseShareModal';
 import { CourseAIModal } from '../components/course/CourseAIModal';
+import { useNewParam } from '../lib/useNewParam';
 
 /** Alles wat de AI-cursusbouwer vooringevuld kan krijgen. */
 interface AIStart {
@@ -35,6 +36,7 @@ export function CoursesPage() {
   const [curricula, setCurricula] = useState<Curriculum[]>([]);
   const [widgets, setWidgets] = useState<Widget[]>([]);
   const [newOpen, setNewOpen] = useState(false);
+  useNewParam(() => setNewOpen(true));
   const [aiStart, setAiStart] = useState<AIStart | null>(null);
   const [shareTarget, setShareTarget] = useState<Course | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Course | null>(null);

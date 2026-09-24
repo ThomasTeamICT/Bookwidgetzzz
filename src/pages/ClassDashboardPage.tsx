@@ -603,7 +603,7 @@ function NewAssignmentModal({
             <option value="">— kies een oefening —</option>
             {widgets.map((w) => (
               <option key={w.id} value={w.id}>
-                {getTypeDef(w.type).icon} {w.title}{alReeds(w.id) ? ' (staat er al)' : ''}
+                {w.title} ({getTypeDef(w.type).name}){alReeds(w.id) ? ', staat er al' : ''}
               </option>
             ))}
           </select>

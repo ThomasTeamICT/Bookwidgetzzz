@@ -9,6 +9,7 @@ import { getSubmissions, getWidget, onStorageChange } from '../lib/storage';
 import { getTypeDef } from '../widgets/registry';
 import { csvCell, downloadFile, formatDate, formatDuration, pct } from '../lib/utils';
 import { ConfirmModal, EmptyState, Modal, useToast } from '../components/ui';
+import { TypeTile } from '../components/TypeTile';
 
 export function CourseTrackPage() {
   const { id } = useParams();
@@ -223,7 +224,7 @@ export function CourseTrackPage() {
               const def = getTypeDef(w.type);
               return (
                 <div key={w.id} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span aria-hidden>{def.icon}</span>
+                  <TypeTile type={def} size="sm" />
                   <strong style={{ flex: '1 1 200px' }}>{w.title}</strong>
                   <span className="hint">{subs.length} inzending{subs.length === 1 ? '' : 'en'}{avgScore !== null && ` · gem. ${avgScore}%`}</span>
                   {def.hasSubmissions && <Link to={`/resultaten/${w.id}`} className="btn btn-sm btn-ghost">→ Resultaten</Link>}

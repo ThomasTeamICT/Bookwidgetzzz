@@ -14,6 +14,7 @@ import { CopyButton } from '../components/ui';
 // getoond wordt: houdt de hoofdbundel, het kritieke leerlingpad, licht.
 const CodeQr = React.lazy(() => import('../components/CodeQr').then((m) => ({ default: m.CodeQr })));
 import { A11yMenu, loadA11y } from '../components/A11yMenu';
+import { TypeTile } from '../components/TypeTile';
 
 /** Sleutel waaronder de deadline van één leerling bewaard wordt. */
 function deadlineKey(widgetId: string, studentKey: string): string {
@@ -228,7 +229,7 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
       }}
     >
       <header className="player-topbar">
-        <span aria-hidden style={{ fontSize: '1.3rem' }}>{def.icon}</span>
+        <TypeTile type={def} size="sm" />
         <span className="title">{widget.title}</span>
         <A11yMenu value={a11y} onChange={setA11y} />
         {widget.settings.examMode && phase === 'playing' && (
@@ -271,7 +272,7 @@ export function WidgetRunner({ widget, recordSubmission, offerResultCode }: { wi
           </div>
         ) : phase === 'gate' ? (
           <div className="card card-pad" style={{ maxWidth: 480, margin: '40px auto 0', textAlign: 'center' }}>
-            <div style={{ fontSize: '2.6rem' }} aria-hidden>{def.icon}</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}><TypeTile type={def} size="xl" /></div>
             <h1 style={{ fontSize: '1.5rem' }}>{widget.title}</h1>
             <p style={{ color: 'var(--text-soft)' }}>{def.name}</p>
             {widget.settings.instructions && (

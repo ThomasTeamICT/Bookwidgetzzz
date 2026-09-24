@@ -21,6 +21,7 @@ import { getTypeDef } from '../widgets/registry';
 import { lintQuiz } from '../lib/linter';
 import type { LintWarning } from '../lib/linter';
 import { clamp, uid } from '../lib/utils';
+import { TypeTile } from '../components/TypeTile';
 
 // ── Hulpjes voor de voorvertoning ───────────────────────────────────────────
 
@@ -465,7 +466,7 @@ export function AIStudioPage() {
                           background: on ? 'var(--brand-soft)' : 'transparent',
                         }}
                       >
-                        <span aria-hidden>{def.icon}</span> {def.name}{on && <span aria-hidden> ✓</span>}
+                        <TypeTile type={def} size="xs" /> {def.name}{on && <span aria-hidden> ✓</span>}
                       </button>
                     );
                   })}
@@ -543,16 +544,7 @@ export function AIStudioPage() {
                       aria-label={`${def.name} "${w.title}" bewaren`}
                       style={{ width: 20, height: 20, accentColor: 'var(--brand)', cursor: 'pointer', flexShrink: 0 }}
                     />
-                    <span
-                      aria-hidden
-                      style={{
-                        width: 38, height: 38, borderRadius: 10, background: def.color, color: '#fff',
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '1.2rem', flexShrink: 0,
-                      }}
-                    >
-                      {def.icon}
-                    </span>
+                    <TypeTile type={def} size="md" />
                     <div style={{ flex: 1, minWidth: 220 }}>
                       <input
                         className="input input-sm"
@@ -675,7 +667,7 @@ export function AIStudioPage() {
                       border: '1px solid var(--line)', borderRadius: 10, padding: '8px 12px',
                     }}
                   >
-                    <span aria-hidden style={{ fontSize: '1.15rem' }}>{def.icon}</span>
+                    <TypeTile type={def} size="sm" />
                     <strong style={{ flex: 1, minWidth: 160 }}>{w.title}</strong>
                     <Link className="btn btn-sm btn-ghost" to={`/bewerk/${w.id}`}>✏️ Bewerken</Link>
                     <Link className="btn btn-sm btn-ghost" to={`/speel/${w.code}`}>▶ Uittesten</Link>

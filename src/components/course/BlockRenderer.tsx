@@ -12,6 +12,7 @@ import type { PlayerResult } from '../../widgets/shared';
 import type { Submission } from '../../lib/types';
 import { pct, uid } from '../../lib/utils';
 import { deletePdf, getPdf, savePdf } from '../../lib/pdfStore';
+import { TypeTile } from '../TypeTile';
 
 // De pdf-viewer (en via hem pdf.js) hoort niet bij het leesnetwerk van een
 // cursus zonder pdf-blok: lui laden i.p.v. statisch meesturen.
@@ -648,9 +649,9 @@ function WidgetBlockView({
           borderRadius: 'var(--radius-m) var(--radius-m) 0 0',
         }}
       >
-        <span aria-hidden style={{ fontSize: '1.5rem' }}>{def.icon}</span>
+        <TypeTile type={def} size="md" />
         <div style={{ flex: 1, minWidth: 160 }}>
-          <strong>🧩 Oefening: {widget.title}</strong>
+          <strong>Oefening: {widget.title}</strong>
           <div className="hint" style={{ marginTop: 0 }}>{def.name} — {def.tagline}</div>
         </div>
         {alreadySubmitted && !sub && (

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { CATEGORIES, WIDGET_TYPES } from '../widgets/registry';
 import { BrandMark } from '../components/Brand';
+import { TypeTile } from '../components/TypeTile';
 
 export function Landing() {
   return (
@@ -67,7 +68,7 @@ export function Landing() {
           const types = WIDGET_TYPES.filter((t) => t.category === cat.id);
           return (
             <div key={cat.id} style={{ marginBottom: 26 }}>
-              <h3 style={{ marginBottom: 12 }}>{cat.icon} {cat.name}</h3>
+              <h3 style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}><cat.Icon size={20} aria-hidden /> {cat.name}</h3>
               <div className="type-grid">
                 {types.map((t) => (
                   <Link
@@ -76,7 +77,7 @@ export function Landing() {
                     className="card type-card"
                     style={{ textDecoration: 'none' }}
                   >
-                    <span className="type-icon" style={{ background: t.color }} aria-hidden>{t.icon}</span>
+                    <TypeTile type={t} size="lg" />
                     <span>
                       <h3>{t.name}</h3>
                       <p>{t.tagline}</p>

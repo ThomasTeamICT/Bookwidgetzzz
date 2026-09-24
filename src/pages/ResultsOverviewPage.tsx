@@ -7,6 +7,7 @@ import { EmptyState } from '../components/ui';
 import { gradeQuestion } from '../lib/grading';
 import { goalLabel, normalizeGoalCode } from '../lib/curriculum';
 import type { Question, QuizConfig, Submission, Widget } from '../lib/types';
+import { TypeTile } from '../components/TypeTile';
 
 // widgets met een QuizConfig-achtige 'questions'-lijst (zelfde set als ResultsPage)
 const QUIZ_FAMILY = new Set<string>(['quiz', 'worksheet', 'exitticket', 'splitworksheet']);
@@ -61,7 +62,7 @@ export function ResultsOverviewPage() {
                   return (
                     <tr key={widget.id} onClick={() => (location.hash = `#/resultaten/${widget.id}`)}>
                       <td>
-                        <strong>{def.icon} {widget.title}</strong>
+                        <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><TypeTile type={def} size="xs" /> {widget.title}</strong>
                         <div className="hint">{def.name} · code {widget.code}</div>
                       </td>
                       <td>{subs.length}</td>

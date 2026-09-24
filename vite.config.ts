@@ -14,12 +14,16 @@ import react from '@vitejs/plugin-react';
  *  - hoofdbundel: react + react-dom + react-router + de leerlingroutes
  *    (/speel, /open, /meedoen). Dit is wat een leerling met een code MOET
  *    downloaden voor er iets op het scherm staat — het kritieke pad.
+ *    September 2026: van 320 naar 330 kB voor de Lucide-iconen van de 38
+ *    widgetsoorten (±28 kB; de speler toont het icoon van de soort). De
+ *    leerkrachtschil en de startpagina gingen tegelijk uit de hoofdbundel.
+ *    Netto: 306 → 327 kB, of 97,8 → 102,5 kB gzip.
  *  - pdf.js: wordt pas opgehaald wanneer iemand echt een pdf opent; groot,
  *    maar nooit onderdeel van het leerlingpad.
  *  - de rest: paginachunks en widgetmodules; die horen klein te blijven.
  */
 const BUDGETS: { test: RegExp; label: string; maxKb: number }[] = [
-  { test: /^assets\/index-[\w-]+\.js$/, label: 'hoofdbundel (kritieke leerlingpad)', maxKb: 320 },
+  { test: /^assets\/index-[\w-]+\.js$/, label: 'hoofdbundel (kritieke leerlingpad)', maxKb: 330 },
   { test: /^assets\/pdf-[\w-]+\.js$/, label: 'pdf.js (lui geladen)', maxKb: 560 },
   { test: /mammoth/i, label: 'mammoth (.docx-import, lui geladen)', maxKb: 720 },
   { test: /jsqr/i, label: 'jsQR (QR-scanner, lui geladen)', maxKb: 140 },

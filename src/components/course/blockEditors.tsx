@@ -795,7 +795,7 @@ function WidgetBlockEditor({ b, onChange }: { b: WidgetBlock; onChange: OnChange
             const def = getTypeDef(w.type);
             return (
               <option key={w.id} value={w.id}>
-                {def.icon} {w.title} ({w.code})
+                {w.title} ({def.name}, {w.code})
               </option>
             );
           })}

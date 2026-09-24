@@ -14,6 +14,7 @@ import { uid } from '../lib/utils';
 import { askAI, hasAIKey } from '../lib/ai';
 import { markTokens as playerMarkTokens, matchMarkers, ZoneCircle } from '../widgets/qtypes/interactTypes';
 import { getStudentFile } from '../lib/pdfStore';
+import { TypeTile } from '../components/TypeTile';
 
 // widgets met een QuizConfig-achtige 'questions'-lijst → volledige beoordelings-UI
 const QUIZ_FAMILY = new Set(['quiz', 'worksheet', 'exitticket', 'splitworksheet']);
@@ -82,7 +83,7 @@ export function ResultsPage() {
       <div className="page-head">
         <div>
           <Link to="/resultaten" className="hint" style={{ textDecoration: 'none' }}>← Alle resultaten</Link>
-          <h1 style={{ marginTop: 4 }}>{def.icon} {widget.title}</h1>
+          <h1 style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 12 }}><TypeTile type={def} size="md" /> {widget.title}</h1>
           <p className="sub">{def.name} · code <strong style={{ fontFamily: 'monospace' }}>{widget.code}</strong></p>
         </div>
         <div className="page-head-actions">
