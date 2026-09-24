@@ -34,11 +34,13 @@ page.on('console', (m) => {
 
 const go = async (hash) => { await page.goto(BASE + hash, { waitUntil: 'networkidle' }); await sleep(500); };
 
-// ── 1. Landing ──────────────────────────────────────────────────────────────
-console.log('1. Landing');
+// ── 1. Startpagina (eerste bezoek) ──────────────────────────────────────────
+console.log('1. Startpagina');
 await go('/#/');
-check('hero zichtbaar', await page.locator('.hero h1').isVisible());
-check('38 widgettypes op landing', (await page.locator('.type-card').count()) === 38);
+check('startpagina heeft één h1', (await page.locator('main h1').count()) === 1);
+check('eerste bezoek: uitleg "hoe het in elkaar zit"', await page.locator('text=Hoe het in elkaar zit').first().isVisible());
+check('38 widgetsoorten op de startpagina', (await page.locator('.start-type-chip').count()) === 38);
+check('aparte ingang voor leerlingen', (await page.locator('a[href="#/meedoen"]').count()) >= 1);
 
 // ── 2. Dashboard ────────────────────────────────────────────────────────────
 console.log('2. Dashboard');
@@ -158,7 +160,7 @@ check('printweergave', await page.locator('text=Correctiesleutel tonen').isVisib
 await go('/#/privacy');
 check('privacypagina', await page.locator('text=Waar staan de gegevens?').isVisible());
 await go('/#/hulp');
-check('hulppagina', await page.locator('text=Aan de slag').first().isVisible());
+check('hulppagina', await page.locator('h1', { hasText: 'Hoe werkt Boosterz?' }).isVisible());
 check('FAQ aanwezig', (await page.locator('details').count()) >= 6);
 await go('/#/voortgang');
 check('voortgangspagina rendert', (await page.locator('h1').count()) >= 1);

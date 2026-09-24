@@ -1,0 +1,193 @@
+/* ── Startpagina (/) ──────────────────────────────────────────────────────
+   Twee toestellen: het dashboard voor een terugkerende leerkracht en de
+   uitleg bij een eerste bezoek. Alles hier is eigen aan deze pagina; de
+   gedeelde bouwstenen (.card, .btn, .callout, .type-grid …) komen uit
+   global.css. */
+
+/* ── Dashboard: kop ───────────────────────────────────────────────────── */
+
+.start-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 22px;
+}
+.start-head h1 { margin: 0; font-size: 1.7rem; }
+.start-head .sub { margin: 4px 0 0; color: var(--text-soft); }
+.start-help-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.9rem; color: var(--text-soft); text-decoration: none;
+  white-space: nowrap; min-height: 44px; padding: 4px 2px;
+}
+.start-help-link:hover { color: var(--text); text-decoration: underline; }
+
+/* ── Tellers ──────────────────────────────────────────────────────────── */
+
+.start-stats { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); margin-bottom: 26px; }
+.start-stat {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; border-radius: var(--radius-m);
+  background: var(--bg-raised); border: 1px solid var(--line);
+  text-decoration: none; color: inherit; min-height: 44px;
+  transition: border-color 0.12s, transform 0.1s;
+}
+.start-stat:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.start-stat .icon {
+  display: grid; place-items: center; flex: none;
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--bg-sunken); color: var(--text-faint);
+}
+.start-stat.has-value .icon { background: var(--brand-soft); color: var(--brand); }
+.start-stat b { display: block; font-family: var(--font-display); font-size: 1.5rem; line-height: 1.1; color: var(--text-faint); }
+.start-stat.has-value b { color: var(--text); }
+.start-stat span.label { display: block; font-size: 0.85rem; color: var(--text-soft); }
+
+/* ── Twee kolommen: verder werken / klassen ──────────────────────────── */
+
+.start-cols { display: grid; gap: 20px; grid-template-columns: 1.3fr 1fr; align-items: start; margin-bottom: 26px; }
+.start-panel { min-width: 0; }
+.start-panel h2 {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 1.05rem; margin: 0 0 10px;
+}
+.start-panel h2 svg { color: var(--text-faint); }
+
+.start-list { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.start-row {
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+  padding: 9px 6px; border-radius: var(--radius-s);
+  text-decoration: none; color: inherit; min-height: 44px;
+}
+.start-row:hover { background: var(--bg-sunken); }
+.start-row .txt { flex: 1; min-width: 0; }
+.start-row .txt b { display: block; font-size: 0.95rem; font-weight: 650; }
+.start-row .txt small { display: block; color: var(--text-soft); font-size: 0.82rem; }
+.start-row .meta { flex: none; font-size: 0.8rem; color: var(--text-faint); white-space: nowrap; }
+.start-course-icon {
+  display: grid; place-items: center; flex: none;
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--brand-soft); color: var(--brand);
+}
+
+.start-class-row { flex-wrap: wrap; }
+
+.start-empty-hint {
+  color: var(--text-soft); font-size: 0.9rem; padding: 8px 6px 4px; margin: 0;
+}
+
+/* ── Snel maken ───────────────────────────────────────────────────────── */
+
+.start-quick { display: grid; gap: 10px; grid-template-columns: repeat(3, 1fr); }
+.start-quick-tile {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: var(--radius-m);
+  background: var(--bg-raised); border: 1px solid var(--line);
+  text-decoration: none; color: inherit; min-height: 44px;
+}
+.start-quick-tile:hover { border-color: var(--brand); }
+.start-quick-tile .icon {
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px;
+  background: var(--brand-soft); color: var(--brand);
+}
+.start-quick-tile .icon { flex: none; }
+.start-quick-tile b { font-size: 0.95rem; display: block; }
+.start-quick-tile small { color: var(--text-soft); font-size: 0.82rem; line-height: 1.35; }
+
+/* ── Eerste bezoek: kop ───────────────────────────────────────────────── */
+
+.start-intro { max-width: 760px; margin: 0 auto 34px; text-align: center; }
+.start-intro h1 { font-size: clamp(1.6rem, 4.5vw, 2.3rem); line-height: 1.2; margin-bottom: 8px; }
+.start-intro .lede { color: var(--text-soft); font-size: 1.05rem; margin: 0; }
+
+/* ── Eerste bezoek: hoe het in elkaar zit ─────────────────────────────── */
+
+.start-section { max-width: 980px; margin: 0 auto 40px; }
+.start-section > h2 { text-align: center; font-size: 1.2rem; margin-bottom: 22px; }
+
+.start-steps {
+  display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+.start-step { text-align: left; }
+.start-step .icon {
+  display: grid; place-items: center; width: 42px; height: 42px; border-radius: 11px;
+  background: var(--brand-soft); color: var(--brand); margin-bottom: 10px;
+}
+.start-step h3 { margin: 0 0 4px; font-size: 1rem; }
+.start-step p { margin: 0; color: var(--text-soft); font-size: 0.9rem; line-height: 1.5; }
+
+/* ── Eerste bezoek: vertrekpunten ─────────────────────────────────────── */
+
+.start-ctas {
+  display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr);
+  max-width: 980px; margin: 0 auto 18px;
+}
+.start-ctas .btn { width: 100%; }
+
+.start-student-box {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center;
+  max-width: 980px; margin: 0 auto 40px; padding: 16px 20px;
+  border-radius: var(--radius-m); background: var(--bg-sunken); border: 1px solid var(--line);
+}
+.start-student-box p { margin: 0; color: var(--text-soft); }
+
+/* ── Eerste bezoek: 38 soorten ────────────────────────────────────────── */
+
+.start-cat { margin-bottom: 16px; }
+.start-cat h3 {
+  display: flex; align-items: center; gap: 8px; font-size: 0.95rem; margin: 0 0 8px;
+}
+.start-cat h3 svg { color: var(--text-faint); }
+.start-type-row {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin;
+}
+.start-type-chip {
+  display: flex; align-items: center; gap: 8px; flex: none;
+  padding: 7px 12px 7px 7px; border-radius: 999px;
+  background: var(--bg-raised); border: 1px solid var(--line);
+  text-decoration: none; color: var(--text); font-size: 0.86rem; white-space: nowrap;
+  min-height: 44px;
+}
+.start-type-chip:hover { border-color: var(--line-strong); background: var(--bg-sunken); }
+
+.start-privacy {
+  max-width: 980px; margin: 30px auto 0; text-align: center;
+  color: var(--text-faint); font-size: 0.88rem;
+}
+
+/* ── Klein scherm ─────────────────────────────────────────────────────── */
+
+/* Op een breed scherm lopen de soorten door op meerdere regels; op gsm scrollt de rij. */
+@media (min-width: 761px) {
+  .start-type-row { flex-wrap: wrap; overflow-x: visible; }
+}
+
+@media (max-width: 760px) {
+  .start-cols { grid-template-columns: 1fr; }
+  .start-quick { grid-template-columns: 1fr; }
+  .start-ctas { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .start-stats { grid-template-columns: 1fr; }
+  .start-quick { grid-template-columns: 1fr; }
+  .start-head { flex-direction: column; }
+}
+
+/* ── Hulppagina (/hulp) ───────────────────────────────────────────────────
+   Dezelfde stylesheet: Start en Hulp horen bij hetzelfde pakket. */
+
+.help-parts { display: flex; flex-direction: column; gap: 16px; }
+.help-part { display: flex; gap: 14px; align-items: flex-start; }
+.help-part .icon {
+  display: grid; place-items: center; flex: none; margin-top: 2px;
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--brand-soft); color: var(--brand);
+}
+.help-part h3 { margin: 0 0 3px; font-size: 1rem; }
+.help-part p { margin: 0; color: var(--text-soft); font-size: 0.92rem; line-height: 1.5; }
+
+.help-steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; }
+.help-steps li { line-height: 1.5; }
+.help-steps li::marker { font-weight: 700; color: var(--brand); }
+
+.help-faq { display: grid; gap: 8px; }
+.help-faq summary { cursor: pointer; font-weight: 650; min-height: 44px; display: flex; align-items: center; }
+.help-faq p { margin: 8px 0 0; color: var(--text-soft); }

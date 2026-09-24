@@ -38,7 +38,7 @@ function lazyRetry<T extends React.ComponentType<any>>(load: () => Promise<{ def
 // De leerkrachtschil (navigatie, menu's, startpagina) hoort niet op het
 // leerlingpad: een leerling met een code laadt ze nooit.
 const Layout = lazyRetry(() => import('./components/Layout').then((m) => ({ default: m.Layout })), 'Layout');
-const Landing = lazyRetry(() => import('./pages/Landing').then((m) => ({ default: m.Landing })), 'Landing');
+const StartPage = lazyRetry(() => import('./pages/StartPage').then((m) => ({ default: m.StartPage })), 'StartPage');
 const TeacherDashboard = lazyRetry(() => import('./pages/TeacherDashboard').then((m) => ({ default: m.TeacherDashboard })), 'TeacherDashboard');
 const NewWidgetPage = lazyRetry(() => import('./pages/NewWidgetPage').then((m) => ({ default: m.NewWidgetPage })), 'NewWidgetPage');
 const EditorPage = lazyRetry(() => import('./pages/EditorPage').then((m) => ({ default: m.EditorPage })), 'EditorPage');
@@ -104,7 +104,7 @@ const router = createHashRouter([
     element: lz(<Layout />),
     errorElement,
     children: [
-      { path: '/', element: lz(<Landing />) },
+      { path: '/', element: lz(<StartPage />) },
       { path: '/widgets', element: lz(<TeacherDashboard />) },
       { path: '/nieuw', element: lz(<NewWidgetPage />) },
       { path: '/resultaten', element: lz(<ResultsOverviewPage />) },
