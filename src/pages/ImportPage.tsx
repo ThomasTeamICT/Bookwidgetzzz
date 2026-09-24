@@ -11,6 +11,7 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { FileText, type LucideIcon, Package, Puzzle } from 'lucide-react';
 import {
   extractFromFile, fromPastedText, ImportError, IMPORT_ACCEPT, MAX_COMFORT_CHARS,
   markdownToCourse, mergeSourcesToCourse, saveImportedCourse, saveImportedPack, saveImportedWidget,
@@ -22,22 +23,28 @@ import { saveWidget } from '../lib/storage';
 import { deriveExercises, describeDerived } from '../lib/deriveExercises';
 import { setHandoff } from '../lib/handoff';
 import { getCurricula } from '../lib/curriculum';
+import { suggestCourseTitle } from '../lib/importTitle';
 import { EmptyState, Field, useToast } from '../components/ui';
 import { uid } from '../lib/utils';
+import {
+  AddIcon, AIIcon, BackIcon, CheckIcon, CourseIcon, DeleteIcon, EditIcon, ImportIcon, PrivacyIcon,
+  WarningIcon,
+} from '../components/icons';
+import '../styles/cursus.css';
 
 interface SourceItem extends ExtractedSource {
   key: string;
   /** Samenvatting nadat een json-bron geïmporteerd is. */
   imported?: string;
   /** Waar je naartoe kan na die import. */
-  importedTo?: { label: string; to: string };
+  importedTo?: { label: React.ReactNode; to: string };
 }
 
-const KIND_LABEL: Record<ExtractedSource['kind'], string> = {
-  text: '📄 tekst',
-  widget: '🧩 widget',
-  pack: '📦 pakket',
-  course: '📘 cursus',
+const KIND_META: Record<ExtractedSource['kind'], { icon: LucideIcon; label: string }> = {
+  text: { icon: FileText, label: 'tekst' },
+  widget: { icon: Puzzle, label: 'widget' },
+  pack: { icon: Package, label: 'pakket' },
+  course: { icon: CourseIcon, label: 'cursus' },
 };
 
 export function ImportPage() {
@@ -63,6 +70,17 @@ export function ImportPage() {
 
   const remove = (key: string) => setItems((list) => list.filter((it) => it.key !== key));
 
+  /**
+   * Titelvoorstel voor een tekstbron: de eerste duidelijke kop in het
+   * document, anders de titel die de bron al meekreeg (doorgaans de
+   * bestandsnaam zonder extensie). De leerkracht ziet en past dit meteen aan
+   * in "Titel van deze bron" — vóór ze op "Omzetten naar cursus" klikt.
+   */
+  function withSuggestedTitle(src: ExtractedSource): ExtractedSource {
+    if (src.kind !== 'text') return src;
+    return { ...src, title: suggestCourseTitle(src.text, src.title) };
+  }
+
   async function addFiles(files: File[]) {
     if (files.length === 0) return;
     let added = 0;
@@ -70,7 +88,7 @@ export function ImportPage() {
       setBusy(file.name);
       setStatus(`“${file.name}” wordt gelezen…`);
       try {
-        const src = await extractFromFile(file);
+        const src = withSuggestedTitle(await extractFromFile(file));
         setItems((list) => [...list, { ...src, key: uid() }]);
         added++;
         setStatus(`“${file.name}” is ingelezen.`);
@@ -86,7 +104,9 @@ export function ImportPage() {
 
   function addPaste() {
     try {
-      const src = fromPastedText(paste, pasteTitle.trim() || 'Geplakte tekst');
+      const raw = fromPastedText(paste, pasteTitle.trim() || 'Geplakte tekst');
+      // Een titel die de leerkracht hier zelf al intypte, laten we met rust.
+      const src = pasteTitle.trim() ? raw : withSuggestedTitle(raw);
       setItems((list) => [...list, { ...src, key: uid() }]);
       setPaste('');
       setPasteTitle('');
@@ -120,13 +140,21 @@ export function ImportPage() {
     navigate(target === 'cursus' ? '/cursussen?ai=nieuw' : '/ai-studio');
   }
 
+  /**
+   * De titel komt uit "Titel van deze bron" — die staat al vóór dit moment op
+   * het scherm, met een voorstel (eerste kop, anders de bestandsnaam), en de
+   * leerkracht kon ze al aanpassen. Die titel wint altijd, ook als er verderop
+   * in de tekst nog een `#`-kop staat.
+   */
   function toCourseWithoutAI(item: SourceItem) {
     const text = item.text.trim();
     if (!text) {
       toast('Er staat nog geen tekst in deze bron.', 'err');
       return;
     }
-    const built = markdownToCourse(item.text, item.title.trim() || item.origin, { sectionLevel });
+    const chosenTitle = item.title.trim() || item.origin;
+    const built = markdownToCourse(item.text, chosenTitle, { sectionLevel });
+    built.title = chosenTitle;
     if (curriculumId) built.curriculumId = curriculumId;
     const { course, note } = finishCourse(built);
     const sections = course.chapters.reduce((n, ch) => n + ch.sections.length, 0);
@@ -178,7 +206,7 @@ export function ImportPage() {
         const saved = saveImportedWidget(item.widget);
         patch(item.key, {
           imported: `“${saved.title}” staat nu bij je widgets (code ${saved.code}).`,
-          importedTo: { label: '✏️ Openen in de editor', to: `/bewerk/${saved.id}` },
+          importedTo: { label: <><EditIcon size={16} /> Openen in de editor</>, to: `/bewerk/${saved.id}` },
         });
         toast(`“${saved.title}” geïmporteerd`, 'ok');
         return;
@@ -190,7 +218,7 @@ export function ImportPage() {
           imported:
             `${n} widget${n === 1 ? '' : 's'} geïmporteerd in de map “${res.folderName}”.` +
             (res.skipped > 0 ? ` ${res.skipped} onderdeel${res.skipped === 1 ? '' : 'en'} overgeslagen: onbekend widgettype.` : ''),
-          importedTo: { label: '🧩 Naar mijn widgets', to: '/widgets' },
+          importedTo: { label: <><Puzzle size={16} /> Naar mijn widgets</>, to: '/widgets' },
         });
         toast(`${n} widget${n === 1 ? '' : 's'} geïmporteerd`, 'ok');
         return;
@@ -199,7 +227,7 @@ export function ImportPage() {
         const course = saveImportedCourse(item.course);
         patch(item.key, {
           imported: `Cursus “${course.title}” staat nu bij je cursussen.`,
-          importedTo: { label: '📘 Cursus openen', to: `/cursus/bewerk/${course.id}` },
+          importedTo: { label: <><CourseIcon size={16} /> Cursus openen</>, to: `/cursus/bewerk/${course.id}` },
         });
         toast(`Cursus “${course.title}” geïmporteerd`, 'ok');
       }
@@ -216,30 +244,36 @@ export function ImportPage() {
     <div className="page">
       <div className="page-head">
         <div>
-          <h1>📄 Bestaand materiaal verwerken</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}><ImportIcon size={24} /> Bestaand materiaal verwerken</h1>
           <p className="sub">
             Je Word-document, pdf of losse tekst wordt hier leesbare tekst — en daarna een cursus of oefeningen.
           </p>
         </div>
         <div className="page-head-actions">
-          <Link to="/widgets" className="btn btn-ghost">← Mijn widgets</Link>
+          <Link to="/widgets" className="btn btn-ghost"><BackIcon size={16} /> Mijn widgets</Link>
         </div>
       </div>
 
       <div className="callout" style={{ marginBottom: 18 }}>
-        <strong>Wat kan hier binnen?</strong>
-        <ul style={{ margin: '6px 0 0', paddingLeft: 20 }}>
-          <li><strong>.docx</strong> (Word), <strong>.pdf</strong>, <strong>.md</strong>, <strong>.txt</strong> en <strong>.html</strong> → de tekst eruit.</li>
-          <li><strong>.json</strong> uit Boosterz → een widget, een vakgroeppakket of een cursus, meteen te importeren.</li>
-        </ul>
-        <p className="hint" style={{ margin: '8px 0 0' }}>
-          ⚠️ Een <strong>gescande</strong> pdf (foto’s van pagina’s) bevat geen tekstlaag: daar komt niets uit.
-          Gebruik dan het originele bestand of plak de tekst hieronder zelf.
-        </p>
-        <p className="hint" style={{ margin: '4px 0 0' }}>
-          🔒 Het lezen gebeurt volledig op dit toestel. Er vertrekt <strong>niets</strong> naar het internet, behalve
-          de tekst die je zelf naar een AI-stap stuurt — die gaat dan naar je gekozen AI-aanbieder.
-        </p>
+        {/* Eén flex-kind i.p.v. vier: anders zet .callout (display: flex) elk
+            blok in een eigen smalle kolom naast elkaar, met tekstoverloop tot gevolg. */}
+        <div style={{ minWidth: 0 }}>
+          <strong>Wat kan hier binnen?</strong>
+          <ul style={{ margin: '6px 0 0', paddingLeft: 20 }}>
+            <li><strong>.docx</strong> (Word), <strong>.pdf</strong>, <strong>.md</strong>, <strong>.txt</strong> en <strong>.html</strong> → de tekst eruit.</li>
+            <li><strong>.json</strong> uit Boosterz → een widget, een vakgroeppakket of een cursus, meteen te importeren.</li>
+          </ul>
+          <p className="hint" style={{ margin: '8px 0 0' }}>
+            <WarningIcon size={16} className="icon-inline" aria-hidden /> Een <strong>gescande</strong> pdf (foto’s van
+            pagina’s) bevat geen tekstlaag: daar komt niets uit. Gebruik dan het originele bestand of plak de tekst
+            hieronder zelf.
+          </p>
+          <p className="hint" style={{ margin: '4px 0 0' }}>
+            <PrivacyIcon size={16} className="icon-inline" aria-hidden /> Het lezen gebeurt volledig op dit toestel. Er
+            vertrekt <strong>niets</strong> naar het internet, behalve de tekst die je zelf naar een AI-stap stuurt —
+            die gaat dan naar je gekozen AI-aanbieder.
+          </p>
+        </div>
       </div>
 
       {/* ── Bronnen toevoegen ── */}
@@ -263,7 +297,7 @@ export function ImportPage() {
             justifyItems: 'center',
           }}
         >
-          <span aria-hidden style={{ fontSize: '1.8rem' }}>📥</span>
+          <span aria-hidden style={{ display: 'flex', color: 'var(--brand)' }}><ImportIcon size={32} /></span>
           <button
             type="button"
             className="btn btn-primary"
@@ -271,7 +305,7 @@ export function ImportPage() {
             disabled={busy !== null}
             aria-busy={busy !== null}
           >
-            {busy ? `⏳ ${busy} lezen…` : 'Bestanden kiezen…'}
+            {busy ? `${busy} lezen…` : 'Bestanden kiezen…'}
           </button>
           <input
             ref={fileRef}
@@ -294,8 +328,8 @@ export function ImportPage() {
         </p>
 
         <details style={{ marginTop: 12 }}>
-          <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.92rem' }}>
-            ✍️ Of plak je tekst rechtstreeks
+          <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <EditIcon size={16} aria-hidden /> Of plak je tekst rechtstreeks
           </summary>
           <div style={{ paddingTop: 10 }}>
             <Field label="Titel (optioneel)">
@@ -318,7 +352,7 @@ export function ImportPage() {
               />
             </Field>
             <button className="btn btn-primary" onClick={addPaste} disabled={!paste.trim()}>
-              + Tekst toevoegen als bron
+              <AddIcon size={16} /> Tekst toevoegen als bron
             </button>
           </div>
         </details>
@@ -379,7 +413,7 @@ export function ImportPage() {
           </label>
           {items.filter((it) => it.kind === 'text').length >= 2 && (
             <div className="callout" style={{ marginTop: 6 }}>
-              <span aria-hidden>📚</span>
+              <CourseIcon size={18} aria-hidden style={{ flex: 'none' }} />
               <div style={{ flex: 1 }}>
                 <strong>Alles samen: één cursus.</strong> Elk bestand wordt een hoofdstuk, in de volgorde van de
                 lijst hieronder; begint een bestand met een eigen titel (“Hoofdstuk 3: Materie”), dan wordt die de
@@ -394,7 +428,7 @@ export function ImportPage() {
                     style={{ maxWidth: 380 }}
                   />
                   <button className="btn btn-primary btn-sm" onClick={mergeToCourse}>
-                    📚 Samenvoegen tot één cursus (zonder AI)
+                    <CourseIcon size={16} /> Samenvoegen tot één cursus (zonder AI)
                   </button>
                 </div>
               </div>
@@ -405,7 +439,7 @@ export function ImportPage() {
 
       {/* ── De bronnen ── */}
       {items.length === 0 ? (
-        <EmptyState icon="📚" title="Nog geen bronmateriaal">
+        <EmptyState icon={<CourseIcon size={40} />} title="Nog geen bronmateriaal">
           <p>
             Kies hierboven een bestand of plak je tekst. Je ziet dan eerst wat eruit komt — pas daarna beslis
             jij wat ermee gebeurt.
@@ -447,12 +481,16 @@ function SourceCard({
   const counterId = `teller-${item.key}`;
   const tooLong = item.text.length > MAX_COMFORT_CHARS;
   const empty = item.text.trim() === '';
+  const kindMeta = KIND_META[item.kind];
 
   return (
     <div className="card card-pad">
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 220 }}>
-          <Field label="Titel van deze bron">
+          <Field
+            label="Titel van deze bron"
+            hint={item.kind === 'text' ? 'Ook de titel van de cursus bij "Omzetten naar cursus" — pas ze hier aan.' : undefined}
+          >
             <input
               className="input"
               type="text"
@@ -461,7 +499,7 @@ function SourceCard({
             />
           </Field>
           <p className="hint" style={{ margin: '-8px 0 0' }}>
-            <span className="badge badge-brand">{KIND_LABEL[item.kind]}</span>{' '}
+            <span className="badge badge-brand"><kindMeta.icon size={13} /> {kindMeta.label}</span>{' '}
             uit <strong>{item.origin}</strong> · {item.sourceLabel}
           </p>
         </div>
@@ -471,15 +509,19 @@ function SourceCard({
           onClick={onRemove}
           aria-label={`Bron “${item.title}” verwijderen uit deze lijst`}
         >
-          ✕ Verwijderen
+          <DeleteIcon size={16} /> Verwijderen
         </button>
       </div>
 
       {item.warnings.length > 0 && (
         <div className="callout warn" style={{ margin: '12px 0' }} role="status">
-          {item.warnings.map((w, i) => (
-            <p key={i} style={{ margin: i === 0 ? 0 : '6px 0 0' }}>⚠️ {w}</p>
-          ))}
+          <div style={{ minWidth: 0 }}>
+            {item.warnings.map((w, i) => (
+              <p key={i} style={{ margin: i === 0 ? 0 : '6px 0 0' }}>
+                <WarningIcon size={16} className="icon-inline" aria-hidden /> {w}
+              </p>
+            ))}
+          </div>
         </div>
       )}
 
@@ -502,20 +544,25 @@ function SourceCard({
             style={{ margin: '-8px 0 12px', ...(tooLong ? { color: 'var(--warn)', fontWeight: 600 } : {}) }}
           >
             {item.text.length.toLocaleString('nl-BE')} tekens
-            {tooLong && ' — ⚠️ erg lang: knip in kleinere stukken voor een beter resultaat'}
+            {tooLong && (
+              <>
+                {' — '}<WarningIcon size={14} className="icon-inline" aria-hidden /> erg lang: knip in kleinere
+                stukken voor een beter resultaat
+              </>
+            )}
           </p>
 
           <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14 }}>
             <strong style={{ display: 'block', marginBottom: 8 }}>Wat wil je hiermee doen?</strong>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button className="btn btn-ai" onClick={onCourseAI} disabled={empty}>
-                ✨ Cursus bouwen met AI
+                <AIIcon size={16} /> Cursus bouwen met AI
               </button>
               <button className="btn btn-ai" onClick={onWidgetsAI} disabled={empty}>
-                ✨ Oefeningen maken met AI
+                <AIIcon size={16} /> Oefeningen maken met AI
               </button>
               <button className="btn btn-ghost" onClick={onCourse} disabled={empty}>
-                📘 Omzetten naar cursus (zonder AI)
+                <CourseIcon size={16} /> Omzetten naar cursus (zonder AI)
               </button>
             </div>
             <p className="hint" style={{ margin: '8px 0 0' }}>
@@ -531,14 +578,14 @@ function SourceCard({
           <p style={{ margin: '0 0 10px' }}>{describeBundle(item)}</p>
           {item.imported ? (
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span className="badge badge-ok">✓ geïmporteerd</span>
+              <span className="badge badge-ok"><CheckIcon size={13} /> geïmporteerd</span>
               <span>{item.imported}</span>
               {item.importedTo && (
                 <Link className="btn btn-sm btn-ghost" to={item.importedTo.to}>{item.importedTo.label}</Link>
               )}
             </div>
           ) : (
-            <button className="btn btn-primary" onClick={onImport}>📥 Nu importeren</button>
+            <button className="btn btn-primary" onClick={onImport}><ImportIcon size={16} /> Nu importeren</button>
           )}
         </div>
       )}

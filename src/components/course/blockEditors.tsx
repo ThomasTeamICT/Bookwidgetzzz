@@ -4,7 +4,12 @@
 // zijn eigen compacte formulier; BLOCK_META levert icoon/naam/uitleg voor
 // blokkaarten en het blokkenpalet.
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  AlignLeft, BookMarked, ChevronsUpDown, Columns2, FileText, Globe, Heading2,
+  Image as ImageTypeIcon, ListChecks, type LucideIcon, Minus, Paperclip, Puzzle, Quote,
+  Table as TableTypeIcon, Video as VideoTypeIcon, Volume2,
+} from 'lucide-react';
 import type {
   AccordionBlock, AttachmentBlock, AudioBlock, CalloutBlock, ChecklistBlock,
   ColumnsBlock, CourseBlock, CourseBlockType, EmbedBlock, HeadingBlock,
@@ -20,27 +25,32 @@ import { deletePdf, formatBytes, getPdf } from '../../lib/pdfStore';
 import { pdfReferenceCount } from '../../lib/courses';
 import { CheckRow, Field, ImagePicker, useToast } from '../ui';
 import { renderMarkdown } from '../../lib/markdown';
+import { hasMarkdownFormatting } from '../../lib/textFormatting';
+import {
+  AddIcon, DeleteIcon, EditIcon, GoalIcon, InfoIcon, MoveDownIcon, MoveUpIcon,
+  PreviewIcon, SearchIcon, TipIcon, WarningIcon,
+} from '../icons';
 
 // ── Metadata: icoon, naam en één zin uitleg per bloktype ────────────────────
 
-export const BLOCK_META: Record<CourseBlockType, { icon: string; name: string; blurb: string }> = {
-  heading: { icon: '🔠', name: 'Tussenkop', blurb: 'Structuur in je pagina met een kop (H2 of H3).' },
-  text: { icon: '📝', name: 'Tekst', blurb: 'Alinea’s met eenvoudige opmaak: vet, cursief, lijsten en links.' },
-  image: { icon: '🖼️', name: 'Afbeelding', blurb: 'Afbeelding met bijschrift, in drie groottes.' },
-  video: { icon: '🎬', name: 'Video', blurb: 'YouTube- of Vimeo-video, afspeelbaar in de cursus.' },
-  audio: { icon: '🔊', name: 'Audio', blurb: 'Audiofragment dat je zelf oplaadt (bv. uitspraak of instructie).' },
-  pdf: { icon: '📄', name: 'Pdf-document', blurb: 'Toon een pdf rechtstreeks in de cursus — leerlingen bladeren, zoomen en openen hem desnoods in een nieuw tabblad.' },
-  embed: { icon: '🌐', name: 'Insluiting', blurb: 'Externe webpagina in een kader: GeoGebra, kaarten, …' },
-  callout: { icon: '💡', name: 'Kadertje', blurb: 'Opvallend kader: info, tip, let op of leerdoelen.' },
-  quote: { icon: '💬', name: 'Citaat', blurb: 'Citaat met bronvermelding.' },
-  divider: { icon: '➖', name: 'Scheidingslijn', blurb: 'Visuele adempauze tussen twee delen.' },
-  attachment: { icon: '📎', name: 'Bijlage', blurb: 'Downloadbaar bestand voor je leerlingen.' },
-  accordion: { icon: '📂', name: 'Uitklapper', blurb: 'Uitklapbare onderdelen — handig voor extra uitleg.' },
-  columns: { icon: '🔳', name: 'Twee kolommen', blurb: 'Twee tekstkolommen naast elkaar, bv. voor vergelijkingen.' },
-  table: { icon: '📋', name: 'Tabel', blurb: 'Eenvoudige tabel met optionele kopregel.' },
-  terms: { icon: '📖', name: 'Begrippen', blurb: 'Begrippenlijst met term en uitleg.' },
-  checklist: { icon: '☑️', name: 'Afvinklijst', blurb: 'Lijstje dat de leerling zelf afvinkt (telt mee in de voortgang).' },
-  widget: { icon: '🧩', name: 'Widget', blurb: 'Een oefening of toets uit Boosterz, inline afspeelbaar.' },
+export const BLOCK_META: Record<CourseBlockType, { icon: LucideIcon; name: string; blurb: string }> = {
+  heading: { icon: Heading2, name: 'Tussenkop', blurb: 'Structuur in je pagina met een kop (H2 of H3).' },
+  text: { icon: AlignLeft, name: 'Tekst', blurb: 'Alinea’s met eenvoudige opmaak: vet, cursief, lijsten en links.' },
+  image: { icon: ImageTypeIcon, name: 'Afbeelding', blurb: 'Afbeelding met bijschrift, in drie groottes.' },
+  video: { icon: VideoTypeIcon, name: 'Video', blurb: 'YouTube- of Vimeo-video, afspeelbaar in de cursus.' },
+  audio: { icon: Volume2, name: 'Audio', blurb: 'Audiofragment dat je zelf oplaadt (bv. uitspraak of instructie).' },
+  pdf: { icon: FileText, name: 'Pdf-document', blurb: 'Toon een pdf rechtstreeks in de cursus — leerlingen bladeren, zoomen en openen hem desnoods in een nieuw tabblad.' },
+  embed: { icon: Globe, name: 'Insluiting', blurb: 'Externe webpagina in een kader: GeoGebra, kaarten, …' },
+  callout: { icon: TipIcon, name: 'Kadertje', blurb: 'Opvallend kader: info, tip, let op of leerdoelen.' },
+  quote: { icon: Quote, name: 'Citaat', blurb: 'Citaat met bronvermelding.' },
+  divider: { icon: Minus, name: 'Scheidingslijn', blurb: 'Visuele adempauze tussen twee delen.' },
+  attachment: { icon: Paperclip, name: 'Bijlage', blurb: 'Downloadbaar bestand voor je leerlingen.' },
+  accordion: { icon: ChevronsUpDown, name: 'Uitklapper', blurb: 'Uitklapbare onderdelen — handig voor extra uitleg.' },
+  columns: { icon: Columns2, name: 'Twee kolommen', blurb: 'Twee tekstkolommen naast elkaar, bv. voor vergelijkingen.' },
+  table: { icon: TableTypeIcon, name: 'Tabel', blurb: 'Eenvoudige tabel met optionele kopregel.' },
+  terms: { icon: BookMarked, name: 'Begrippen', blurb: 'Begrippenlijst met term en uitleg.' },
+  checklist: { icon: ListChecks, name: 'Afvinklijst', blurb: 'Lijstje dat de leerling zelf afvinkt (telt mee in de voortgang).' },
+  widget: { icon: Puzzle, name: 'Widget', blurb: 'Een oefening of toets uit Boosterz, inline afspeelbaar.' },
 };
 
 /** Volgorde voor het blokkenpalet. */
@@ -48,6 +58,18 @@ export const PALETTE_ORDER: CourseBlockType[] = [
   'text', 'heading', 'image', 'video', 'audio', 'pdf', 'callout', 'quote', 'widget',
   'checklist', 'terms', 'accordion', 'columns', 'table', 'embed', 'attachment', 'divider',
 ];
+
+const CALLOUT_KIND_ICONS: Record<CalloutBlock['kind'], LucideIcon> = {
+  info: InfoIcon,
+  tip: TipIcon,
+  warn: WarningIcon,
+  goal: GoalIcon,
+};
+
+/** Icoon voor een blok: bij een kadertje het icoon van de gekozen soort. */
+export function blockIcon(block: CourseBlock): LucideIcon {
+  return block.type === 'callout' ? CALLOUT_KIND_ICONS[block.kind] : BLOCK_META[block.type].icon;
+}
 
 /** Kopie van een blok met verse ids — ook voor geneste items. */
 export function duplicateBlock(block: CourseBlock): CourseBlock {
@@ -156,6 +178,11 @@ function HeadingEditor({ b, onChange }: { b: HeadingBlock; onChange: OnChange })
 }
 
 function TextEditor({ b, onChange }: { b: TextBlock; onChange: OnChange }) {
+  // Het voorbeeld toont zichzelf zodra de tekst opmaak bevat (koppen, lijsten,
+  // vet, links, tabellen, afbeeldingen); anders alleen op vraag, met de knop
+  // hieronder. Zo staat een gewoon zinnetje niet twee keer op het scherm.
+  const [manualPreview, setManualPreview] = useState(false);
+  const autoPreview = hasMarkdownFormatting(b.markdown);
   return (
     <div>
       <textarea
@@ -166,8 +193,20 @@ function TextEditor({ b, onChange }: { b: TextBlock; onChange: OnChange }) {
         aria-label="Tekst van het blok"
         onChange={(e) => onChange({ ...b, markdown: e.target.value })}
       />
-      <span className="hint">{MD_HINT}</span>
-      <MarkdownPreview md={b.markdown} />
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
+        <span className="hint">{MD_HINT}</span>
+        {!autoPreview && (
+          <button
+            type="button"
+            className="btn btn-quiet btn-sm"
+            aria-pressed={manualPreview}
+            onClick={() => setManualPreview((v) => !v)}
+          >
+            <PreviewIcon size={16} /> Voorbeeld
+          </button>
+        )}
+      </div>
+      {(autoPreview || manualPreview) && <MarkdownPreview md={b.markdown} />}
     </div>
   );
 }
@@ -239,7 +278,7 @@ function AudioEditor({ b, onChange }: { b: AudioBlock; onChange: OnChange }) {
       ) : (
         <div style={{ marginBottom: 10 }}>
           <button className="btn btn-sm btn-ghost" onClick={() => inputRef.current?.click()}>
-            🔊 Audiobestand kiezen…
+            <Volume2 size={16} /> Audiobestand kiezen…
           </button>
           <span className="hint" style={{ display: 'block', marginTop: 4 }}>
             Kleine bestanden werken het best — alles wordt in de browser bewaard.
@@ -323,12 +362,15 @@ function PdfBlockEditor({ b, onChange }: { b: PdfBlock; onChange: OnChange }) {
     <div>
       {b.pdfId ? (
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            📄 {b.name || (typeof stored === 'object' && stored?.name) || 'pdf-bestand'}
+          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <FileText size={16} aria-hidden style={{ flex: 'none' }} />
+            {b.name || (typeof stored === 'object' && stored?.name) || 'pdf-bestand'}
             {typeof stored === 'object' && stored && <span className="hint"> ({formatBytes(stored.size)})</span>}
           </span>
           {stored === 'weg' && (
-            <span className="hint" style={{ color: 'var(--err)' }}>⚠ niet gevonden op dit toestel</span>
+            <span className="hint" style={{ color: 'var(--err)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <WarningIcon size={14} /> niet gevonden op dit toestel
+            </span>
           )}
           <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => inputRef.current?.click()}>
             {busy ? 'Bezig…' : 'Vervangen…'}
@@ -339,7 +381,7 @@ function PdfBlockEditor({ b, onChange }: { b: PdfBlock; onChange: OnChange }) {
         <>
           <div style={{ marginBottom: 10 }}>
             <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => inputRef.current?.click()}>
-              📄 {busy ? 'Bezig met bewaren…' : 'Pdf-bestand kiezen…'}
+              <FileText size={16} /> {busy ? 'Bezig met bewaren…' : 'Pdf-bestand kiezen…'}
             </button>
             <span className="hint" style={{ marginLeft: 8 }}>of gebruik een URL:</span>
           </div>
@@ -400,8 +442,8 @@ function EmbedEditor({ b, onChange }: { b: EmbedBlock; onChange: OnChange }) {
         />
       </Field>
       {insecure && (
-        <p className="hint" style={{ color: 'var(--err)', marginTop: -6 }}>
-          ⚠ Dit adres begint niet met https:// en zal bij de leerling niet getoond worden.
+        <p className="hint" style={{ color: 'var(--err)', marginTop: -6, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <WarningIcon size={16} /> Dit adres begint niet met https:// en zal bij de leerling niet getoond worden.
         </p>
       )}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -431,16 +473,17 @@ function EmbedEditor({ b, onChange }: { b: EmbedBlock; onChange: OnChange }) {
 }
 
 const CALLOUT_KINDS: { value: CalloutBlock['kind']; label: string }[] = [
-  { value: 'info', label: 'ℹ️ Info' },
-  { value: 'tip', label: '💡 Tip' },
-  { value: 'warn', label: '⚠️ Let op' },
-  { value: 'goal', label: '🎯 Leerdoelen' },
+  { value: 'info', label: 'Info' },
+  { value: 'tip', label: 'Tip' },
+  { value: 'warn', label: 'Let op' },
+  { value: 'goal', label: 'Leerdoelen' },
 ];
 
 function CalloutEditor({ b, onChange }: { b: CalloutBlock; onChange: OnChange }) {
+  const KindIcon = CALLOUT_KIND_ICONS[b.kind];
   return (
     <div>
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <Field label="Soort">
           <select
             className="select input-sm"
@@ -451,6 +494,9 @@ function CalloutEditor({ b, onChange }: { b: CalloutBlock; onChange: OnChange })
             {CALLOUT_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
           </select>
         </Field>
+        <span aria-hidden style={{ display: 'inline-flex', paddingBottom: 10, color: 'var(--text-soft)' }}>
+          <KindIcon size={18} />
+        </span>
         <Field label="Titel (optioneel)">
           <input
             className="input input-sm"
@@ -503,13 +549,16 @@ function AttachmentEditor({ b, onChange }: { b: AttachmentBlock; onChange: OnCha
     <div>
       {b.dataUrl ? (
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-          <span>📎 {b.name || 'bestand'} <span className="hint">({dataUrlSize(b.dataUrl)})</span></span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Paperclip size={16} aria-hidden />
+            {b.name || 'bestand'} <span className="hint">({dataUrlSize(b.dataUrl)})</span>
+          </span>
           <button className="btn btn-sm btn-ghost" onClick={() => onChange({ ...b, dataUrl: '' })}>Verwijderen</button>
         </div>
       ) : (
         <div style={{ marginBottom: 10 }}>
           <button className="btn btn-sm btn-ghost" onClick={() => inputRef.current?.click()}>
-            📎 Bestand kiezen…
+            <Paperclip size={16} /> Bestand kiezen…
           </button>
           <span className="hint" style={{ display: 'block', marginTop: 4 }}>
             Voor grote bestanden werkt een link (bv. naar je schoolcloud) in een tekstblok beter.
@@ -560,11 +609,11 @@ function AccordionEditor({ b, onChange }: { b: AccordionBlock; onChange: OnChang
               onChange={(e) => setItems(b.items.map((x) => (x.id === it.id ? { ...x, title: e.target.value } : x)))}
             />
             <button className="btn btn-quiet btn-sm btn-icon" disabled={i === 0} aria-label="Onderdeel omhoog"
-              onClick={() => setItems(moveItem(b.items, i, -1))}>↑</button>
+              onClick={() => setItems(moveItem(b.items, i, -1))}><MoveUpIcon size={16} /></button>
             <button className="btn btn-quiet btn-sm btn-icon" disabled={i === b.items.length - 1} aria-label="Onderdeel omlaag"
-              onClick={() => setItems(moveItem(b.items, i, 1))}>↓</button>
+              onClick={() => setItems(moveItem(b.items, i, 1))}><MoveDownIcon size={16} /></button>
             <button className="btn btn-quiet btn-sm btn-icon" disabled={b.items.length <= 1} aria-label="Onderdeel verwijderen"
-              onClick={() => setItems(b.items.filter((x) => x.id !== it.id))}>🗑</button>
+              onClick={() => setItems(b.items.filter((x) => x.id !== it.id))}><DeleteIcon size={16} /></button>
           </div>
           <textarea
             className="textarea"
@@ -577,7 +626,7 @@ function AccordionEditor({ b, onChange }: { b: AccordionBlock; onChange: OnChang
         </div>
       ))}
       <button className="btn btn-sm btn-ghost" onClick={() => setItems([...b.items, { id: uid(), title: '', text: '' }])}>
-        + Onderdeel
+        <AddIcon size={16} /> Onderdeel
       </button>
     </div>
   );
@@ -632,7 +681,7 @@ function TableEditor({ b, onChange }: { b: TableBlock; onChange: OnChange }) {
                   title="Kolom verwijderen"
                   onClick={() => setRows(rows.map((r) => r.filter((_, j) => j !== ci)))}
                 >
-                  ✕
+                  <DeleteIcon size={16} />
                 </button>
               ))}
               <span aria-hidden />
@@ -657,15 +706,15 @@ function TableEditor({ b, onChange }: { b: TableBlock; onChange: OnChange }) {
                 title="Rij verwijderen"
                 onClick={() => setRows(rows.filter((_, i) => i !== ri))}
               >
-                🗑
+                <DeleteIcon size={16} />
               </button>
             </React.Fragment>
           ))}
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <button className="btn btn-sm btn-ghost" onClick={() => setRows([...rows, Array(Math.max(cols, 1)).fill('')])}>+ Rij</button>
-        <button className="btn btn-sm btn-ghost" onClick={() => setRows(rows.map((r) => [...r, '']))}>+ Kolom</button>
+        <button className="btn btn-sm btn-ghost" onClick={() => setRows([...rows, Array(Math.max(cols, 1)).fill('')])}><AddIcon size={16} /> Rij</button>
+        <button className="btn btn-sm btn-ghost" onClick={() => setRows(rows.map((r) => [...r, '']))}><AddIcon size={16} /> Kolom</button>
       </div>
     </div>
   );
@@ -694,11 +743,11 @@ function TermsEditor({ b, onChange }: { b: TermsBlock; onChange: OnChange }) {
             onChange={(e) => setItems(b.items.map((x) => (x.id === it.id ? { ...x, uitleg: e.target.value } : x)))}
           />
           <button className="btn btn-quiet btn-sm btn-icon" disabled={b.items.length <= 1} aria-label={`Term ${i + 1} verwijderen`}
-            onClick={() => setItems(b.items.filter((x) => x.id !== it.id))}>🗑</button>
+            onClick={() => setItems(b.items.filter((x) => x.id !== it.id))}><DeleteIcon size={16} /></button>
         </div>
       ))}
       <button className="btn btn-sm btn-ghost" onClick={() => setItems([...b.items, { id: uid(), term: '', uitleg: '' }])}>
-        + Begrip
+        <AddIcon size={16} /> Begrip
       </button>
     </div>
   );
@@ -728,11 +777,11 @@ function ChecklistEditor({ b, onChange }: { b: ChecklistBlock; onChange: OnChang
             onChange={(e) => setItems(b.items.map((x) => (x.id === it.id ? { ...x, text: e.target.value } : x)))}
           />
           <button className="btn btn-quiet btn-sm btn-icon" disabled={b.items.length <= 1} aria-label={`Item ${i + 1} verwijderen`}
-            onClick={() => setItems(b.items.filter((x) => x.id !== it.id))}>🗑</button>
+            onClick={() => setItems(b.items.filter((x) => x.id !== it.id))}><DeleteIcon size={16} /></button>
         </div>
       ))}
       <button className="btn btn-sm btn-ghost" onClick={() => setItems([...b.items, { id: uid(), text: '' }])}>
-        + Item
+        <AddIcon size={16} /> Item
       </button>
     </div>
   );
@@ -742,7 +791,7 @@ function ChecklistEditor({ b, onChange }: { b: ChecklistBlock; onChange: OnChang
 
 function WidgetBlockEditor({ b, onChange }: { b: WidgetBlock; onChange: OnChange }) {
   // Live meebewegen met de opslag: wie in een ander tabblad net een widget
-  // maakte ("🆕 Nieuwe widget maken"), ziet hem hier meteen verschijnen.
+  // maakte ("Nieuwe widget maken"), ziet hem hier meteen verschijnen.
   const [widgets, setWidgets] = useState(() => getWidgets());
   useEffect(() => onStorageChange(() => setWidgets(getWidgets())), []);
   const [search, setSearch] = useState('');
@@ -767,7 +816,7 @@ function WidgetBlockEditor({ b, onChange }: { b: WidgetBlock; onChange: OnChange
         <p className="hint" style={{ marginTop: 0 }}>
           Je hebt nog geen widgets. Maak er eerst één — daarna kan je hem hier in de cursus zetten.
         </p>
-        <a className="btn btn-sm btn-ghost" href="#/nieuw" target="_blank" rel="noopener noreferrer">🆕 Nieuwe widget maken</a>
+        <a className="btn btn-sm btn-ghost" href="#/nieuw" target="_blank" rel="noopener noreferrer"><AddIcon size={16} /> Nieuwe widget maken</a>
       </div>
     );
   }
@@ -775,14 +824,16 @@ function WidgetBlockEditor({ b, onChange }: { b: WidgetBlock; onChange: OnChange
   return (
     <div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-        <input
-          className="input input-sm"
-          style={{ maxWidth: 200 }}
-          value={search}
-          placeholder="🔍 Zoek widget…"
-          aria-label="Zoek een widget op titel, code of type"
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div className="course-search" style={{ maxWidth: 200 }}>
+          <SearchIcon size={16} aria-hidden />
+          <input
+            className="input input-sm"
+            value={search}
+            placeholder="Zoek widget…"
+            aria-label="Zoek een widget op titel, code of type"
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
         <select
           className="select input-sm"
           style={{ flex: 1, minWidth: 220 }}
@@ -802,13 +853,13 @@ function WidgetBlockEditor({ b, onChange }: { b: WidgetBlock; onChange: OnChange
         </select>
       </div>
       {b.widgetId && !selected && (
-        <p className="hint" style={{ color: 'var(--err)' }}>
-          ⚠ Deze widget bestaat niet (meer) in deze browser. Kies een andere.
+        <p className="hint" style={{ color: 'var(--err)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <WarningIcon size={16} /> Deze widget bestaat niet (meer) in deze browser. Kies een andere.
         </p>
       )}
       {selected && (
         <div className="callout" style={{ marginBottom: 10, alignItems: 'center' }}>
-          <span aria-hidden>🧩</span>
+          <Puzzle size={18} aria-hidden />
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <span>
               <strong>{selected.title}</strong>
@@ -817,7 +868,7 @@ function WidgetBlockEditor({ b, onChange }: { b: WidgetBlock; onChange: OnChange
                 : ' — oefenwidget zonder inzendingen'}
             </span>
             <a className="btn btn-sm btn-ghost" href={`#/bewerk/${selected.id}`} target="_blank" rel="noopener noreferrer">
-              ✏️ Widget bewerken
+              <EditIcon size={16} /> Widget bewerken
             </a>
           </div>
         </div>
@@ -830,7 +881,7 @@ function WidgetBlockEditor({ b, onChange }: { b: WidgetBlock; onChange: OnChange
         />
       </Field>
       <a className="btn btn-sm btn-quiet" href="#/nieuw" target="_blank" rel="noopener noreferrer">
-        🆕 Nieuwe widget maken
+        <AddIcon size={16} /> Nieuwe widget maken
       </a>
     </div>
   );

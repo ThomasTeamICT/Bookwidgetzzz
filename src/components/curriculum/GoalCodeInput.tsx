@@ -8,12 +8,13 @@
 
 import React, { useId, useMemo, useState } from 'react';
 import { allGoalOptions, findGoalByCode, normalizeGoalCode, shortGoalText } from '../../lib/curriculum';
+import { DeleteIcon } from '../icons';
 
 export function GoalCodeInput({
   value,
   onChange,
   curriculumId,
-  label = '🎯 Leerplandoelen (codes)',
+  label = 'Leerplandoelen (codes)',
   hint = 'Typ een code of kies uit de lijst. De code koppelt deze sectie aan je leerplan, de dekking en het klasoverzicht.',
   placeholder = 'bv. NW 4.1',
 }: {
@@ -82,12 +83,12 @@ export function GoalCodeInput({
                 </span>
                 <button
                   type="button"
-                  className="btn btn-quiet btn-sm btn-icon"
+                  className="btn btn-quiet btn-sm btn-icon goalcode-chip-remove"
                   style={{ minWidth: 26, minHeight: 26, padding: 0, borderRadius: 999 }}
                   aria-label={`Doel ${code} loskoppelen`}
                   onClick={() => remove(code)}
                 >
-                  ✕
+                  <DeleteIcon size={14} />
                 </button>
               </li>
             );

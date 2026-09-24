@@ -6,6 +6,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Blocks, ExternalLink } from 'lucide-react';
 import type { Course, CourseBlockType, CourseChapter, CourseSection } from '../lib/courseTypes';
 import { allSections } from '../lib/courseTypes';
 import type { Curriculum } from '../lib/curriculumTypes';
@@ -14,11 +15,16 @@ import { getCurricula, getCurriculum } from '../lib/curriculum';
 import { getWidgets } from '../lib/storage';
 import { uid } from '../lib/utils';
 import { CheckRow, ConfirmModal, EmptyState, Field, Modal, useToast } from '../components/ui';
-import { BLOCK_META, BlockEditor, PALETTE_ORDER, duplicateBlock } from '../components/course/blockEditors';
+import { BLOCK_META, BlockEditor, PALETTE_ORDER, blockIcon, duplicateBlock } from '../components/course/blockEditors';
 import { CourseAIModal } from '../components/course/CourseAIModal';
 import { GoalCodeInput } from '../components/curriculum/GoalCodeInput';
 import { GoalCoverage } from '../components/course/GoalCoverage';
 import type { OptimizePreset } from '../lib/aiCourse';
+import {
+  AddIcon, AIIcon, BackIcon, CheckIcon, CourseIcon, DeleteIcon, DuplicateIcon, GoalIcon,
+  MoveDownIcon, MoveUpIcon, PreviewIcon, PrintIcon, ResultsIcon, SettingsIcon,
+} from '../components/icons';
+import '../styles/cursus.css';
 
 // ── Immutabele hulpjes ──────────────────────────────────────────────────────
 
@@ -138,9 +144,9 @@ export function CourseEditorPage() {
   if (!course) {
     return (
       <div className="page page-narrow" style={{ paddingTop: 60 }}>
-        <EmptyState icon="📚" title="Cursus niet gevonden">
+        <EmptyState icon={<CourseIcon size={40} />} title="Cursus niet gevonden">
           <p style={{ color: 'var(--text-soft)' }}>Deze cursus bestaat niet (meer) in deze browser.</p>
-          <Link to="/cursussen" className="btn btn-primary">← Naar mijn cursussen</Link>
+          <Link to="/cursussen" className="btn btn-primary"><BackIcon size={16} /> Naar mijn cursussen</Link>
         </EmptyState>
       </div>
     );
@@ -190,9 +196,10 @@ export function CourseEditorPage() {
 
   return (
     <div className="appshell">
+      <h1 className="sr-only">Cursus bewerken: {course.title.trim() || 'naamloze cursus'}</h1>
       <header className="topbar" style={{ flexWrap: 'wrap', rowGap: 6 }}>
         <button className="btn btn-quiet btn-sm" onClick={() => navigate('/cursussen')} aria-label="Terug naar mijn cursussen">
-          ← Terug
+          <BackIcon size={16} /> Terug
         </button>
         <span
           className="type-icon"
@@ -208,8 +215,8 @@ export function CourseEditorPage() {
           aria-label="Titel van de cursus"
           onChange={(e) => setCourse({ ...course, title: e.target.value })}
         />
-        <span className="hint" aria-live="polite" style={{ minWidth: 84 }}>
-          {saveState === 'saving' ? 'Bewaren…' : saveState === 'saved' ? '✓ Bewaard' : ''}
+        <span className="hint" aria-live="polite" style={{ minWidth: 84, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          {saveState === 'saving' ? 'Bewaren…' : saveState === 'saved' ? <><CheckIcon size={14} /> Bewaard</> : ''}
         </span>
         <div className="topbar-spacer" />
         <span className="badge" title="Cursuscode" style={{ fontFamily: 'monospace', letterSpacing: '0.15em' }}>{course.code}</span>
@@ -218,7 +225,7 @@ export function CourseEditorPage() {
           onClick={() => { flushNow(); window.open(courseReadUrl(course.code), '_blank'); }}
           title="Open de cursus zoals je leerlingen hem zien"
         >
-          👁️ Als leerling
+          <PreviewIcon size={16} /> Als leerling
         </button>
         <a
           className="btn btn-sm btn-ghost"
@@ -228,39 +235,34 @@ export function CourseEditorPage() {
           onClick={flushNow}
           title="Afdrukken of als PDF bewaren"
         >
-          🖨️ Afdrukken
+          <PrintIcon size={16} /> Afdrukken
         </a>
         <button className="btn btn-sm btn-ai" onClick={() => setAiModal({ mode: 'rework' })} title="Laat AI de hele cursus herwerken of uitbreiden">
-          ✨ Herwerk met AI
+          <AIIcon size={16} /> Herwerk met AI
         </button>
         <button
           className="btn btn-sm btn-ai"
           onClick={() => setAiModal({ mode: 'optimize' })}
           title="Taal vereenvoudigen, differentiëren, controlevragen toevoegen of de hiaten t.o.v. het leerplan vullen"
         >
-          ✨ Optimaliseer
+          <AIIcon size={16} /> Optimaliseer
         </button>
         <button
           className="btn btn-sm btn-ghost"
           onClick={() => setGoalsOpen(true)}
           title="Welke leerplandoelen zijn gedekt, en welke secties dragen nog geen doel?"
         >
-          🎯 Doelendekking
+          <GoalIcon size={16} /> Doelendekking
         </button>
         <Link to={`/cursus/volg/${course.id}`} className="btn btn-sm btn-ghost" title="Voortgang van je leerlingen">
-          📊 Voortgang
+          <ResultsIcon size={16} /> Voortgang
         </Link>
-        <button className="btn btn-sm btn-ghost btn-icon" onClick={() => setSettingsOpen(true)} aria-label="Cursusinstellingen" title="Cursusinstellingen">
-          ⚙️
+        <button className="btn btn-sm btn-ghost" onClick={() => setSettingsOpen(true)} title="Cursusinstellingen">
+          <SettingsIcon size={16} /> Instellingen
         </button>
       </header>
 
-      <main
-        style={{
-          flex: 1, display: 'grid', gridTemplateColumns: '300px minmax(0, 1fr)', gap: 18,
-          width: '100%', maxWidth: 1400, margin: '0 auto', padding: '18px 22px 60px', alignItems: 'start',
-        }}
-      >
+      <main className="course-editor-main">
         <StructurePane
           course={course}
           selectedId={selected?.section.id}
@@ -292,7 +294,7 @@ export function CourseEditorPage() {
             onOpenPalette={setPaletteAt}
           />
         ) : (
-          <EmptyState icon="🧱" title="Geen sectie geselecteerd">
+          <EmptyState icon={<Blocks size={40} />} title="Geen sectie geselecteerd">
             <p style={{ color: 'var(--text-soft)' }}>Voeg links een hoofdstuk en een sectie toe om te beginnen.</p>
           </EmptyState>
         )}
@@ -305,12 +307,13 @@ export function CourseEditorPage() {
       )}
 
       {goalsOpen && (
-        <Modal title="🎯 Doelendekking" onClose={() => setGoalsOpen(false)} wide>
+        <Modal title="Doelendekking" onClose={() => setGoalsOpen(false)} wide>
           <GoalCoverage
             course={course}
             curriculum={curriculum}
             widgets={widgets}
             onFillGaps={() => { setGoalsOpen(false); setAiModal({ mode: 'optimize', preset: 'hiaten' }); }}
+            onOpenSettings={() => { setGoalsOpen(false); setSettingsOpen(true); }}
           />
         </Modal>
       )}
@@ -338,7 +341,7 @@ export function CourseEditorPage() {
           onResult={(result: Course) => {
             setCourse(result);
             setAiModal(null);
-            toast('✨ Cursus bijgewerkt — kijk alles even na', 'ok');
+            toast('Cursus bijgewerkt — kijk alles even na', 'ok');
           }}
         />
       )}
@@ -373,10 +376,7 @@ function StructurePane({
   };
 
   return (
-    <nav
-      aria-label="Cursusstructuur"
-      style={{ position: 'sticky', top: 70, maxHeight: 'calc(100vh - 92px)', overflowY: 'auto', paddingRight: 2 }}
-    >
+    <nav aria-label="Cursusstructuur" className="course-structure">
       {course.chapters.map((ch, ci) => (
         <div key={ch.id} className="card" style={{ padding: 10, marginBottom: 10 }}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -399,9 +399,9 @@ function StructurePane({
           </div>
           <div style={{ display: 'flex', gap: 2, alignItems: 'center', margin: '4px 0 6px' }}>
             <button className="btn btn-quiet btn-sm btn-icon" disabled={ci === 0} aria-label={`Hoofdstuk ${ci + 1} omhoog`}
-              onClick={() => onChange({ ...course, chapters: moveItem(course.chapters, ci, -1) })}>↑</button>
+              onClick={() => onChange({ ...course, chapters: moveItem(course.chapters, ci, -1) })}><MoveUpIcon size={16} /></button>
             <button className="btn btn-quiet btn-sm btn-icon" disabled={ci === course.chapters.length - 1} aria-label={`Hoofdstuk ${ci + 1} omlaag`}
-              onClick={() => onChange({ ...course, chapters: moveItem(course.chapters, ci, 1) })}>↓</button>
+              onClick={() => onChange({ ...course, chapters: moveItem(course.chapters, ci, 1) })}><MoveDownIcon size={16} /></button>
             <button
               className="btn btn-quiet btn-sm btn-icon"
               disabled={course.chapters.length <= 1}
@@ -409,14 +409,15 @@ function StructurePane({
               title={course.chapters.length <= 1 ? 'Een cursus heeft minstens één hoofdstuk' : 'Hoofdstuk verwijderen'}
               onClick={() => onAskDelete({ kind: 'chapter', chapterId: ch.id })}
             >
-              🗑
+              <DeleteIcon size={16} />
             </button>
             <span style={{ flex: 1 }} />
-            <button className="btn btn-quiet btn-sm" onClick={() => addSection(ch.id)}>+ Sectie</button>
+            <button className="btn btn-quiet btn-sm" onClick={() => addSection(ch.id)}><AddIcon size={16} /> Sectie</button>
           </div>
 
           {ch.sections.map((se, si) => {
             const sel = se.id === selectedId;
+            const sectionTitle = se.title.trim() || 'Naamloze sectie';
             return (
               <div key={se.id} style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2 }}>
                 <button
@@ -431,16 +432,16 @@ function StructurePane({
                     fontWeight: sel ? 700 : 500,
                   }}
                 >
-                  <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {se.title.trim() || 'Naamloze sectie'}
+                  <span className="course-section-title" style={{ flex: 1, minWidth: 0 }} title={sectionTitle}>
+                    {sectionTitle}
                   </span>
                   {((se.goals?.length ?? 0) + (se.goalCodes?.length ?? 0)) > 0 && (
                     <span
                       title={se.goalCodes?.length ? `Leerplandoelen: ${se.goalCodes.join(', ')}` : 'Heeft leerdoelen'}
                       aria-label="heeft leerdoelen"
-                      style={{ fontSize: '0.8rem' }}
+                      style={{ display: 'inline-flex', flex: 'none' }}
                     >
-                      🎯
+                      <GoalIcon size={14} />
                     </span>
                   )}
                   {se.optional && (
@@ -449,12 +450,12 @@ function StructurePane({
                     </span>
                   )}
                 </button>
-                <button className="btn btn-quiet btn-sm btn-icon" disabled={si === 0} aria-label={`Sectie “${se.title}” omhoog`}
-                  onClick={() => onChange(patchChapter(course, ch.id, (c) => ({ ...c, sections: moveItem(c.sections, si, -1) })))}>↑</button>
-                <button className="btn btn-quiet btn-sm btn-icon" disabled={si === ch.sections.length - 1} aria-label={`Sectie “${se.title}” omlaag`}
-                  onClick={() => onChange(patchChapter(course, ch.id, (c) => ({ ...c, sections: moveItem(c.sections, si, 1) })))}>↓</button>
-                <button className="btn btn-quiet btn-sm btn-icon" aria-label={`Sectie “${se.title}” verwijderen`}
-                  onClick={() => onAskDelete({ kind: 'section', chapterId: ch.id, sectionId: se.id })}>🗑</button>
+                <button className="btn btn-quiet btn-sm btn-icon" disabled={si === 0} aria-label={`Sectie “${sectionTitle}” omhoog`}
+                  onClick={() => onChange(patchChapter(course, ch.id, (c) => ({ ...c, sections: moveItem(c.sections, si, -1) })))}><MoveUpIcon size={16} /></button>
+                <button className="btn btn-quiet btn-sm btn-icon" disabled={si === ch.sections.length - 1} aria-label={`Sectie “${sectionTitle}” omlaag`}
+                  onClick={() => onChange(patchChapter(course, ch.id, (c) => ({ ...c, sections: moveItem(c.sections, si, 1) })))}><MoveDownIcon size={16} /></button>
+                <button className="btn btn-quiet btn-sm btn-icon" aria-label={`Sectie “${sectionTitle}” verwijderen`}
+                  onClick={() => onAskDelete({ kind: 'section', chapterId: ch.id, sectionId: se.id })}><DeleteIcon size={16} /></button>
               </div>
             );
           })}
@@ -463,7 +464,7 @@ function StructurePane({
           )}
         </div>
       ))}
-      <button className="btn btn-ghost" style={{ width: '100%' }} onClick={addChapter}>+ Hoofdstuk</button>
+      <button className="btn btn-ghost" style={{ width: '100%' }} onClick={addChapter}><AddIcon size={16} /> Hoofdstuk</button>
     </nav>
   );
 }
@@ -502,10 +503,10 @@ function SectionPane({
             onChange={(e) => onPatch((s) => ({ ...s, title: e.target.value }))}
           />
           <button className="btn btn-sm btn-ai" onClick={onOpenAI} title="Laat AI deze sectie vullen met inhoud">
-            ✨ Vul deze sectie met AI
+            <AIIcon size={16} /> Vul deze sectie met AI
           </button>
           <button className="btn btn-sm btn-ai" onClick={onOpenExercises} title="Laat AI oefeningen maken bij de inhoud en de doelen van deze sectie">
-            ✨ Stel oefeningen voor
+            <AIIcon size={16} /> Stel oefeningen voor
           </button>
         </div>
         <div style={{ marginTop: 8 }}>
@@ -521,7 +522,7 @@ function SectionPane({
           onChange={(codes) => onPatch((s) => ({ ...s, goalCodes: codes.length ? codes : undefined }))}
         />
         <Field
-          label="🎯 Leerdoelen in eigen woorden (optioneel)"
+          label="Leerdoelen in eigen woorden (optioneel)"
           hint="Wat kan de leerling na deze sectie? Zichtbaar als feed-up en in de voortgangsweergave."
         >
           <div>
@@ -536,17 +537,17 @@ function SectionPane({
                   onChange={(e) => setGoals(goals.map((x, j) => (j === i ? e.target.value : x)))}
                 />
                 <button className="btn btn-quiet btn-sm btn-icon" aria-label={`Leerdoel ${i + 1} verwijderen`}
-                  onClick={() => setGoals(goals.filter((_, j) => j !== i))}>🗑</button>
+                  onClick={() => setGoals(goals.filter((_, j) => j !== i))}><DeleteIcon size={16} /></button>
               </div>
             ))}
-            <button className="btn btn-sm btn-ghost" onClick={() => setGoals([...goals, ''])}>+ Leerdoel</button>
+            <button className="btn btn-sm btn-ghost" onClick={() => setGoals([...goals, ''])}><AddIcon size={16} /> Leerdoel</button>
           </div>
         </Field>
       </div>
 
       {section.blocks.length === 0 && (
         <div className="empty-state" style={{ padding: '26px 16px' }}>
-          <div className="big" aria-hidden>🧱</div>
+          <div className="big" aria-hidden><Blocks size={40} /></div>
           <h3>Nog geen inhoud</h3>
           <p style={{ color: 'var(--text-soft)' }}>Voeg je eerste blok toe — tekst, video, een oefenwidget, …</p>
         </div>
@@ -562,7 +563,7 @@ function SectionPane({
                 title="Blok hier invoegen"
                 onClick={() => onOpenPalette(i)}
               >
-                +
+                <AddIcon size={16} />
               </button>
             </div>
           )}
@@ -582,7 +583,7 @@ function SectionPane({
       ))}
 
       <button className="btn btn-ghost" style={{ width: '100%', marginTop: 4 }} onClick={() => onOpenPalette(section.blocks.length)}>
-        + Blok toevoegen
+        <AddIcon size={16} /> Blok toevoegen
       </button>
     </div>
   );
@@ -602,20 +603,21 @@ function BlockCard({
   onDelete: () => void;
 }) {
   const meta = BLOCK_META[block.type];
+  const Icon = blockIcon(block);
   return (
     <div className="editor-item">
       <div className="editor-item-head">
-        <span aria-hidden>{meta.icon}</span>
+        <span aria-hidden style={{ display: 'flex' }}><Icon size={18} /></span>
         <strong style={{ fontSize: '0.9rem' }}>{meta.name}</strong>
         <span style={{ flex: 1 }} />
         <button className="btn btn-quiet btn-sm btn-icon" disabled={index === 0} aria-label={`Blok ${index + 1} omhoog`}
-          onClick={() => onMove(-1)}>↑</button>
+          onClick={() => onMove(-1)}><MoveUpIcon size={16} /></button>
         <button className="btn btn-quiet btn-sm btn-icon" disabled={index === count - 1} aria-label={`Blok ${index + 1} omlaag`}
-          onClick={() => onMove(1)}>↓</button>
+          onClick={() => onMove(1)}><MoveDownIcon size={16} /></button>
         <button className="btn btn-quiet btn-sm btn-icon" aria-label={`Blok ${index + 1} dupliceren`} title="Dupliceren"
-          onClick={onDuplicate}>📄</button>
+          onClick={onDuplicate}><DuplicateIcon size={16} /></button>
         <button className="btn btn-quiet btn-sm btn-icon" aria-label={`Blok ${index + 1} verwijderen`} title="Verwijderen"
-          onClick={onDelete}>🗑</button>
+          onClick={onDelete}><DeleteIcon size={16} /></button>
       </div>
       <div className="editor-item-body">
         <BlockEditor block={block} onChange={onChange} />
@@ -632,14 +634,15 @@ function BlockPalette({ onPick, onClose }: { onPick: (type: CourseBlockType) => 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10 }}>
         {PALETTE_ORDER.map((type) => {
           const meta = BLOCK_META[type];
+          const Icon = meta.icon;
           return (
             <button
               key={type}
-              className="card"
+              className="card block-palette-item"
               style={{ padding: '12px 14px', textAlign: 'left', cursor: 'pointer', font: 'inherit' }}
               onClick={() => onPick(type)}
             >
-              <div style={{ fontSize: '1.4rem', marginBottom: 4 }} aria-hidden>{meta.icon}</div>
+              <div className="block-palette-icon" aria-hidden><Icon size={24} /></div>
               <div style={{ fontWeight: 700, marginBottom: 2 }}>{meta.name}</div>
               <div className="hint" style={{ lineHeight: 1.35 }}>{meta.blurb}</div>
             </button>
@@ -665,7 +668,7 @@ function CourseSettingsModal({
 
   return (
     <Modal
-      title="⚙️ Cursusinstellingen"
+      title="Cursusinstellingen"
       onClose={onClose}
       footer={<button className="btn btn-primary" onClick={onClose}>Klaar</button>}
     >
@@ -732,7 +735,7 @@ function CurriculumSetting({ course, onChange }: { course: Course; onChange: (pa
 
   return (
     <Field
-      label="🎯 Leerplan"
+      label="Leerplan"
       hint="Bepaalt welke doelcodes je per sectie kan kiezen en waartegen de doelendekking rekent."
     >
       <div>
@@ -757,7 +760,9 @@ function CurriculumSetting({ course, onChange }: { course: Course; onChange: (pa
             ? `${current.goals.length} doel(en) beschikbaar.`
             : 'Nog geen leerplan gekozen — zonder leerplan werk je met vrije doelen in eigen woorden.'}
           {' '}
-          <Link to="/leerplannen" target="_blank" rel="noopener">Leerplannen beheren ↗</Link>
+          <Link to="/leerplannen" target="_blank" rel="noopener" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            Leerplannen beheren <ExternalLink size={14} />
+          </Link>
         </p>
       </div>
     </Field>

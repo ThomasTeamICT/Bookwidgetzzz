@@ -5,6 +5,10 @@ import type { Curriculum } from '../../lib/curriculumTypes';
 import type { Widget } from '../../lib/types';
 import { computeCoverage, type CoverageRow } from '../../lib/coverage';
 import { EmptyState } from '../ui';
+import {
+  AIIcon, CheckIcon, CloseIcon, GoalIcon, SettingsIcon, TipIcon, WarningIcon,
+} from '../icons';
+import { Puzzle } from 'lucide-react';
 
 // ── Doelendekking ───────────────────────────────────────────────────────────
 //
@@ -34,30 +38,32 @@ function shortTitle(title: string, max = 14): string {
 }
 
 export function GoalCoverage({
-  course, curriculum, widgets = [], onFillGaps,
+  course, curriculum, widgets = [], onFillGaps, onOpenSettings,
 }: {
   course: Course;
   /** Leerplan van de cursus; aanwezig = matrix op leerplandoelen. */
   curriculum?: Curriculum;
   /** Widgets van dit toestel — de ingebedde exemplaren tellen mee. */
   widgets?: Widget[];
-  /** "✨ Vul de hiaten": opent de optimalisatie met de niet-gedekte doelen. */
+  /** "Vul de hiaten": opent de optimalisatie met de niet-gedekte doelen. */
   onFillGaps?: () => void;
+  /** Opent de cursusinstellingen — voor "Koppel een leerplan" zonder leerplan. */
+  onOpenSettings?: () => void;
 }): JSX.Element {
   if (curriculum) {
     return (
       <CurriculumCoverage course={course} curriculum={curriculum} widgets={widgets} onFillGaps={onFillGaps} />
     );
   }
-  return <FreeTextCoverage course={course} />;
+  return <FreeTextCoverage course={course} onOpenSettings={onOpenSettings} />;
 }
 
 // ── Matrix op leerplandoelen (cursus met curriculumId) ──────────────────────
 
-const STATUS_META: Record<CoverageRow['status'], { icon: string; label: string; badge: string }> = {
-  covered: { icon: '✅', label: 'gedekt', badge: 'badge badge-ok' },
-  optional: { icon: '⚠️', label: 'alleen in verdieping', badge: 'badge badge-warn' },
-  missing: { icon: '❌', label: 'niet gedekt', badge: 'badge badge-err' },
+const STATUS_META: Record<CoverageRow['status'], { icon: typeof CheckIcon; label: string; badge: string }> = {
+  covered: { icon: CheckIcon, label: 'gedekt', badge: 'badge badge-ok' },
+  optional: { icon: WarningIcon, label: 'alleen in verdieping', badge: 'badge badge-warn' },
+  missing: { icon: CloseIcon, label: 'niet gedekt', badge: 'badge badge-err' },
 };
 
 function CurriculumCoverage({
@@ -81,9 +87,9 @@ function CurriculumCoverage({
 
   if (result.total === 0) {
     return (
-      <EmptyState icon="🎯" title="Dit leerplan bevat nog geen doelen">
+      <EmptyState icon={<GoalIcon size={40} />} title="Dit leerplan bevat nog geen doelen">
         <p>Vul de doelenlijst aan, dan verschijnt hier de dekking van je cursus.</p>
-        <Link to="/leerplannen" className="btn btn-primary">🎯 Naar Leerplannen</Link>
+        <Link to="/leerplannen" className="btn btn-primary"><GoalIcon size={16} /> Naar Leerplannen</Link>
       </EmptyState>
     );
   }
@@ -100,7 +106,7 @@ function CurriculumCoverage({
 
       {result.uncovered.length > 0 && onFillGaps && (
         <p style={{ margin: '0 0 12px' }}>
-          <button className="btn btn-sm btn-ai" onClick={onFillGaps}>✨ Vul de hiaten</button>{' '}
+          <button className="btn btn-sm btn-ai" onClick={onFillGaps}><AIIcon size={16} /> Vul de hiaten</button>{' '}
           <span className="hint">De AI maakt nieuwe secties voor de doelen die nog niet aan bod komen.</span>
         </p>
       )}
@@ -138,7 +144,7 @@ function CurriculumCoverage({
                     const wids = row.widgets.filter((w) => ch.sections.some((se) => se.id === w.sectionId));
                     const titles = [
                       ...secs.map((s) => (s.optional ? `${s.sectionTitle} ◇` : s.sectionTitle)),
-                      ...wids.map((w) => `🧩 ${w.title}`),
+                      ...wids.map((w) => `Oefening: ${w.title}`),
                     ];
                     return (
                       <td
@@ -151,12 +157,13 @@ function CurriculumCoverage({
                             : `Dit doel komt niet voor in “${ch.title}”`
                         }
                       >
-                        {secs.length > 0 ? secs.length : ''}{wids.length > 0 ? ' 🧩' : ''}
+                        {secs.length > 0 ? secs.length : ''}
+                        {wids.length > 0 && <Puzzle size={12} aria-hidden style={{ verticalAlign: 'middle', marginLeft: 2 }} />}
                       </td>
                     );
                   })}
                   <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
-                    <span className={meta.badge}>{meta.icon} {meta.label}</span>
+                    <span className={meta.badge}><meta.icon size={13} /> {meta.label}</span>
                   </td>
                 </tr>
               );
@@ -178,7 +185,7 @@ function CurriculumCoverage({
           </ul>
         </div>
       ) : (
-        <p><span aria-hidden>✅</span> Alle doelen van dit leerplan komen aan bod in een gewone sectie.</p>
+        <p style={{ display: 'flex', alignItems: 'center', gap: 6 }}><CheckIcon size={16} aria-hidden /> Alle doelen van dit leerplan komen aan bod in een gewone sectie.</p>
       )}
 
       {result.sectionsWithoutCode.length > 0 && (
@@ -200,15 +207,18 @@ function CurriculumCoverage({
 
       {result.unknownCodes.length > 0 && (
         <p className="callout warn" role="status">
-          ⚠️ Deze codes staan wel in de cursus, maar niet in dit leerplan:{' '}
+          <WarningIcon size={16} aria-hidden /> Deze codes staan wel in de cursus, maar niet in dit leerplan:{' '}
           <strong>{result.unknownCodes.join(', ')}</strong>. Pas ze aan of voeg ze toe aan je{' '}
           <Link to="/leerplannen">leerplan</Link>.
         </p>
       )}
 
-      <p className="hint" style={{ marginBottom: 0 }}>
-        💡 Cijfer = aantal secties met dit doel in dat hoofdstuk; 🧩 = een ingebedde oefening toetst het.
-        Keuzesecties zijn gemarkeerd met ◇ en tellen niet als dekkend.
+      <p className="hint" style={{ marginBottom: 0, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+        <TipIcon size={16} aria-hidden style={{ flex: 'none', marginTop: 2 }} />
+        <span>
+          Cijfer = aantal secties met dit doel in dat hoofdstuk; <Puzzle size={13} className="icon-inline" aria-hidden /> = een
+          ingebedde oefening toetst het. Keuzesecties zijn gemarkeerd met ◇ en tellen niet als dekkend.
+        </span>
       </p>
     </div>
   );
@@ -216,7 +226,24 @@ function CurriculumCoverage({
 
 // ── Terugval: vrije-tekstdoelen (cursus zonder leerplan) ────────────────────
 
-function FreeTextCoverage({ course }: { course: Course }): JSX.Element {
+/** Actie om alsnog een leerplan te koppelen — steeds zichtbaar zonder leerplan. */
+function LinkCurriculumCta({ onOpenSettings }: { onOpenSettings?: () => void }): JSX.Element | null {
+  if (!onOpenSettings) return null;
+  return (
+    <div className="callout" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+      <GoalIcon size={18} aria-hidden style={{ flex: 'none' }} />
+      <span style={{ flex: '1 1 220px' }}>
+        Deze cursus heeft nog geen leerplan gekoppeld. Koppel er een om doelcodes te kunnen kiezen
+        en de dekking automatisch te laten berekenen.
+      </span>
+      <button type="button" className="btn btn-sm btn-primary" style={{ flex: 'none' }} onClick={onOpenSettings}>
+        <SettingsIcon size={16} /> Koppel een leerplan
+      </button>
+    </div>
+  );
+}
+
+function FreeTextCoverage({ course, onOpenSettings }: { course: Course; onOpenSettings?: () => void }): JSX.Element {
   const { rows, sectionsWithGoal, totalSections, missing } = useMemo(() => {
     const byKey = new Map<string, GoalRow>();
     let withGoal = 0;
@@ -269,17 +296,20 @@ function FreeTextCoverage({ course }: { course: Course }): JSX.Element {
   // ── Lege staat: nog geen enkel doel in de cursus ──────────────────────────
   if (rows.length === 0) {
     return (
-      <EmptyState icon="🎯" title="Nog geen leerplandoelen gekoppeld">
-        <p>
-          Koppel doelen aan je secties om hier de dekking te zien: welke doelen komen waar aan
-          bod, en welke secties dragen er nog geen. Gekoppelde doelen voeden ook de heatmaps en
-          de feed-up voor leerlingen.
-        </p>
-        <p className="hint">
-          💡 Tip: de AI-cursusbouwer koppelt doelen automatisch aan de secties die hij maakt.
-          Zelf doen kan ook — vul ze per sectie in via de linkerkolom van de editor.
-        </p>
-      </EmptyState>
+      <div>
+        <LinkCurriculumCta onOpenSettings={onOpenSettings} />
+        <EmptyState icon={<GoalIcon size={40} />} title="Nog geen leerplandoelen gekoppeld">
+          <p>
+            Koppel doelen aan je secties om hier de dekking te zien: welke doelen komen waar aan
+            bod, en welke secties dragen er nog geen. Gekoppelde doelen voeden ook de heatmaps en
+            de feed-up voor leerlingen.
+          </p>
+          <p className="hint">
+            Tip: de AI-cursusbouwer koppelt doelen automatisch aan de secties die hij maakt.
+            Zelf doen kan ook — vul ze per sectie in via de linkerkolom van de editor.
+          </p>
+        </EmptyState>
+      </div>
     );
   }
 
@@ -294,6 +324,7 @@ function FreeTextCoverage({ course }: { course: Course }): JSX.Element {
 
   return (
     <div>
+      <LinkCurriculumCta onOpenSettings={onOpenSettings} />
       {/* 2. Samenvatting */}
       <p style={{ marginTop: 0 }}>
         <strong>{rows.length} {rows.length === 1 ? 'doel' : 'doelen'}</strong>
@@ -331,7 +362,7 @@ function FreeTextCoverage({ course }: { course: Course }): JSX.Element {
                       style={{ marginLeft: 8, whiteSpace: 'nowrap' }}
                       title="Dit doel komt enkel voor in keuzesecties (verdieping) — geen enkele verplichte sectie dekt het."
                     >
-                      ⚠️ alleen in verdieping
+                      <WarningIcon size={13} /> alleen in verdieping
                     </span>
                   )}
                 </th>
@@ -360,8 +391,8 @@ function FreeTextCoverage({ course }: { course: Course }): JSX.Element {
 
       {/* 4. Secties zonder doel */}
       {missing.length === 0 ? (
-        <p>
-          <span aria-hidden>✅</span> Elke sectie draagt minstens één doel — de dekking is rond.
+        <p style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <CheckIcon size={16} aria-hidden /> Elke sectie draagt minstens één doel — de dekking is rond.
         </p>
       ) : (
         <div className="card card-pad" style={{ marginBottom: 16 }}>
@@ -391,9 +422,9 @@ function FreeTextCoverage({ course }: { course: Course }): JSX.Element {
       )}
 
       {/* 6. Hint onderaan */}
-      <p className="hint" style={{ marginBottom: 0 }}>
-        💡 Doelen formuleer je best in leerlingtaal; dezelfde formulering in meerdere secties =
-        dezelfde rij.
+      <p className="hint" style={{ marginBottom: 0, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+        <TipIcon size={16} aria-hidden style={{ flex: 'none', marginTop: 2 }} />
+        <span>Doelen formuleer je best in leerlingtaal; dezelfde formulering in meerdere secties = dezelfde rij.</span>
       </p>
     </div>
   );

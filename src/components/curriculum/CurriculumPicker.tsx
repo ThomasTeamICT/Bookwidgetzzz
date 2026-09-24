@@ -11,6 +11,7 @@ import type { Curriculum, CurriculumGoal } from '../../lib/curriculumTypes';
 import {
   curriculumLabel, getCurricula, goalsByTheme, netLabel, normalizeGoalCode,
 } from '../../lib/curriculum';
+import { GoalIcon } from '../icons';
 
 export interface CurriculumSelection {
   curriculumId?: string;
@@ -83,7 +84,7 @@ export function CurriculumPicker({
           Maak eerst een doelenlijst aan: blanco, uit een geplakte leerplantekst of pdf, of uit een
           JSON-bestand van een collega.
         </p>
-        <Link to="/leerplannen" className="btn btn-sm btn-primary">🎯 Naar Leerplannen</Link>
+        <Link to="/leerplannen" className="btn btn-sm btn-primary"><GoalIcon size={16} /> Naar Leerplannen</Link>
       </div>
     );
   }

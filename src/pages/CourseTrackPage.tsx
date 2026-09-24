@@ -1,15 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ChevronRight, Clock, Mail, PartyPopper, Puzzle } from 'lucide-react';
 import type { Course, CourseProgress } from '../lib/courseTypes';
-import { allSections, countableSections, progressPercent, referencedWidgetIds } from '../lib/courseTypes';
+import { allSections, progressPercent } from '../lib/courseTypes';
 import {
   decodeCourseProgress, deleteStudentProgress, getCourse, getCourseProgressAll, importProgressCode,
 } from '../lib/courses';
 import { getSubmissions, getWidget, onStorageChange } from '../lib/storage';
 import { getTypeDef } from '../widgets/registry';
+import { type ChapterExerciseGroup, filterChapterGroups, groupWidgetIdsByChapter } from '../lib/courseTrack';
 import { csvCell, downloadFile, formatDate, formatDuration, pct } from '../lib/utils';
 import { ConfirmModal, EmptyState, Modal, useToast } from '../components/ui';
 import { TypeTile } from '../components/TypeTile';
+import {
+  AssignIcon, CheckIcon, DeleteIcon, DownloadIcon, EditIcon, InfoIcon, ResultsIcon, SearchIcon,
+} from '../components/icons';
+import '../styles/cursus.css';
 
 export function CourseTrackPage() {
   const { id } = useParams();
@@ -23,20 +29,28 @@ export function CourseTrackPage() {
   );
   const [importOpen, setImportOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CourseProgress | null>(null);
+  const [exerciseQuery, setExerciseQuery] = useState('');
   const toast = useToast();
+
+  // Oefeningen per hoofdstuk, in cursusvolgorde, gefilterd op het zoekveld.
+  const chapterGroups = useMemo(() => (course ? groupWidgetIdsByChapter(course) : []), [course]);
+  const filteredGroups = useMemo(
+    () => filterChapterGroups(chapterGroups, exerciseQuery, (wid) => getWidget(wid)?.title),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [chapterGroups, exerciseQuery, tick]
+  );
 
   if (!course) {
     return (
       <div className="page page-narrow" style={{ paddingTop: 60 }}>
-        <EmptyState icon="📊" title="Cursus niet gevonden">
-          <Link to="/cursussen" className="btn btn-primary">← Naar de cursussen</Link>
+        <EmptyState icon={<ResultsIcon size={40} />} title="Cursus niet gevonden">
+          <Link to="/cursussen" className="btn btn-primary">Naar de cursussen</Link>
         </EmptyState>
       </div>
     );
   }
 
   const sections = allSections(course);
-  const countable = countableSections(course);
   const avg = progress.length
     ? Math.round(progress.reduce((a, p) => a + progressPercent(course, p), 0) / progress.length)
     : 0;
@@ -65,33 +79,29 @@ export function CourseTrackPage() {
     downloadFile(`voortgang - ${course.title}.csv`, lines.join('\n'), 'text/csv');
   };
 
-  const widgets = referencedWidgetIds(course)
-    .map((wid) => getWidget(wid))
-    .filter((w): w is NonNullable<typeof w> => Boolean(w));
-
   return (
     <div className="page">
       <div className="page-head">
         <div>
-          <h1>📊 {course.title}</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}><ResultsIcon size={24} /> {course.title}</h1>
           <p className="sub">Leesvoortgang per leerling en per sectie — transparant: de leerling ziet zelf exact hetzelfde.</p>
         </div>
         <div className="page-head-actions">
-          <button className="btn btn-ghost" onClick={exportCsv} disabled={progress.length === 0}>⬇ CSV</button>
-          <button className="btn btn-ghost" onClick={() => setImportOpen(true)}>📨 Voortgangscodes invoeren</button>
-          <Link to={`/cursus/bewerk/${course.id}`} className="btn btn-primary">✏️ Bewerken</Link>
+          <button className="btn btn-ghost" onClick={exportCsv} disabled={progress.length === 0}><DownloadIcon size={16} /> CSV</button>
+          <button className="btn btn-ghost" onClick={() => setImportOpen(true)}><Mail size={16} /> Voortgangscodes invoeren</button>
+          <Link to={`/cursus/bewerk/${course.id}`} className="btn btn-primary"><EditIcon size={16} /> Bewerken</Link>
         </div>
       </div>
 
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', marginBottom: 20 }}>
         {[
-          { icon: '👥', label: 'lezers', value: String(progress.length) },
-          { icon: '📈', label: 'gemiddelde voortgang', value: `${avg}%` },
-          { icon: '🎉', label: 'volledig afgewerkt', value: String(complete) },
-          { icon: '⏱️', label: 'totale leestijd', value: formatDuration(totalSeconds) },
+          { icon: AssignIcon, label: 'lezers', value: String(progress.length) },
+          { icon: ResultsIcon, label: 'gemiddelde voortgang', value: `${avg}%` },
+          { icon: PartyPopper, label: 'volledig afgewerkt', value: String(complete) },
+          { icon: Clock, label: 'totale leestijd', value: formatDuration(totalSeconds) },
         ].map((s) => (
           <div key={s.label} className="card card-pad" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.5rem' }} aria-hidden>{s.icon}</div>
+            <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--brand)' }} aria-hidden><s.icon size={26} /></div>
             <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{s.value}</div>
             <div className="hint">{s.label}</div>
           </div>
@@ -99,7 +109,7 @@ export function CourseTrackPage() {
       </div>
 
       {progress.length === 0 ? (
-        <EmptyState icon="🕐" title="Nog geen lezers">
+        <EmptyState icon={<Clock size={40} />} title="Nog geen lezers">
           <p>
             Zodra leerlingen op dit toestel (of via de klascode in deze browser) lezen, verschijnt hun
             voortgang hier. Lezen ze thuis via de draagbare link? Laat hen dan hun
@@ -156,7 +166,7 @@ export function CourseTrackPage() {
                           }
                         >
                           <span aria-label={state === 'done' ? 'gelezen' : state === 'open' ? 'geopend' : 'nog niet geopend'}>
-                            {state === 'done' ? '✅' : state === 'open' ? '◐' : '·'}
+                            {state === 'done' ? <CheckIcon size={14} className="icon-inline" style={{ color: 'var(--ok)' }} /> : state === 'open' ? '◐' : '·'}
                           </span>
                         </td>
                       );
@@ -170,7 +180,7 @@ export function CourseTrackPage() {
                         title="Voortgang verwijderen"
                         onClick={() => setDeleteTarget(p)}
                       >
-                        🗑
+                        <DeleteIcon size={16} />
                       </button>
                     </td>
                   </tr>
@@ -201,7 +211,7 @@ export function CourseTrackPage() {
                       <div style={{ width: `${pctDone}%`, height: '100%', background: 'var(--ok)', borderRadius: 99, transition: 'width 0.4s' }} />
                     </div>
                     <span className="hint" style={{ whiteSpace: 'nowrap' }}>
-                      {done}✅ / {opened}◐{avgTime > 0 && ` (gem. ${formatDuration(avgTime)})`}
+                      {done}<CheckIcon size={12} className="icon-inline" /> / {opened}◐{avgTime > 0 && ` (gem. ${formatDuration(avgTime)})`}
                     </span>
                   </div>
                 );
@@ -211,34 +221,38 @@ export function CourseTrackPage() {
         </>
       )}
 
-      {widgets.length > 0 && (
+      {chapterGroups.length > 0 && (
         <div className="card card-pad" style={{ marginBottom: 20 }}>
-          <h3 style={{ marginTop: 0 }}>🧩 Oefeningen in deze cursus</h3>
-          <div style={{ display: 'grid', gap: 8 }}>
-            {widgets.map((w) => {
-              const subs = getSubmissions(w.id);
-              const scored = subs.filter((s) => s.totalMax > 0);
-              const avgScore = scored.length
-                ? Math.round(scored.reduce((a, s) => a + pct(s.totalEarned, s.totalMax), 0) / scored.length)
-                : null;
-              const def = getTypeDef(w.type);
-              return (
-                <div key={w.id} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <TypeTile type={def} size="sm" />
-                  <strong style={{ flex: '1 1 200px' }}>{w.title}</strong>
-                  <span className="hint">{subs.length} inzending{subs.length === 1 ? '' : 'en'}{avgScore !== null && ` · gem. ${avgScore}%`}</span>
-                  {def.hasSubmissions && <Link to={`/resultaten/${w.id}`} className="btn btn-sm btn-ghost">→ Resultaten</Link>}
-                </div>
-              );
-            })}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+            <h2 style={{ margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Puzzle size={20} /> Oefeningen per hoofdstuk
+            </h2>
+            <div className="course-search" style={{ marginLeft: 'auto', maxWidth: 240 }}>
+              <SearchIcon size={16} aria-hidden />
+              <input
+                className="input input-sm"
+                value={exerciseQuery}
+                onChange={(e) => setExerciseQuery(e.target.value)}
+                placeholder="Zoek op titel…"
+                aria-label="Zoek een oefening op titel"
+              />
+            </div>
           </div>
+          {filteredGroups.length === 0 ? (
+            <p className="hint">Geen oefening gevonden voor “{exerciseQuery}”.</p>
+          ) : (
+            filteredGroups.map((group) => <ChapterExerciseDetails key={group.chapter.id} group={group} />)
+          )}
         </div>
       )}
 
-      <p className="hint">
-        🔎 Eerlijk over de werking: voortgang wordt per toestel/browser bijgehouden. Leerlingen die
-        thuis via de draagbare link lezen, sturen hun <strong>voortgangscode</strong> door (die vinden
-        ze in de cursus zelf). Er is geen verborgen tracking — de leerling ziet exact wat jij ziet.
+      <p className="hint" style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+        <InfoIcon size={16} aria-hidden style={{ flex: 'none', marginTop: 2 }} />
+        <span>
+          Eerlijk over de werking: voortgang wordt per toestel/browser bijgehouden. Leerlingen die
+          thuis via de draagbare link lezen, sturen hun <strong>voortgangscode</strong> door (die vinden
+          ze in de cursus zelf). Er is geen verborgen tracking — de leerling ziet exact wat jij ziet.
+        </span>
       </p>
 
       {importOpen && (
@@ -257,6 +271,59 @@ export function CourseTrackPage() {
         />
       )}
     </div>
+  );
+}
+
+// ── Eén hoofdstuk met zijn oefeningen, inklapbaar ────────────────────────────
+
+function ChapterExerciseDetails({ group }: { group: ChapterExerciseGroup }) {
+  const rows = group.widgetIds
+    .map((wid) => getWidget(wid))
+    .filter((w): w is NonNullable<ReturnType<typeof getWidget>> => Boolean(w))
+    .map((w) => {
+      const subs = getSubmissions(w.id);
+      const scored = subs.filter((s) => s.totalMax > 0);
+      const avgScore = scored.length
+        ? Math.round(scored.reduce((a, s) => a + pct(s.totalEarned, s.totalMax), 0) / scored.length)
+        : null;
+      return { widget: w, subs, avgScore };
+    });
+  const totalSubs = rows.reduce((a, r) => a + r.subs.length, 0);
+  const scoredRows = rows.filter((r): r is typeof r & { avgScore: number } => r.avgScore !== null);
+  const avgAll = scoredRows.length
+    ? Math.round(scoredRows.reduce((a, r) => a + r.avgScore, 0) / scoredRows.length)
+    : null;
+
+  return (
+    <details className="chapter-track" open={totalSubs > 0}>
+      <summary>
+        <ChevronRight size={16} className="chevron" aria-hidden />
+        <span>{group.chapter.emoji ? `${group.chapter.emoji} ` : ''}{group.chapter.title}</span>
+        <span className="chapter-track-summary">
+          {rows.length} oefening{rows.length === 1 ? '' : 'en'} · {totalSubs} inzending{totalSubs === 1 ? '' : 'en'}
+          {avgAll !== null && ` · gem. ${avgAll}%`}
+        </span>
+      </summary>
+      <div className="chapter-track-body" style={{ display: 'grid', gap: 8 }}>
+        {rows.map(({ widget, subs, avgScore }) => {
+          const def = getTypeDef(widget.type);
+          return (
+            <div key={widget.id} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <TypeTile type={def} size="sm" />
+              <strong style={{ flex: '1 1 200px' }}>{widget.title}</strong>
+              <span className="hint">
+                {subs.length} inzending{subs.length === 1 ? '' : 'en'}{avgScore !== null && ` · gem. ${avgScore}%`}
+              </span>
+              {def.hasSubmissions && (
+                <Link to={`/resultaten/${widget.id}`} className="btn btn-sm btn-ghost">
+                  <ResultsIcon size={14} /> Resultaten
+                </Link>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </details>
   );
 }
 
@@ -286,7 +353,7 @@ function ProgressImportModal({
 
   return (
     <Modal
-      title="📨 Voortgangscodes invoeren"
+      title="Voortgangscodes invoeren"
       onClose={onClose}
       footer={
         <>

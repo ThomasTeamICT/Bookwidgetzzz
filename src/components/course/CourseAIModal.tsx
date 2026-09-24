@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Puzzle } from 'lucide-react';
 import type { Widget } from '../../lib/types';
 import type { Course, CourseBlock } from '../../lib/courseTypes';
 import { allSections } from '../../lib/courseTypes';
@@ -18,15 +19,16 @@ import { PdfImportButton } from '../PdfImportButton';
 import { Field, Modal, useToast } from '../ui';
 import { downloadFile, uid } from '../../lib/utils';
 import { getWidgets, saveWidget } from '../../lib/storage';
+import { AIIcon, BackIcon, CheckIcon, DownloadIcon, GoalIcon, ImportIcon, RetryIcon } from '../icons';
 
 type Mode = 'new' | 'rework' | 'optimize' | 'section' | 'exercises';
 
 const TITLES: Record<Mode, string> = {
-  new: '✨ AI-cursusbouwer',
-  rework: '✨ Cursus herwerken met AI',
-  optimize: '✨ Cursus optimaliseren',
-  section: '✨ Sectie vullen met AI',
-  exercises: '✨ Oefeningen voorstellen',
+  new: 'AI-cursusbouwer',
+  rework: 'Cursus herwerken met AI',
+  optimize: 'Cursus optimaliseren',
+  section: 'Sectie vullen met AI',
+  exercises: 'Oefeningen voorstellen',
 };
 
 interface PreviewState {
@@ -218,7 +220,7 @@ export function CourseAIModal({
         })),
       };
       onResult(updated);
-      toast(`✨ ${preview.blocks.length} blok(ken) ${insertMode === 'replace' ? 'geplaatst' : 'toegevoegd'}`, 'ok');
+      toast(`${preview.blocks.length} blok(ken) ${insertMode === 'replace' ? 'geplaatst' : 'toegevoegd'}`, 'ok');
       onClose();
       return;
     }
@@ -238,7 +240,7 @@ export function CourseAIModal({
         })),
       };
       onResult(updated);
-      toast(`✨ ${preview.exercises.length} oefening(en) toegevoegd — kijk ze na`, 'ok');
+      toast(`${preview.exercises.length} oefening(en) toegevoegd — kijk ze na`, 'ok');
       onClose();
       return;
     }
@@ -256,9 +258,9 @@ export function CourseAIModal({
     });
     onResult(result);
     toast(
-      mode === 'new' ? '✨ Cursus aangemaakt — kijk alles na'
-      : mode === 'optimize' ? '✨ Optimalisatie toegepast — kijk alles na'
-      : '✨ Herwerking toegepast — kijk alles na',
+      mode === 'new' ? 'Cursus aangemaakt — kijk alles na'
+      : mode === 'optimize' ? 'Optimalisatie toegepast — kijk alles na'
+      : 'Herwerking toegepast — kijk alles na',
       'ok'
     );
     onClose();
@@ -305,7 +307,7 @@ export function CourseAIModal({
 
   const curriculumField = (
     <div key="curriculum" className="card card-pad" style={{ marginBottom: 14 }}>
-      <strong>🎯 Blanco vanuit leerplan</strong>
+      <strong style={{ display: 'flex', alignItems: 'center', gap: 6 }}><GoalIcon size={16} /> Blanco vanuit leerplan</strong>
       <p className="hint" style={{ margin: '2px 0 10px' }}>
         Kies je doelen: de AI bouwt een cursus die ze allemaal dekt en zet de doelcodes op elke
         sectie. Zo zie je achteraf meteen de dekking — en werkt het klasoverzicht per doel.
@@ -317,8 +319,8 @@ export function CourseAIModal({
         compact
       />
       {selection.goals.length > 0 && (
-        <p className="hint" style={{ margin: '8px 0 0' }} aria-live="polite">
-          ✔ {selection.goals.length} doel(en) gaan mee in de opdracht.
+        <p className="hint" style={{ margin: '8px 0 0', display: 'flex', alignItems: 'center', gap: 6 }} aria-live="polite">
+          <CheckIcon size={14} aria-hidden /> {selection.goals.length} doel(en) gaan mee in de opdracht.
         </p>
       )}
     </div>
@@ -339,7 +341,7 @@ export function CourseAIModal({
     <Modal title={TITLES[mode]} onClose={onClose} wide>
       <AIGate>
         {originNote && !preview && (
-          <p className="callout" style={{ marginTop: 0 }}>📥 {originNote}</p>
+          <p className="callout" style={{ marginTop: 0 }}><ImportIcon size={16} aria-hidden /> {originNote}</p>
         )}
         {!busy && !preview && (
           <div style={{ display: 'grid', gap: 4 }}>
@@ -373,7 +375,9 @@ export function CourseAIModal({
                 </div>
                 <label className="checkbox-row">
                   <input type="checkbox" checked={withQuizzes} onChange={(e) => setWithQuizzes(e.target.checked)} />
-                  <span>✅ Per hoofdstuk ook een oefenquiz maken (aparte widgets, automatisch ingebed in de cursus)</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <CheckIcon size={14} aria-hidden /> Per hoofdstuk ook een oefenquiz maken (aparte widgets, automatisch ingebed in de cursus)
+                  </span>
                 </label>
               </>
             )}
@@ -472,8 +476,8 @@ export function CourseAIModal({
                   . Ze worden bewaard bij “Mijn widgets” én achteraan deze sectie ingebed.
                 </p>
                 {sectionGoals.length > 0 ? (
-                  <p className="hint" style={{ margin: '6px 0 0' }}>
-                    🎯 Doelen van deze sectie: {sectionGoals.map((g) => g.code).join(', ')} — de vragen krijgen die codes mee.
+                  <p className="hint" style={{ margin: '6px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <GoalIcon size={14} aria-hidden /> Doelen van deze sectie: {sectionGoals.map((g) => g.code).join(', ')} — de vragen krijgen die codes mee.
                   </p>
                 ) : (
                   <p className="hint" style={{ margin: '6px 0 0' }}>
@@ -499,7 +503,7 @@ export function CourseAIModal({
             {error && <AIErrorBox error={error} onRetry={generate} />}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
               <button className="btn btn-ghost" onClick={onClose}>Annuleren</button>
-              <button className="btn btn-ai" disabled={!canGenerate} onClick={generate}>✨ Genereren</button>
+              <button className="btn btn-ai" disabled={!canGenerate} onClick={generate}><AIIcon size={16} /> Genereren</button>
             </div>
           </div>
         )}
@@ -590,11 +594,14 @@ export function CourseAIModal({
                   </p>
                 )}
                 {previewGoalCheck && (
-                  <p style={{ margin: '0 0 8px', fontSize: '0.9rem' }} aria-live="polite">
-                    🎯 {previewGoalCheck.covered} van {previewGoalCheck.total} gekozen doelen staan op een gewone sectie.
-                    {previewGoalCheck.missing.length > 0 && (
-                      <span className="hint"> Nog open: {previewGoalCheck.missing.map((g) => g.code).join(', ')}.</span>
-                    )}
+                  <p style={{ margin: '0 0 8px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }} aria-live="polite">
+                    <GoalIcon size={14} aria-hidden />
+                    <span>
+                      {previewGoalCheck.covered} van {previewGoalCheck.total} gekozen doelen staan op een gewone sectie.
+                      {previewGoalCheck.missing.length > 0 && (
+                        <span className="hint"> Nog open: {previewGoalCheck.missing.map((g) => g.code).join(', ')}.</span>
+                      )}
+                    </span>
                   </p>
                 )}
                 <ol style={{ margin: 0, paddingLeft: 20 }}>
@@ -606,7 +613,11 @@ export function CourseAIModal({
                           <li key={se.id}>
                             {se.title} · {se.blocks.length} blok(ken)
                             {se.optional && <em> (verdieping)</em>}
-                            {se.goalCodes?.length ? <span> · 🎯 {se.goalCodes.join(', ')}</span> : se.goals?.length ? <span> · 🎯 {se.goals.length} doel(en)</span> : null}
+                            {se.goalCodes?.length ? (
+                              <span> · <GoalIcon size={12} className="icon-inline" /> {se.goalCodes.join(', ')}</span>
+                            ) : se.goals?.length ? (
+                              <span> · <GoalIcon size={12} className="icon-inline" /> {se.goals.length} doel(en)</span>
+                            ) : null}
                           </li>
                         ))}
                       </ul>
@@ -614,25 +625,29 @@ export function CourseAIModal({
                   ))}
                 </ol>
                 {preview.quizzes.some(Boolean) && (
-                  <p style={{ margin: '8px 0 0', fontSize: '0.9rem' }}>
-                    🧩 {preview.quizzes.filter(Boolean).length} oefenquiz(zen):{' '}
-                    {preview.quizzes
-                      .filter((q): q is Widget => q !== null)
-                      .map((q) => `"${q.title}" (${(q.config as { questions: unknown[] }).questions.length} vragen)`)
-                      .join(' · ')}
+                  <p style={{ margin: '8px 0 0', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Puzzle size={14} aria-hidden />
+                    <span>
+                      {preview.quizzes.filter(Boolean).length} oefenquiz(zen):{' '}
+                      {preview.quizzes
+                        .filter((q): q is Widget => q !== null)
+                        .map((q) => `"${q.title}" (${(q.config as { questions: unknown[] }).questions.length} vragen)`)
+                        .join(' · ')}
+                    </span>
                   </p>
                 )}
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button className="btn btn-ghost" onClick={() => setPreview(null)}>← Aanpassen</button>
-              <button className="btn btn-ghost" onClick={generate}>↺ Opnieuw genereren</button>
+              <button className="btn btn-ghost" onClick={() => setPreview(null)}><BackIcon size={16} /> Aanpassen</button>
+              <button className="btn btn-ghost" onClick={generate}><RetryIcon size={16} /> Opnieuw genereren</button>
               <button className="btn btn-primary" onClick={apply}>
-                {mode === 'new' ? '✔ Cursus aanmaken'
-                  : mode === 'rework' ? '✔ Herwerking toepassen'
-                  : mode === 'optimize' ? '✔ Optimalisatie toepassen'
-                  : mode === 'exercises' ? '✔ Oefeningen toevoegen'
-                  : '✔ Toepassen'}
+                <CheckIcon size={16} />
+                {mode === 'new' ? 'Cursus aanmaken'
+                  : mode === 'rework' ? 'Herwerking toepassen'
+                  : mode === 'optimize' ? 'Optimalisatie toepassen'
+                  : mode === 'exercises' ? 'Oefeningen toevoegen'
+                  : 'Toepassen'}
               </button>
             </div>
           </div>
@@ -650,7 +665,7 @@ function BackupButton({ course }: { course: Course }) {
       style={{ justifySelf: 'start' }}
       onClick={() => { void exportCourseJson(course).then((json) => downloadFile(`${course.title || 'cursus'} (backup).json`, json)); }}
     >
-      💾 Eerst back-up downloaden
+      <DownloadIcon size={16} /> Eerst back-up downloaden
     </button>
   );
 }

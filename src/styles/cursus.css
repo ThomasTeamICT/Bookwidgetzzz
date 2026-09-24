@@ -1,0 +1,104 @@
+/* ── Cursus maken en opvolgen ──────────────────────────────────────────────
+ * Eigen stijlen voor CourseEditorPage, CourseTrackPage en ImportPage. Gebruikt
+ * de tokens uit global.css; geen losse kleurcodes.
+ */
+
+/* Sectietitel in de structuurzijbalk: twee regels in plaats van één
+ * afgekapte regel, zodat "1.1 Hoe stel je je…" leesbaar blijft. */
+.course-section-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.3;
+}
+
+/* Editorlayout: vaste zijbalk naast de sectie-inhoud, één kolom op gsm. */
+.course-editor-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 18px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 18px 22px 60px;
+  align-items: start;
+}
+.course-structure {
+  position: sticky;
+  top: 70px;
+  max-height: calc(100vh - 92px);
+  overflow-y: auto;
+  padding-right: 2px;
+  min-width: 0;
+}
+@media (max-width: 860px) {
+  .course-editor-main {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px 14px 60px;
+  }
+  .course-structure {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+/* Blokkenpalet: icoon + naam, wat groter dan in een gewone knop. */
+.block-palette-icon {
+  display: flex;
+  color: var(--brand);
+  margin-bottom: 6px;
+}
+
+/* Blokpalet-kaarten en structuurknoppen zijn tikbaar op gsm: minstens 44px. */
+@media (max-width: 640px) {
+  .course-structure button,
+  .block-palette-item,
+  .editor-item-head button {
+    min-height: 44px;
+  }
+  .course-structure .btn-icon,
+  .editor-item-head .btn-icon,
+  .goalcode-chip-remove {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Zoekveld met icoon (widget kiezen, oefeningen opvolgen). */
+.course-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.course-search svg { flex: none; color: var(--text-faint); }
+.course-search input { flex: 1; min-width: 0; }
+
+/* Hoofdstukgroep bij het opvolgen: inklapbaar, met samenvatting in de kop. */
+.chapter-track {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.chapter-track + .chapter-track { margin-top: 0; }
+.chapter-track summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-weight: 700;
+  min-height: 44px;
+}
+.chapter-track summary::-webkit-details-marker { display: none; }
+.chapter-track summary:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.chapter-track summary .chevron { color: var(--text-faint); flex: none; transition: transform 0.15s; }
+.chapter-track[open] summary .chevron { transform: rotate(90deg); }
+.chapter-track-body { padding: 4px 14px 12px; border-top: 1px solid var(--line); }
+.chapter-track-summary { font-weight: 500; color: var(--text-soft); font-size: 0.86rem; margin-left: auto; }

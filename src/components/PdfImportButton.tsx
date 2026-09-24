@@ -6,6 +6,7 @@
 // worden als toast gemeld; tijdens het lezen is de knop bezig/uitgeschakeld.
 
 import React, { useRef, useState } from 'react';
+import { FileText } from 'lucide-react';
 import { extractPdfText } from '../lib/pdfText';
 import { useToast } from './ui';
 
@@ -53,7 +54,7 @@ export function PdfImportButton({ onText, className }: {
         disabled={busy}
         aria-busy={busy}
       >
-        {busy ? '⏳ Pdf lezen…' : '📄 Pdf inlezen'}
+        <FileText size={16} /> {busy ? 'Pdf lezen…' : 'Pdf inlezen'}
       </button>
       <input
         ref={fileRef}
